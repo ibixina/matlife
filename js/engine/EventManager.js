@@ -7,6 +7,8 @@
 import { gameStateManager } from '../core/GameStateManager.js';
 import ResolutionEngine from './ResolutionEngine.js';
 import { weightedRandom } from '../core/Utils.js';
+import RelationshipManager from './RelationshipManager.js';
+import InjuryEngine from './InjuryEngine.js';
 
 /**
  * EventManager - Handles dynamic event generation and resolution
@@ -43,7 +45,7 @@ export class EventManager {
     const eligibleTemplates = this.eventTemplates.filter(template => {
       // Check required tags
       if (template.requiredTags) {
-        const hasAllRequired = template.requiredTags.every(tag => 
+        const hasAllRequired = template.requiredTags.every(tag =>
           playerTags.includes(tag)
         );
         if (!hasAllRequired) return false;
@@ -51,7 +53,7 @@ export class EventManager {
 
       // Check excluded tags
       if (template.excludedTags) {
-        const hasExcluded = template.excludedTags.some(tag => 
+        const hasExcluded = template.excludedTags.some(tag =>
           playerTags.includes(tag)
         );
         if (hasExcluded) return false;
@@ -86,7 +88,7 @@ export class EventManager {
     }));
 
     const selectedEvent = weightedRandom(weightedItems);
-    
+
     // Set cooldown
     this.cooldowns.set(selectedEvent.id, currentWeek);
 
@@ -129,16 +131,28 @@ export class EventManager {
       outcome = 'SUCCESS';
     }
 
+    // Map the OUTCOME constants to the keys used in events.json
+    const outcomeMap = {
+      'CRITICAL_SUCCESS': 'critSuccess',
+      'SUCCESS': 'success',
+      'FAILURE': 'failure',
+      'CRITICAL_FAILURE': 'critFailure'
+    };
+
+    // Fallback to lowercase just in case some logic passes strings directly
+    const outcomeKey = outcomeMap[outcome] || outcome.toLowerCase();
+
     // Get the outcome data
-    const outcomeData = choice.outcomes[outcome.toLowerCase()];
+    const outcomeData = choice.outcomes[outcomeKey];
     if (!outcomeData) {
+      console.error(`No outcome data for: ${outcome} (mapped to ${outcomeKey})`, choice.outcomes);
       throw new Error(`No outcome data for: ${outcome}`);
     }
 
     // Apply effects
     if (outcomeData.effects) {
       for (const effect of outcomeData.effects) {
-        this._applyEffect(effect, playerEntity, state);
+        EventManager._applyEffect(effect, playerEntity, state);
       }
     }
 
@@ -214,7 +228,6 @@ export class EventManager {
 
       case 'relationship':
         // Update relationship
-        const RelationshipManager = require('./RelationshipManager.js').default;
         RelationshipManager.modifyAffinity(
           entity.id,
           effect.targetId,
@@ -248,7 +261,6 @@ export class EventManager {
 
       case 'injury':
         // Add injury
-        const InjuryEngine = require('./InjuryEngine.js').default;
         InjuryEngine.addInjury(entity, effect.bodyPart, effect.severity, effect.cause);
         break;
 
