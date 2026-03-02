@@ -1,0 +1,825 @@
+[
+  {
+    "id": "vultures_circle",
+    "title": "The Vultures Circle",
+    "requiredTags": ["[Contract_Expiring]", "[Over]"],
+    "weight": 5,
+    "cooldownWeeks": 12,
+    "choices": [
+      {
+        "text": "Leak it to the sheets",
+        "check": {
+          "stat": "charisma",
+          "dc": 12
+        },
+        "outcomes": {
+          "critSuccess": {
+            "narrative": "The story hits the sheets and creates massive buzz. Multiple promotions start a bidding war for your services!",
+            "effects": [
+              { "type": "money", "value": 5000 },
+              { "type": "tag", "tag": "[Hot_Streak]", "action": "add" }
+            ]
+          },
+          "success": {
+            "narrative": "The leak gets some attention. Your agent reports increased interest from rival promotions.",
+            "effects": [
+              { "type": "money", "value": 1000 }
+            ]
+          },
+          "failure": {
+            "narrative": "The leak backfires. Your current promotion is furious and your reputation takes a hit.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": -5 }
+            ]
+          },
+          "critFailure": {
+            "narrative": "The leak is traced back to you. The locker room turns against you and the promoter threatens legal action.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": -10 },
+              { "type": "stat", "component": "lifestyle", "stat": "burnout", "value": 10 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Deny everything and stay professional",
+        "outcomes": {
+          "success": {
+            "narrative": "You maintain your professionalism. The speculation dies down and you keep your options open.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": 2 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Let your agent handle negotiations",
+        "outcomes": {
+          "success": {
+            "narrative": "Your agent works behind the scenes. Several offers come in over the next few weeks.",
+            "effects": [
+              { "type": "stat", "component": "contract", "stat": "weeklySalary", "value": 500 }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "reckless_opponent",
+    "title": "Reckless Opponent",
+    "requiredTags": ["[Impending_Match]"],
+    "weight": 3,
+    "cooldownWeeks": 8,
+    "choices": [
+      {
+        "text": "Complain to the booker",
+        "check": {
+          "stat": "charisma",
+          "dc": 10
+        },
+        "outcomes": {
+          "success": {
+            "narrative": "The booker listens and switches your opponent. Crisis averted.",
+            "effects": []
+          },
+          "failure": {
+            "narrative": "The booker dismisses your concerns. You look like you're ducking the match.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "momentum", "value": -5 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Confront your opponent directly",
+        "check": {
+          "stat": "brawling",
+          "dc": 12
+        },
+        "outcomes": {
+          "success": {
+            "narrative": "Your confrontation intimidates them. They agree to take it easier in the ring.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "momentum", "value": 5 }
+            ]
+          },
+          "failure": {
+            "narrative": "The confrontation escalates into a backstage brawl. Security has to separate you.",
+            "effects": [
+              { "type": "injury", "bodyPart": "Hand_R", "severity": 1, "cause": "Backstage brawl" }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Risk it and work the match",
+        "outcomes": {
+          "success": {
+            "narrative": "The match goes fine. Your opponent respects your courage.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": 3 }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "locker_room_argument",
+    "title": "Locker Room Argument",
+    "requiredTags": [],
+    "weight": 4,
+    "cooldownWeeks": 6,
+    "choices": [
+      {
+        "text": "Escalate the situation",
+        "check": {
+          "stat": "brawling",
+          "dc": 14
+        },
+        "outcomes": {
+          "success": {
+            "narrative": "You establish dominance. The locker room knows not to mess with you.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": 5 },
+              { "type": "stat", "component": "lifestyle", "stat": "burnout", "value": 10 }
+            ]
+          },
+          "failure": {
+            "narrative": "You get embarrassed in front of everyone. Your reputation suffers.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": -10 },
+              { "type": "stat", "component": "condition", "stat": "mentalHealth", "value": -10 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Walk away and stay out of it",
+        "outcomes": {
+          "success": {
+            "narrative": "You avoid the drama. Some respect your maturity, others see it as weakness.",
+            "effects": [
+              { "type": "stat", "component": "condition", "stat": "mentalHealth", "value": 5 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Mediate the dispute",
+        "requiredTags": ["[Locker_Room_Leader]"],
+        "outcomes": {
+          "success": {
+            "narrative": "Your leadership resolves the conflict. The locker room respects you even more.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": 8 },
+              { "type": "stat", "component": "entertainmentStats", "stat": "charisma", "value": 1 }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "wellness_test",
+    "title": "Wellness Test",
+    "requiredTags": ["[Substance_Issues]"],
+    "weight": 6,
+    "cooldownWeeks": 4,
+    "choices": [
+      {
+        "text": "Take the test",
+        "outcomes": {
+          "success": {
+            "narrative": "The test comes back positive. You've failed the wellness policy.",
+            "effects": [
+              { "type": "stat", "component": "wellness", "stat": "wellnessStrikes", "value": 1 },
+              { "type": "stat", "component": "contract", "stat": "remainingWeeks", "value": -4 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Try to dodge the test",
+        "check": {
+          "stat": "psychology",
+          "dc": 15
+        },
+        "outcomes": {
+          "success": {
+            "narrative": "You successfully avoid the test this time. But they'll be watching you closer now.",
+            "effects": [
+              { "type": "stat", "component": "wellness", "stat": "pedDetectionRisk", "value": 10 }
+            ]
+          },
+          "failure": {
+            "narrative": "They catch you trying to dodge. That's a strike in itself plus you still have to test.",
+            "effects": [
+              { "type": "stat", "component": "wellness", "stat": "wellnessStrikes", "value": 2 },
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": -5 }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "ped_offer",
+    "title": "PED Offer",
+    "excludedTags": ["[Substance_Issues]"],
+    "weight": 3,
+    "cooldownWeeks": 16,
+    "choices": [
+      {
+        "text": "Accept the offer",
+        "outcomes": {
+          "success": {
+            "narrative": "You start using PEDs. Your performance improves but now you're playing a dangerous game.",
+            "effects": [
+              { "type": "stat", "component": "wellness", "stat": "pedUsage", "value": true },
+              { "type": "stat", "component": "physicalStats", "stat": "strength", "value": 3 },
+              { "type": "stat", "component": "physicalStats", "stat": "stamina", "value": 2 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Refuse politely",
+        "outcomes": {
+          "success": {
+            "narrative": "You decline. The offerer understands and respects your decision.",
+            "effects": [
+              { "type": "stat", "component": "condition", "stat": "mentalHealth", "value": 5 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Report them",
+        "outcomes": {
+          "success": {
+            "narrative": "You report the PED dealer to management. They appreciate your integrity.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": 3 },
+              { "type": "stat", "component": "contract", "stat": "hasCreativeControl", "value": true }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "fan_encounter",
+    "title": "Fan Encounter",
+    "requiredTags": ["[Over]"],
+    "weight": 5,
+    "cooldownWeeks": 2,
+    "choices": [
+      {
+        "text": "Sign autographs for everyone",
+        "check": {
+          "stat": "charisma",
+          "dc": 8
+        },
+        "outcomes": {
+          "success": {
+            "narrative": "The fans love you! Your merch sales spike this week.",
+            "effects": [
+              { "type": "stat", "component": "financial", "stat": "merchandiseIncome", "value": 500 },
+              { "type": "stat", "component": "socialMedia", "stat": "followers", "value": 100 }
+            ]
+          },
+          "failure": {
+            "narrative": "You sign some autographs but seem rushed. Fans are disappointed.",
+            "effects": [
+              { "type": "stat", "component": "socialMedia", "stat": "followers", "value": -10 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Ignore them and keep walking",
+        "outcomes": {
+          "success": {
+            "narrative": "You avoid the fans. Some understand you're busy, others complain online.",
+            "effects": [
+              { "type": "stat", "component": "socialMedia", "stat": "scandalRisk", "value": 5 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Take selfies and post to social media",
+        "check": {
+          "stat": "charisma",
+          "dc": 10
+        },
+        "outcomes": {
+          "success": {
+            "narrative": "Your social media post goes viral! Fans appreciate the accessibility.",
+            "effects": [
+              { "type": "stat", "component": "socialMedia", "stat": "followers", "value": 500 },
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": 2 }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "injury_setback",
+    "title": "Injury Setback",
+    "requiredTags": ["[Injured_]"],
+    "weight": 4,
+    "cooldownWeeks": 4,
+    "choices": [
+      {
+        "text": "See a doctor immediately",
+        "outcomes": {
+          "success": {
+            "narrative": "The doctor recommends rest. You'll heal properly but miss some shows.",
+            "effects": [
+              { "type": "money", "value": -1000 },
+              { "type": "stat", "component": "condition", "stat": "health", "value": 10 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Push through and work the show",
+        "check": {
+          "stat": "resilience",
+          "dc": 14
+        },
+        "outcomes": {
+          "success": {
+            "narrative": "You tough it out and work the match. The crowd respects your heart.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": 5 },
+              { "type": "stat", "component": "condition", "stat": "health", "value": -5 }
+            ]
+          },
+          "failure": {
+            "narrative": "The injury worsens mid-match. You have to be helped to the back.",
+            "effects": [
+              { "type": "injury", "bodyPart": "Back", "severity": 2, "cause": "Working hurt" },
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": -5 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Take time off to heal",
+        "outcomes": {
+          "success": {
+            "narrative": "You take the time you need. You'll come back stronger.",
+            "effects": [
+              { "type": "stat", "component": "condition", "stat": "health", "value": 20 },
+              { "type": "stat", "component": "lifestyle", "stat": "burnout", "value": -10 }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "scout_notice",
+    "title": "Scout Notice",
+    "requiredTags": ["[Rookie]"],
+    "weight": 3,
+    "cooldownWeeks": 20,
+    "choices": [
+      {
+        "text": "Accept the developmental deal",
+        "outcomes": {
+          "success": {
+            "narrative": "You sign the contract! Your career is about to take off.",
+            "effects": [
+              { "type": "stat", "component": "contract", "stat": "weeklySalary", "value": 300 },
+              { "type": "stat", "component": "contract", "stat": "lengthWeeks", "value": 52 },
+              { "type": "stat", "component": "contract", "stat": "remainingWeeks", "value": 52 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Negotiate for better terms",
+        "check": {
+          "stat": "charisma",
+          "dc": 12
+        },
+        "outcomes": {
+          "success": {
+            "narrative": "Your negotiation pays off. You get a better starting salary.",
+            "effects": [
+              { "type": "stat", "component": "contract", "stat": "weeklySalary", "value": 500 },
+              { "type": "stat", "component": "contract", "stat": "lengthWeeks", "value": 52 },
+              { "type": "stat", "component": "contract", "stat": "remainingWeeks", "value": 52 }
+            ]
+          },
+          "failure": {
+            "narrarian": "Your negotiation fails. They withdraw the offer entirely.",
+            "effects": [
+              { "type": "stat", "component": "condition", "stat": "mentalHealth", "value": -10 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Decline and stay indie",
+        "outcomes": {
+          "success": {
+            "narrative": "You stay true to the indie scene. Your reputation grows in the underground.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": 5 }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "gimmick_stale",
+    "title": "Gimmick Going Stale",
+    "requiredTags": ["[Cold]"],
+    "weight": 4,
+    "cooldownWeeks": 12,
+    "choices": [
+      {
+        "text": "Reinvent yourself with a new gimmick",
+        "check": {
+          "stat": "charisma",
+          "dc": 13
+        },
+        "outcomes": {
+          "success": {
+            "narrative": "The new gimmick is a hit! Fans are talking about you again.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": 10 },
+              { "type": "stat", "component": "popularity", "stat": "momentum", "value": 15 }
+            ]
+          },
+          "failure": {
+            "narrative": "The new gimmick falls flat. Fans prefer the old you.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": -5 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Double down on your current gimmick",
+        "outcomes": {
+          "success": {
+            "narrative": "You lean into the gimmick harder. The dedication is noticed.",
+            "effects": [
+              { "type": "stat", "component": "entertainmentStats", "stat": "acting", "value": 2 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Ask the booker for direction",
+        "outcomes": {
+          "success": {
+            "narrative": "The booker has some ideas. You'll work together on a refresh.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "momentum", "value": 5 }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "social_media_blowup",
+    "title": "Social Media Blowup",
+    "requiredTags": ["[Scandal]"],
+    "weight": 5,
+    "cooldownWeeks": 8,
+    "choices": [
+      {
+        "text": "Apologize publicly",
+        "check": {
+          "stat": "charisma",
+          "dc": 10
+        },
+        "outcomes": {
+          "success": {
+            "narrative": "Your apology is accepted. The scandal dies down quickly.",
+            "effects": [
+              { "type": "tag", "tag": "[Scandal]", "action": "remove" },
+              { "type": "stat", "component": "socialMedia", "stat": "scandalRisk", "value": -20 }
+            ]
+          },
+          "failure": {
+            "narrative": "Your apology seems insincere. The backlash continues.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": -5 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Double down on your statement",
+        "check": {
+          "stat": "charisma",
+          "dc": 16
+        },
+        "outcomes": {
+          "success": {
+            "narrative": "Your boldness pays off. Fans respect that you stand by your words.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": 8 },
+              { "type": "tag", "tag": "[Scandal]", "action": "remove" }
+            ]
+          },
+          "failure": {
+            "narrative": "Digging the hole deeper. The promotion issues a statement distancing from you.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": -15 },
+              { "type": "stat", "component": "contract", "stat": "remainingWeeks", "value": -8 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Delete and go silent",
+        "outcomes": {
+          "success": {
+            "narrative": "The internet has a short attention span. Something else trends tomorrow.",
+            "effects": [
+              { "type": "tag", "tag": "[Scandal]", "action": "remove" },
+              { "type": "stat", "component": "socialMedia", "stat": "followers", "value": -50 }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "van_broke_down",
+    "title": "Van Broke Down",
+    "requiredTags": ["[Rookie]"],
+    "excludedTags": ["[Contract_Expiring]"],
+    "weight": 3,
+    "cooldownWeeks": 10,
+    "choices": [
+      {
+        "text": "Pay for repair out of pocket",
+        "outcomes": {
+          "success": {
+            "narrative": "The van is fixed but your wallet is lighter. You make the show.",
+            "effects": [
+              { "type": "money", "value": -300 },
+              { "type": "stat", "component": "careerStats", "stat": "totalWins", "value": 1 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Hitchhike to the venue",
+        "check": {
+          "stat": "charisma",
+          "dc": 12
+        },
+        "outcomes": {
+          "success": {
+            "narrative": "A kind fan recognizes you and gives you a ride. You arrive just in time.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": 3 },
+              { "type": "stat", "component": "careerStats", "stat": "totalWins", "value": 1 }
+            ]
+          },
+          "failure": {
+            "narrative": "You can't get a ride. You miss the show and anger the promoter.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": -5 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Miss the show",
+        "outcomes": {
+          "success": {
+            "narrative": "You call ahead and explain. The promoter is understanding... this time.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": -2 }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "promoter_no_pay",
+    "title": "Promoter Didn't Pay",
+    "excludedTags": ["[Contract_Expiring]"],
+    "weight": 3,
+    "cooldownWeeks": 12,
+    "choices": [
+      {
+        "text": "Confront the promoter",
+        "check": {
+          "stat": "brawling",
+          "dc": 12
+        },
+        "outcomes": {
+          "success": {
+            "narrative": "You intimidate the promoter into paying. He'll think twice before stiffing wrestlers.",
+            "effects": [
+              { "type": "money", "value": 150 },
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": 3 }
+            ]
+          },
+          "failure": {
+            "narrative": "The confrontation gets heated. Security escorts you out. No pay.",
+            "effects": [
+              { "type": "stat", "component": "condition", "stat": "mentalHealth", "value": -10 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Let it go and move on",
+        "outcomes": {
+          "success": {
+            "narrative": "You decide it's not worth the trouble. Word spreads that this promoter can't be trusted.",
+            "effects": [
+              { "type": "stat", "component": "condition", "stat": "mentalHealth", "value": 5 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Blast them on social media",
+        "check": {
+          "stat": "charisma",
+          "dc": 10
+        },
+        "outcomes": {
+          "success": {
+            "narrative": "Your post goes viral. Other wrestlers share similar stories. The promoter is blacklisted.",
+            "effects": [
+              { "type": "stat", "component": "socialMedia", "stat": "followers", "value": 200 },
+              { "type": "tag", "tag": "[Scandal]", "action": "add" }
+            ]
+          },
+          "failure": {
+            "narrative": "The promoter threatens to sue for defamation. You delete the post.",
+            "effects": [
+              { "type": "stat", "component": "condition", "stat": "mentalHealth", "value": -5 }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "faction_power_struggle",
+    "title": "Faction Power Struggle",
+    "requiredTags": [],
+    "weight": 3,
+    "cooldownWeeks": 16,
+    "choices": [
+      {
+        "text": "Challenge the leader",
+        "check": {
+          "stat": "charisma",
+          "dc": 15
+        },
+        "outcomes": {
+          "success": {
+            "narrative": "You successfully challenge for leadership. The faction is yours now.",
+            "effects": [
+              { "type": "tag", "tag": "[Locker_Room_Leader]", "action": "add" },
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": 10 }
+            ]
+          },
+          "failure": {
+            "narrative": "The challenge fails. You're kicked out of the faction.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "overness", "value": -5 },
+              { "type": "stat", "component": "condition", "stat": "mentalHealth", "value": -10 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Stay loyal to the current leader",
+        "outcomes": {
+          "success": {
+            "narrative": "Your loyalty is noted. The leader trusts you more now.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "momentum", "value": 5 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Leave the faction",
+        "outcomes": {
+          "success": {
+            "narrative": "You leave on good terms. Time to forge your own path.",
+            "effects": [
+              { "type": "stat", "component": "popularity", "stat": "momentum", "value": -5 },
+              { "type": "stat", "component": "condition", "stat": "mentalHealth", "value": 10 }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "mentor_offer",
+    "title": "Mentor Offer",
+    "requiredTags": ["[Veteran]"],
+    "weight": 2,
+    "cooldownWeeks": 20,
+    "choices": [
+      {
+        "text": "Accept the mentor role",
+        "outcomes": {
+          "success": {
+            "narrative": "You take a young wrestler under your wing. Passing on knowledge feels good.",
+            "effects": [
+              { "type": "stat", "component": "careerStats", "stat": "hallOfFamePoints", "value": 5 },
+              { "type": "stat", "component": "entertainmentStats", "stat": "charisma", "value": 2 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Decline - focus on your own career",
+        "outcomes": {
+          "success": {
+            "narrative": "You politely decline. You need to focus on your own matches right now.",
+            "effects": [
+              { "type": "stat", "component": "lifestyle", "stat": "burnout", "value": -5 }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  {
+    "id": "burnout_warning",
+    "title": "Burnout Warning",
+    "requiredTags": ["[Burned_Out]"],
+    "weight": 6,
+    "cooldownWeeks": 8,
+    "choices": [
+      {
+        "text": "Take a vacation",
+        "outcomes": {
+          "success": {
+            "narrative": "The time off does wonders. You return refreshed and ready.",
+            "effects": [
+              { "type": "money", "value": -2000 },
+              { "type": "stat", "component": "lifestyle", "stat": "burnout", "value": -40 },
+              { "type": "stat", "component": "condition", "stat": "mentalHealth", "value": 20 },
+              { "type": "tag", "tag": "[Burned_Out]", "action": "remove" }
+            ]
+          }
+        }
+      },
+      {
+        "text": "See a therapist",
+        "check": {
+          "stat": "psychology",
+          "dc": 10
+        },
+        "outcomes": {
+          "success": {
+            "narrative": "Therapy helps you work through your issues. Mental health is important.",
+            "effects": [
+              { "type": "money", "value": -500 },
+              { "type": "stat", "component": "condition", "stat": "mentalHealth", "value": 30 },
+              { "type": "stat", "component": "lifestyle", "stat": "burnout", "value": -20 }
+            ]
+          },
+          "failure": {
+            "narrative": "You try therapy but you're not ready to open up yet.",
+            "effects": [
+              { "type": "money", "value": -500 }
+            ]
+          }
+        }
+      },
+      {
+        "text": "Ignore it and keep working",
+        "outcomes": {
+          "success": {
+            "narrative": "You push through. But at what cost?",
+            "effects": [
+              { "type": "stat", "component": "condition", "stat": "mentalHealth", "value": -15 },
+              { "type": "stat", "component": "lifestyle", "stat": "burnout", "value": 10 }
+            ]
+          }
+        }
+      }
+    ]
+  }
+]

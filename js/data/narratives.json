@@ -1,0 +1,98 @@
+{
+  "match_start": [
+    "The bell rings and we're underway!",
+    "The crowd is electric as the match begins!",
+    "Here we go! Both competitors ready for battle."
+  ],
+  "strike_success": [
+    "{attacker} connects with a devastating {move}! {defender} staggers backward.",
+    "{attacker} lands the {move} flush! The crowd reacts!",
+    "A stiff {move} from {attacker} catches {defender} right on the jaw!",
+    "{attacker} with a thunderous {move}! {defender} is rocked!"
+  ],
+  "strike_critical_success": [
+    "{attacker} unleashes a BRUTAL {move}! {defender} might be out cold!",
+    "OH MY! {attacker} just destroyed {defender} with that {move}!",
+    "The crowd explodes as {attacker} connects with a perfect {move}!"
+  ],
+  "strike_failure": [
+    "{attacker} goes for the {move} but {defender} sees it coming!",
+    "{defender} ducks under the {move} attempt!",
+    "{attacker} misses the {move} and {defender} capitalizes!"
+  ],
+  "grapple_success": [
+    "{attacker} hoists {defender} up and delivers a powerful {move}!",
+    "Beautiful {move} executed perfectly by {attacker}!",
+    "{defender} is taken down hard with that {move}!"
+  ],
+  "grapple_critical_success": [
+    "{attacker} SLAMS {defender} with incredible force! What impact!",
+    "The canvas shakes as {attacker} delivers a devastating {move}!",
+    "{defender} is broken in half by that incredible {move}!"
+  ],
+  "aerial_success": [
+    "{attacker} takes flight - {move} connects!",
+    "From the top rope! {attacker} hits the {move}!",
+    "{attacker} soars through the air with the {move}!"
+  ],
+  "aerial_critical_success": [
+    "{attacker} FLIES through the air - {move} CONNECTS PERFECTLY! The crowd is on their feet! THIS IS WRESTLING!",
+    "UNBELIEVABLE! {attacker} nails the {move} from the top rope! {defender} is DOWN!",
+    "INCREDIBLE! {attacker} risks it all and connects with the {move}! The arena is shaking!"
+  ],
+  "aerial_failure": [
+    "{attacker} goes up top but {defender} rolls out of the way!",
+    "The {move} misses! {defender} was playing possum!",
+    "Too much hesitation from {attacker} and the opportunity is lost!"
+  ],
+  "aerial_critical_failure": [
+    "{attacker} goes up top for the {move}... AND CRASHES AND BURNS! That could be a serious injury!",
+    "OH NO! {attacker} slips on the top rope - the {move} attempt goes horribly wrong!",
+    "DISASTER! {attacker} crashes to the mat! That was scary!"
+  ],
+  "submission_success": [
+    "{attacker} locks in the {move}! {defender} is in trouble!",
+    "The {move} is cinched in tight! Can {defender} escape?",
+    "{attacker} has the {move} applied - this could be it!"
+  ],
+  "pin_attempt": [
+    "{attacker} goes for the cover!",
+    "Could this be it? {attacker} hooks the leg!",
+    "The pin attempt by {attacker}!"
+  ],
+  "pin_success": [
+    "1... 2... 3! It's over!",
+    "That's it! 1... 2... 3! What a match!",
+    "The referee counts three! We have a winner!"
+  ],
+  "pin_kickout_early": [
+    "Kickout at ONE! {defender} is far from done!",
+    "A count of one and {defender} is already up!",
+    "No! {defender} powers out at one!"
+  ],
+  "pin_kickout_late": [
+    "Kickout at TWO! So close!",
+    "NO! {defender} gets the shoulder up at the last second!",
+    "How did {defender} kick out of that?!"
+  ],
+  "phase_change": [
+    "The match is heating up as we enter the {phase}!",
+    "The intensity increases - it's time for the {phase}!",
+    "Here comes the {phase}! Things are getting serious!"
+  ],
+  "comeback_start": [
+    "{attacker} is starting to fire up! The crowd is behind them!",
+    "The momentum is shifting! {attacker} is making a comeback!",
+    "{defender} can't keep {attacker} down! The comeback is on!"
+  ],
+  "finish_nearfall": [
+    "The crowd thought that was it! What a near fall!",
+    "HOW DID THEY KICK OUT?! The match continues!",
+    "I don't believe it! That was a three count if I've ever seen one!"
+  ],
+  "match_end": [
+    "What a contest! {winner} stands tall!",
+    "An incredible performance by both athletes, but {winner} takes the victory!",
+    "The winner of the match... {winner}!"
+  ]
+}

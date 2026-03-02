@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Mat Life: Professional Wrestling Career Simulator">
+  <title>Mat Life: Wrestling Simulator</title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Bebas+Neue&display=swap"
+    rel="stylesheet">
+</head>
+
+<body>
+  <div id="app">
+    <!-- Character Creation Screen -->
+    <div id="character-creation" class="screen active">
+      <div class="creation-container">
+        <header class="creation-header">
+          <h1>Mat Life</h1>
+          <p class="subtitle">Professional Wrestling Career Simulator</p>
+        </header>
+
+        <div class="creation-steps">
+          <!-- Step 1: Mode Selection -->
+          <div class="step" id="step-mode">
+            <h2>Select Game Mode</h2>
+            <div class="mode-cards">
+              <div class="mode-card" data-mode="WRESTLER">
+                <div class="mode-icon">🤼</div>
+                <h3>Wrestler Mode</h3>
+                <p>Live the life of a professional wrestler from indie circuits to the Hall of Fame.</p>
+              </div>
+              <div class="mode-card" data-mode="BOOKER">
+                <div class="mode-icon">📋</div>
+                <h3>Booker Mode</h3>
+                <p>Run a promotion, book shows, manage talent, and compete for ratings.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 2: Basic Info (Wrestler) -->
+          <div class="step hidden" id="step-basic-info">
+            <h2>Basic Information</h2>
+            <form id="basic-info-form">
+              <div class="form-group">
+                <label for="wrestler-name">Ring Name</label>
+                <input type="text" id="wrestler-name" placeholder="Enter your ring name" required>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="wrestler-age">Age</label>
+                  <input type="range" id="wrestler-age" min="18" max="25" value="20">
+                  <span class="range-value">20</span>
+                </div>
+                <div class="form-group">
+                  <label for="wrestler-gender">Gender</label>
+                  <select id="wrestler-gender">
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="wrestler-hometown">Hometown</label>
+                <input type="text" id="wrestler-hometown" placeholder="City, State/Country">
+              </div>
+            </form>
+          </div>
+
+          <!-- Step 3: Archetype Selection -->
+          <div class="step hidden" id="step-archetype">
+            <h2>Choose Your Style</h2>
+            <div class="archetype-grid">
+              <div class="archetype-card" data-archetype="Technical">
+                <h3>Technical</h3>
+                <div class="stat-preview">
+                  <span>TECH: 16</span>
+                  <span>PSY: 14</span>
+                </div>
+                <p>Chain wrestling, submissions, mat work</p>
+              </div>
+              <div class="archetype-card" data-archetype="High-Flyer">
+                <h3>High-Flyer</h3>
+                <div class="stat-preview">
+                  <span>AER: 16</span>
+                  <span>SPD: 16</span>
+                </div>
+                <p>Dives, flips, high-risk spots</p>
+              </div>
+              <div class="archetype-card" data-archetype="Brawler">
+                <h3>Brawler</h3>
+                <div class="stat-preview">
+                  <span>BRW: 16</span>
+                  <span>STR: 14</span>
+                </div>
+                <p>Strikes, weapon use, brawls</p>
+              </div>
+              <div class="archetype-card" data-archetype="Powerhouse">
+                <h3>Powerhouse</h3>
+                <div class="stat-preview">
+                  <span>STR: 18</span>
+                  <span>RES: 16</span>
+                </div>
+                <p>Power moves, slams, dominant squashes</p>
+              </div>
+              <div class="archetype-card" data-archetype="Strong Style">
+                <h3>Strong Style</h3>
+                <div class="stat-preview">
+                  <span>BRW: 16</span>
+                  <span>TEC: 14</span>
+                </div>
+                <p>Stiff strikes, suplexes, fighting spirit</p>
+              </div>
+              <div class="archetype-card" data-archetype="Lucha Libre">
+                <h3>Lucha Libre</h3>
+                <div class="stat-preview">
+                  <span>AER: 16</span>
+                  <span>SPD: 16</span>
+                </div>
+                <p>Rapid sequences, tradition-heavy</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4: Gimmick Builder -->
+          <div class="step hidden" id="step-gimmick">
+            <h2>Build Your Gimmick</h2>
+            <form id="gimmick-form">
+              <div class="form-group">
+                <label>Alignment</label>
+                <div class="alignment-options">
+                  <label class="alignment-option">
+                    <input type="radio" name="alignment" value="Face" checked>
+                    <span class="alignment-face">😇 Face</span>
+                  </label>
+                  <label class="alignment-option">
+                    <input type="radio" name="alignment" value="Heel">
+                    <span class="alignment-heel">😈 Heel</span>
+                  </label>
+                  <label class="alignment-option">
+                    <input type="radio" name="alignment" value="Tweener">
+                    <span class="alignment-tweener">🎭 Tweener</span>
+                  </label>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="gimmick-template">Gimmick Template</label>
+                <select id="gimmick-template">
+                  <option value="Underdog">The Underdog</option>
+                  <option value="Monster">The Monster</option>
+                  <option value="Showman">The Showman</option>
+                  <option value="Silent">The Silent Badass</option>
+                  <option value="Comedy">The Comedy Act</option>
+                  <option value="Technician">The Pure Wrestler</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="catchphrase">Catchphrase</label>
+                <input type="text" id="catchphrase" placeholder="Your signature line">
+              </div>
+              <div class="form-group">
+                <label for="entrance-style">Entrance Style</label>
+                <select id="entrance-style">
+                  <option value="Simple">Simple Walk</option>
+                  <option value="Pyro">Pyrotechnics</option>
+                  <option value="Lights">Lights Out</option>
+                  <option value="Crowd">Crowd Walk</option>
+                </select>
+              </div>
+            </form>
+          </div>
+
+          <!-- Step 5: Stat Allocation -->
+          <div class="step hidden" id="step-stats">
+            <h2>Distribute Bonus Points</h2>
+            <p class="points-remaining">Points Remaining: <span id="points-remaining">10</span></p>
+            <div class="stat-allocation" id="stat-allocation">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Step 6: Confirmation -->
+          <div class="step hidden" id="step-confirmation">
+            <h2>Confirm Your Character</h2>
+            <div class="character-summary" id="character-summary">
+              <!-- Populated dynamically -->
+            </div>
+            <button id="start-career-btn" class="btn btn-primary btn-large">Start Career</button>
+          </div>
+        </div>
+
+        <div class="creation-nav">
+          <button id="prev-step" class="btn hidden">Previous</button>
+          <button id="next-step" class="btn btn-primary">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Game Screen -->
+    <div id="game-screen" class="screen">
+      <!-- Player Info Bar -->
+      <header id="player-info">
+        <div class="player-info-left">
+          <div class="player-name-section">
+            <h2 id="player-name">Wrestler Name</h2>
+            <div class="player-details">
+              <span id="player-gimmick" class="gimmick">The Gimmick</span>
+              <span id="player-alignment" class="alignment">Face</span>
+            </div>
+          </div>
+          <div class="player-promotion">
+            <span id="promotion-name">No Promotion</span>
+            <span id="player-titles"></span>
+          </div>
+        </div>
+        <div class="player-info-right">
+          <div class="key-stats">
+            <div class="stat-pill">
+              <span class="stat-label">STR</span>
+              <span id="stat-strength" class="stat-value">10</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-label">AER</span>
+              <span id="stat-aerial" class="stat-value">10</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-label">MIC</span>
+              <span id="stat-mic" class="stat-value">10</span>
+            </div>
+          </div>
+          <div class="player-bars">
+            <div class="bar-group">
+              <label>Health</label>
+              <div class="bar health-bar">
+                <div class="bar-fill" id="health-fill" style="width: 100%"></div>
+                <span class="bar-value" id="health-value">100/100</span>
+              </div>
+            </div>
+            <div class="bar-group">
+              <label>Energy</label>
+              <div class="bar energy-bar">
+                <div class="bar-fill" id="energy-fill" style="width: 100%"></div>
+                <span class="bar-value" id="energy-value">100/100</span>
+              </div>
+            </div>
+            <div class="bar-group">
+              <label>Momentum</label>
+              <div class="bar momentum-bar">
+                <div class="bar-fill" id="momentum-fill" style="width: 0%"></div>
+                <span class="bar-value" id="momentum-value">0/100</span>
+              </div>
+            </div>
+          </div>
+          <div class="player-metrics">
+            <div class="metric">
+              <span class="metric-label">Overness</span>
+              <span id="metric-overness" class="metric-value">5</span>
+            </div>
+            <div class="metric">
+              <span class="metric-label">Record</span>
+              <span id="metric-record" class="metric-value">0-0-0</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main Game Area -->
+      <main id="game-area">
+        <!-- Event Log Panel (Left) -->
+        <section id="event-log">
+          <div class="panel-header">
+            <h3>Event Log</h3>
+            <span id="current-date" class="date-display">Monday Morning - Week 1, January</span>
+          </div>
+          <div class="log-container" id="log-container">
+            <!-- Log entries populated dynamically -->
+          </div>
+        </section>
+
+        <!-- Action Panel (Right) -->
+        <section id="action-panel">
+          <div class="panel-header">
+            <h3 id="action-title">Actions</h3>
+          </div>
+          <div class="action-content" id="action-content">
+            <!-- Action content populated dynamically based on tab -->
+          </div>
+        </section>
+      </main>
+
+      <!-- Navigation Bar -->
+      <nav id="nav-bar">
+        <button class="nav-btn active" data-tab="match">
+          <span class="nav-icon">🤼</span>
+          <span class="nav-label">Match/Promo</span>
+        </button>
+        <button class="nav-btn" data-tab="backstage">
+          <span class="nav-icon">🚪</span>
+          <span class="nav-label">Backstage</span>
+        </button>
+        <button class="nav-btn" data-tab="actions">
+          <span class="nav-icon">⚡</span>
+          <span class="nav-label">Actions</span>
+        </button>
+        <button class="nav-btn" data-tab="people">
+          <span class="nav-icon">👥</span>
+          <span class="nav-label">People</span>
+        </button>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Main JavaScript -->
+  <script type="module" src="js/main.js"></script>
+</body>
+
+</html>
