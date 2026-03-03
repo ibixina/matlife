@@ -5,7 +5,7 @@
  */
 
 import { gameStateManager } from '../core/GameStateManager.js';
-import { clamp } from '../core/Utils.js';
+import { clamp, randomInt } from '../core/Utils.js';
 
 /**
  * LifestyleEngine - Manages wrestler lifestyle and burnout
@@ -20,7 +20,7 @@ export class LifestyleEngine {
     const condition = entity.getComponent('condition');
     const financial = entity.getComponent('financial');
     const careerStats = entity.getComponent('careerStats');
-    
+
     if (!lifestyle || !condition) return;
 
     // Calculate burnout delta
@@ -51,6 +51,9 @@ export class LifestyleEngine {
     }
 
     // Recovery factors
+    // Natural burnout decay over time (base recovery)
+    burnoutDelta -= 3;
+
     // Rest days help recovery
     if (matchesPerWeek === 0) {
       burnoutDelta -= 5;
@@ -74,7 +77,7 @@ export class LifestyleEngine {
 
     // Reset weekly counters
     lifestyle.workRate = 0;
-    
+
     // Decay travel fatigue
     lifestyle.travelFatigue = Math.max(0, lifestyle.travelFatigue - 10);
 
@@ -128,7 +131,7 @@ export class LifestyleEngine {
     const identity = entity.getComponent('identity');
     const condition = entity.getComponent('condition');
     const lifestyle = entity.getComponent('lifestyle');
-    
+
     gameStateManager.dispatch('ADD_LOG_ENTRY', {
       entry: {
         category: 'personal',
@@ -141,10 +144,10 @@ export class LifestyleEngine {
     if (condition) {
       condition.mentalHealth -= 20;
     }
-    
+
     // Force rest
     lifestyle.burnout = 50;
-    
+
     // Add forced vacation effect
     entity.addTag('[On_Vacation]');
   }
@@ -158,7 +161,7 @@ export class LifestyleEngine {
     const lifestyle = entity.getComponent('lifestyle');
     const condition = entity.getComponent('condition');
     const financial = entity.getComponent('financial');
-    
+
     if (!lifestyle) return { error: 'No lifestyle component' };
 
     // Cost
@@ -206,7 +209,7 @@ export class LifestyleEngine {
   static seeTherapist(entity) {
     const condition = entity.getComponent('condition');
     const financial = entity.getComponent('financial');
-    
+
     if (!condition) return { error: 'No condition component' };
 
     const cost = 100;
@@ -248,7 +251,7 @@ export class LifestyleEngine {
     if (!lifestyle) return;
 
     let fatigue = 0;
-    
+
     if (fromRegion === toRegion) {
       fatigue = 2; // Same city
     } else if (this.isSameCountry(fromRegion, toRegion)) {
@@ -277,7 +280,7 @@ export class LifestyleEngine {
   static getSummary(entity) {
     const lifestyle = entity.getComponent('lifestyle');
     const condition = entity.getComponent('condition');
-    
+
     if (!lifestyle) return null;
 
     return {
