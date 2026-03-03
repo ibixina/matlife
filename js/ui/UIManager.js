@@ -208,13 +208,11 @@ export class UIManager {
     if (dateDisplay && state.calendar) {
       const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
       const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-      const timeSlots = ['Morning', 'Afternoon', 'Evening', 'Night'];
 
       const day = days[state.calendar.day];
-      const time = timeSlots[state.calendar.timeOfDay];
       const month = months[state.calendar.month - 1];
 
-      let dateText = `${day} ${time} - Week ${state.calendar.week}, ${month}`;
+      let dateText = `${day} - Week ${state.calendar.week}, ${month}`;
 
       // Check if it's a show day for the player
       const player = gameStateManager.getPlayerEntity();

@@ -152,8 +152,7 @@ export class SaveLoadManager {
 
       // Restore promotions
       for (const promoData of data.promotions) {
-        const { id, ...promo } = promoData;
-        state.promotions.set(id, promo);
+        state.promotions.set(promoData.id, promoData);
       }
 
       // Restore championships

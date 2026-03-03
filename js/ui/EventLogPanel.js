@@ -76,10 +76,8 @@ export class EventLogPanel {
     
     if (entry.timestamp) {
       const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-      const timeSlots = ['Morn', 'Aft', 'Eve', 'Night'];
       const day = days[entry.timestamp.day] || 'Day';
-      const time = timeSlots[entry.timestamp.timeOfDay] || '';
-      timestamp.textContent = `${day} ${time}`;
+      timestamp.textContent = day;
     } else {
       timestamp.textContent = 'Now';
     }

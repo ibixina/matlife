@@ -485,7 +485,7 @@ export class CharacterCreation {
       if (contract) {
         contract.promotionId = indiePromo.id;
         contract.weeklySalary = 100;
-        contract.remainingWeeks = 8;
+        contract.remainingWeeks = 1;
         contract.position = 'opener';
       }
 
@@ -521,7 +521,7 @@ export class CharacterCreation {
         if (contract) {
           contract.promotionId = promotion.id;
           contract.weeklySalary = 50 + Math.floor(Math.random() * 150);
-          contract.remainingWeeks = 8;
+          contract.remainingWeeks = 1;
         }
 
         promotion.roster.push(npc.id);

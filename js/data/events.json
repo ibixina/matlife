@@ -636,7 +636,7 @@
               {
                 "type": "sign_contract",
                 "weeklySalary": 300,
-                "lengthWeeks": 52
+                "lengthWeeks": 16
               }
             ]
           }
@@ -655,7 +655,7 @@
               {
                 "type": "sign_contract",
                 "weeklySalary": 500,
-                "lengthWeeks": 52
+                "lengthWeeks": 16
               }
             ]
           },
@@ -671,7 +671,7 @@
             ]
           }
         },
-        "description": "Try to leverage the deal into /week."
+        "description": "Try to leverage the deal into $500/week."
       },
       {
         "text": "Decline and stay indie",
@@ -690,7 +690,7 @@
         }
       }
     ],
-    "description": "A scout from {promotion.name} has noticed your work. They are offering a developmental deal: /week for 52 weeks."
+    "description": "A scout from {promotion.name} has noticed your work. They are offering a developmental deal: $300/week for 16 weeks."
   },
   {
     "id": "gimmick_stale",

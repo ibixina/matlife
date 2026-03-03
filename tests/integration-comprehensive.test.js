@@ -212,10 +212,9 @@ async function runComprehensiveTests() {
         assert(testPlayer.getComponent('contract').remainingWeeks === 1, 'Contract initialized with 1 week remaining');
         assert(testPromotion.roster.includes(testPlayer.id), 'Player added to promotion roster');
 
-        // Simulate a week passing (28 time slots)
+        // Simulate a week passing (7 days)
         // Set the calendar to end of week to trigger contract expiration
         state.calendar.day = 6;
-        state.calendar.timeOfDay = 3;
 
         // Tick to trigger weekly processing and contract expiration
         const pendingBefore = WorldSimulator.tick(state);
@@ -286,7 +285,6 @@ async function runComprehensiveTests() {
 
         // Simulate 28 days (4 weeks) to let no-compete expire
         for (let i = 0; i < 28; i++) {
-            state.calendar.timeOfDay = 0; // Morning - triggers daily processing
             ContractEngine.processNoCompeteDaily(noCompetePlayer);
             
             // Check if no-compete expired

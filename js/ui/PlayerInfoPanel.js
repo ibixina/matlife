@@ -55,9 +55,9 @@ export class PlayerInfoPanel {
     // Update promotion info
     if (contract && contract.promotionId) {
       const promotion = state.promotions.get(contract.promotionId);
-      const isShowDay = gameCalendar.isShowDay(promotion);
       const promotionText = promotion?.name || 'Unknown';
       const positionText = contract.position ? ` (${CardPositionSystem.getPositionInfo(contract.position).name})` : '';
+      const isShowDay = promotion ? gameCalendar.isShowDay(promotion) : false;
       this.updateElement('promotion-name', isShowDay ? `${promotionText}${positionText} 📺 LIVE SHOW!` : `${promotionText}${positionText}`);
     } else {
       this.updateElement('promotion-name', 'Independent');

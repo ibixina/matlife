@@ -37,6 +37,8 @@ export class ActionPanel {
     this.currentEvent = null;
     this.matchView = new MatchView();
     this.inMatch = false;
+    this.currentOffer = null;
+    this.currentPromotion = null;
   }
 
   /**
@@ -73,7 +75,17 @@ export class ActionPanel {
     // Render based on tab
     switch (currentTab) {
       case 'match':
-        this.renderMatchTab(state);
+        // Check if there's an ongoing match and restore it
+        if (this.inMatch && this.matchView.simulator?.matchState && !this.matchView.simulator.matchState.finished) {
+          this.titleEl.textContent = 'Match in Progress';
+          // Rebuild the match UI without restarting the match
+          this.container.innerHTML = '';
+          this.matchView.container = this.container;
+          this.matchView.buildMatchUI();
+          this.matchView.updateDisplay();
+        } else {
+          this.renderMatchTab(state);
+        }
         break;
       case 'backstage':
         this.renderBackstageTab(state);
@@ -100,19 +112,17 @@ export class ActionPanel {
     if (!promotion?.shows?.length) return null;
     const cal = gameStateManager.getStateRef().calendar;
     const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    const TIMES = ['Morning', 'Afternoon', 'Evening', 'Night'];
 
-    let minSlots = Infinity;
+    let minDays = Infinity;
     let nextShow = null;
-    const currentSlot = cal.day * 4 + cal.timeOfDay;
+    const currentDayIndex = cal.day;
 
     for (const show of promotion.shows) {
-      const showSlot = show.day * 4 + show.timeOfDay;
-      let diff = showSlot - currentSlot;
-      if (diff <= 0) diff += 28; // wrap to next week
-      if (diff < minSlots) {
-        minSlots = diff;
-        nextShow = { day: DAYS[show.day], time: TIMES[show.timeOfDay], slots: diff };
+      let diff = show.day - currentDayIndex;
+      if (diff <= 0) diff += 7; // wrap to next week
+      if (diff < minDays) {
+        minDays = diff;
+        nextShow = { day: DAYS[show.day], days: diff };
       }
     }
     return nextShow;
@@ -164,10 +174,13 @@ export class ActionPanel {
       }
 
       // Check for events AFTER ticking and processing match/injury/contract
-      const event = eventManager.generateEvents(player, state);
-      if (event) {
-        this.displayEvent(event);
-        return;
+      // Events have a 30% chance to occur (average every 3-4 days)
+      if (Math.random() < 0.3) {
+        const event = eventManager.generateEvents(player, state);
+        if (event) {
+          this.displayEvent(event);
+          return;
+        }
       }
     }
 
@@ -202,7 +215,7 @@ export class ActionPanel {
       const npcContract = opponent.getComponent('contract');
       if (npcContract) {
         npcContract.promotionId = promotion.id;
-        npcContract.remainingWeeks = 8;
+        npcContract.remainingWeeks = 1;
       }
       if (!promotion.roster) promotion.roster = [];
       promotion.roster.push(opponent.id);
@@ -254,15 +267,15 @@ export class ActionPanel {
         const infoDiv = document.createElement('div');
         infoDiv.className = 'panel mb-md';
         infoDiv.innerHTML = `
-          <p style="font-size: 0.9rem;">📺 Next show: <strong>${nextShow.day} ${nextShow.time}</strong> (${nextShow.slots} time slots away)</p>
+          <p style="font-size: 0.9rem;">📺 Next show: <strong>${nextShow.day}</strong> (${nextShow.days} day${nextShow.days !== 1 ? 's' : ''} away)</p>
         `;
         this.container.appendChild(infoDiv);
       }
 
-      // Advance Time (1 slot)
+      // Advance Time (1 day)
       const advanceCard = this.createActionCard(
         'Advance Time',
-        'Move forward one time slot',
+        'Move forward one day',
         () => {
           const pendingActions = WorldSimulator.tick(gameStateManager.getStateRef());
 
@@ -280,10 +293,13 @@ export class ActionPanel {
             }
           }
 
-          const event = eventManager.generateEvents(player, gameStateManager.getStateRef());
-          if (event) {
-            this.displayEvent(event);
-            return;
+          // Events have a 30% chance to occur (average every 3-4 days)
+          if (Math.random() < 0.3) {
+            const event = eventManager.generateEvents(player, gameStateManager.getStateRef());
+            if (event) {
+              this.displayEvent(event);
+              return;
+            }
           }
 
           this.render(gameStateManager.getStateRef(), 'match');
@@ -310,7 +326,7 @@ export class ActionPanel {
       // Advance time
       const advanceCard = this.createActionCard(
         'Advance Time',
-        'Move forward one time slot',
+        'Move forward one day',
         () => {
           WorldSimulator.tick(gameStateManager.getStateRef());
 
@@ -319,10 +335,13 @@ export class ActionPanel {
             return;
           }
 
-          const event = eventManager.generateEvents(player, gameStateManager.getStateRef());
-          if (event) {
-            this.displayEvent(event);
-            return;
+          // Events have a 30% chance to occur (average every 3-4 days)
+          if (Math.random() < 0.3) {
+            const event = eventManager.generateEvents(player, gameStateManager.getStateRef());
+            if (event) {
+              this.displayEvent(event);
+              return;
+            }
           }
           this.render(gameStateManager.getStateRef(), 'match');
         }
@@ -1160,9 +1179,17 @@ export class ActionPanel {
       const identity = entity.getComponent('identity');
       if (!identity) return;
 
+      const npcContract = entity.getComponent('contract');
+      const position = npcContract?.position
+        ? CardPositionSystem.getPositionInfo(npcContract.position).name
+        : null;
+      const subtitle = position
+        ? `${identity.gimmick || 'Wrestler'} · ${position}`
+        : (identity.gimmick || 'Wrestler');
+
       const card = this.createActionCard(
         identity.name,
-        identity.gimmick || 'Wrestler',
+        subtitle,
         () => {
           this.renderWrestlerDetails(entity);
         }
@@ -1263,12 +1290,6 @@ export class ActionPanel {
     }
   }
 
-  /**
-   * Resolves an event choice
-   * @private
-   * @param {object} event - Event
-   * @param {number} choiceIndex - Choice index
-   */
   resolveEventChoice(event, choiceIndex) {
     const state = gameStateManager.getStateRef();
     const player = gameStateManager.getPlayerEntity();
@@ -1286,11 +1307,76 @@ export class ActionPanel {
       }
     });
 
-    // Clear current event
-    this.currentEvent = null;
+    this.renderEventOutcome(event, result);
+  }
 
-    // Re-render
-    this.render(state, 'match');
+  /**
+   * Renders the outcome of an event
+   * @private
+   */
+  renderEventOutcome(event, result) {
+    if (!this.container) return;
+
+    this.container.innerHTML = '';
+
+    // Update title
+    if (this.titleEl) {
+      this.titleEl.textContent = `${event.title} - Outcome`;
+    }
+
+    // Event display
+    const eventDisplay = document.createElement('div');
+    eventDisplay.className = 'event-display';
+
+    const title = document.createElement('h3');
+    title.textContent = 'Result';
+
+    const narrative = document.createElement('p');
+    narrative.className = 'event-description';
+    narrative.textContent = result.narrative;
+
+    eventDisplay.appendChild(title);
+    eventDisplay.appendChild(narrative);
+
+    if (result.resolutionResult) {
+      const rollInfo = document.createElement('p');
+      rollInfo.className = 'event-roll';
+      rollInfo.style.marginTop = '1rem';
+      rollInfo.style.fontStyle = 'italic';
+      rollInfo.style.color = '#888';
+
+      let resText = 'Success';
+      if (result.resolutionResult.outcome === 'CRITICAL_SUCCESS') resText = 'Critical Success';
+      if (result.resolutionResult.outcome === 'FAILURE') resText = 'Failure';
+      if (result.resolutionResult.outcome === 'CRITICAL_FAILURE') resText = 'Critical Failure';
+
+      const roll = result.resolutionResult.roll;
+      const modifier = result.resolutionResult.modifier || 0;
+      const total = result.resolutionResult.total || (roll + modifier);
+      const dc = result.resolutionResult.dc;
+
+      let rollText = `Roll: ${total} vs DC ${dc} (${resText})`;
+      if (modifier !== 0) {
+        const modSign = modifier >= 0 ? '+' : '';
+        rollText += ` — ${roll}${modSign}${modifier}`;
+      }
+
+      rollInfo.textContent = rollText;
+      eventDisplay.appendChild(rollInfo);
+    }
+
+    this.container.appendChild(eventDisplay);
+
+    // Continue button
+    const continueBtn = document.createElement('button');
+    continueBtn.className = 'btn mt-md';
+    continueBtn.textContent = 'Continue';
+    continueBtn.addEventListener('click', () => {
+      this.currentEvent = null;
+      this.render(gameStateManager.getStateRef(), 'match');
+    });
+
+    this.container.appendChild(continueBtn);
   }
 
   /**
@@ -1785,16 +1871,25 @@ export class ActionPanel {
    * Renders a contract offer from a promotion
    * @private
    */
-  renderContractOffer(player, promotion) {
+  renderContractOffer(player, promotion, existingOffer = null) {
     this.container.innerHTML = '';
 
     const backBtn = document.createElement('button');
     backBtn.className = 'btn mb-md';
     backBtn.textContent = '← Back';
-    backBtn.addEventListener('click', () => this.renderPromotionBrowser(player));
+    backBtn.addEventListener('click', () => {
+      // Clear the stored offer when going back
+      this.currentOffer = null;
+      this.currentPromotion = null;
+      this.renderPromotionBrowser(player);
+    });
     this.container.appendChild(backBtn);
 
-    const offer = ContractEngine.generateOffer(promotion, player);
+    const offer = existingOffer || ContractEngine.generateOffer(promotion, player);
+
+    // Store the current offer and promotion for persistence
+    this.currentOffer = offer;
+    this.currentPromotion = promotion;
 
     const title = document.createElement('h4');
     title.textContent = `📝 Contract Offer: ${promotion.name}`;
@@ -1805,31 +1900,34 @@ export class ActionPanel {
     offerDiv.className = 'panel mb-md';
     offerDiv.innerHTML = `
       <h5>Terms</h5>
-      <p><strong>Weekly Salary:</strong> $${offer.weeklySalary}</p>
-      <p><strong>Length:</strong> ${offer.lengthWeeks} weeks</p>
-      <p><strong>Position:</strong> ${CardPositionSystem.getPositionInfo(offer.position).name}</p>
-      <p><strong>TV Appearance Bonus:</strong> $${offer.tvAppearanceBonus}</p>
-      <p><strong>Creative Control:</strong> ${offer.hasCreativeControl ? 'Yes' : 'No'}</p>
-      <p><strong>Merch Cut:</strong> ${offer.hasMerchCut}%</p>
-      <p><strong>No-Compete:</strong> ${offer.noCompeteWeeks} weeks</p>
-      ${offer.benefits.length > 0 ? `<p><strong>Benefits:</strong> ${offer.benefits.join(', ')}</p>` : ''}
+      <p><strong>Weekly Salary:</strong> $${this.currentOffer.weeklySalary}</p>
+      <p><strong>Length:</strong> ${this.currentOffer.lengthWeeks} weeks</p>
+      <p><strong>Position:</strong> ${CardPositionSystem.getPositionInfo(this.currentOffer.position).name}</p>
+      <p><strong>TV Appearance Bonus:</strong> $${this.currentOffer.tvAppearanceBonus}</p>
+      <p><strong>Creative Control:</strong> ${this.currentOffer.hasCreativeControl ? 'Yes' : 'No'}</p>
+      <p><strong>Merch Cut:</strong> ${this.currentOffer.hasMerchCut}%</p>
+      <p><strong>No-Compete:</strong> ${this.currentOffer.noCompeteWeeks} weeks</p>
+      ${this.currentOffer.benefits.length > 0 ? `<p><strong>Benefits:</strong> ${this.currentOffer.benefits.join(', ')}</p>` : ''}
     `;
     this.container.appendChild(offerDiv);
 
     // Accept button
     const acceptCard = this.createActionCard(
       '✅ Accept Contract',
-      `Sign with ${promotion.name} for $${offer.weeklySalary}/week`,
+      `Sign with ${promotion.name} for $${this.currentOffer.weeklySalary}/week`,
       () => {
-        const result = ContractEngine.signContract(player, offer);
+        const result = ContractEngine.signContract(player, this.currentOffer);
         if (result && (result.success ?? result)) {
           gameStateManager.dispatch('ADD_LOG_ENTRY', {
             entry: {
               category: 'personal',
-              text: `🎉 You signed with ${promotion.name}! Brand changed. New position: ${CardPositionSystem.getPositionInfo(offer.position).name}.`,
+              text: `🎉 You signed with ${promotion.name}! Brand changed. New position: ${CardPositionSystem.getPositionInfo(this.currentOffer.position).name}.`,
               type: 'contract'
             }
           });
+          // Clear the stored offer after signing
+          this.currentOffer = null;
+          this.currentPromotion = null;
         }
         this.render(gameStateManager.getStateRef(), 'career');
       }
@@ -1840,15 +1938,15 @@ export class ActionPanel {
     // Negotiate salary
     const negotiateCard = this.createActionCard(
       '💰 Negotiate Higher Salary',
-      `Try to get +50% salary ($${Math.floor(offer.weeklySalary * 1.5)}/week)`,
+      `Try to get +50% salary ($${Math.floor(this.currentOffer.weeklySalary * 1.5)}/week)`,
       () => {
-        const result = ContractEngine.negotiateClause(player, 'weeklySalary', offer, Math.floor(offer.weeklySalary * 1.5));
-        offer.weeklySalary = result.resultValue;
+        const result = ContractEngine.negotiateClause(player, 'weeklySalary', this.currentOffer, Math.floor(this.currentOffer.weeklySalary * 1.5));
+        this.currentOffer.weeklySalary = result.resultValue;
 
         gameStateManager.dispatch('ADD_LOG_ENTRY', {
           entry: { category: 'personal', text: `💰 ${result.narrative} Salary: $${result.resultValue}/week`, type: 'negotiation' }
         });
-        this.renderContractOffer(player, promotion);
+        this.renderContractOffer(player, promotion, this.currentOffer);
       }
     );
     this.container.appendChild(negotiateCard);
@@ -1861,6 +1959,9 @@ export class ActionPanel {
         gameStateManager.dispatch('ADD_LOG_ENTRY', {
           entry: { category: 'personal', text: `Declined contract offer from ${promotion.name}.`, type: 'contract' }
         });
+        // Clear the stored offer when declining
+        this.currentOffer = null;
+        this.currentPromotion = null;
         this.renderPromotionBrowser(player);
       }
     );

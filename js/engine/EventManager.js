@@ -9,6 +9,7 @@ import ResolutionEngine from './ResolutionEngine.js';
 import { weightedRandom } from '../core/Utils.js';
 import RelationshipManager from './RelationshipManager.js';
 import InjuryEngine from './InjuryEngine.js';
+import ContractEngine from './ContractEngine.js';
 
 /**
  * EventManager - Handles dynamic event generation and resolution
@@ -89,10 +90,33 @@ export class EventManager {
 
     const selectedEvent = weightedRandom(weightedItems);
 
-    // Set cooldown
-    this.cooldowns.set(selectedEvent.id, currentWeek);
+    // Create an instance clone
+    const eventInstance = JSON.parse(JSON.stringify(selectedEvent));
+    eventInstance.context = {};
 
-    return selectedEvent;
+    if (eventInstance.id === 'scout_notice') {
+      let promotions = Array.from(state.promotions.values()).filter(p => p.prestige >= 50);
+      if (promotions.length === 0) {
+        promotions = Array.from(state.promotions.values()); // Fallback to any
+      }
+      if (promotions.length > 0) {
+        eventInstance.context.promotionId = promotions[Math.floor(Math.random() * promotions.length)].id;
+      }
+    }
+
+    // Process top-level description templates if available
+    if (eventInstance.description) {
+      eventInstance.description = this.fillTemplate(eventInstance.description, {
+        player: playerEntity,
+        state,
+        promotionId: eventInstance.context.promotionId
+      });
+    }
+
+    // Set cooldown
+    this.cooldowns.set(eventInstance.id, currentWeek);
+
+    return eventInstance;
   }
 
   /**
@@ -155,14 +179,15 @@ export class EventManager {
     // Apply effects
     if (outcomeData.effects) {
       for (const effect of outcomeData.effects) {
-        EventManager._applyEffect(effect, playerEntity, state);
+        EventManager._applyEffect(effect, playerEntity, state, event.context);
       }
     }
 
     // Fill template variables
     const narrative = this.fillTemplate(outcomeData.narrative, {
       player: playerEntity,
-      state
+      state,
+      promotionId: event.context?.promotionId
     });
 
     return {
@@ -218,8 +243,15 @@ export class EventManager {
    * @param {Entity} entity - Target entity
    * @param {object} state - Game state
    */
-  static _applyEffect(effect, entity, state) {
+  static _applyEffect(effect, entity, state, eventContext = {}) {
     switch (effect.type) {
+      case 'sign_contract':
+        const promotionId = effect.promotionId || eventContext.promotionId;
+        if (promotionId) {
+          ContractEngine.signContract(entity, { promotionId }, 'opener', effect.lengthWeeks, effect.weeklySalary);
+        }
+        break;
+
       case 'stat': {
         // Add delta to existing stat value
         const comp = entity.getComponent(effect.component);

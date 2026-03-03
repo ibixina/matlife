@@ -94,7 +94,8 @@ const PERKS = {
 export class PerkSystem {
   static checkAndUnlockPerks(entity) {
     const careerStats = entity.getComponent('careerStats');
-    const unlockedPerks = entity.getComponent('unlockedPerks') || [];
+    const raw = entity.getComponent('unlockedPerks');
+    const unlockedPerks = Array.isArray(raw) ? raw : [];
     const newUnlocks = [];
 
     for (const [perkId, perk] of Object.entries(PERKS)) {
@@ -103,7 +104,7 @@ export class PerkSystem {
       if (this.meetsRequirement(entity, careerStats, perk.requirement)) {
         unlockedPerks.push(perkId);
         newUnlocks.push(perk);
-        
+
         const identity = entity.getComponent('identity');
         gameStateManager.dispatch('ADD_LOG_ENTRY', {
           entry: {
@@ -154,8 +155,10 @@ export class PerkSystem {
   }
 
   static activatePerk(entity, perkId) {
-    const unlockedPerks = entity.getComponent('unlockedPerks') || [];
-    const activePerks = entity.getComponent('activePerks') || [];
+    const rawUnlocked = entity.getComponent('unlockedPerks');
+    const unlockedPerks = Array.isArray(rawUnlocked) ? rawUnlocked : [];
+    const rawActive = entity.getComponent('activePerks');
+    const activePerks = Array.isArray(rawActive) ? rawActive : [];
 
     if (!unlockedPerks.includes(perkId)) {
       return { error: 'Perk not unlocked' };
@@ -175,17 +178,18 @@ export class PerkSystem {
     this.applyPerkEffects(entity, perkId);
 
     const perk = PERKS[perkId];
-    return { 
-      success: true, 
+    return {
+      success: true,
       message: `Activated: ${perk.name}`,
       remainingSlots: MAX_ACTIVE_PERKS - activePerks.length
     };
   }
 
   static deactivatePerk(entity, perkId) {
-    const activePerks = entity.getComponent('activePerks') || [];
+    const rawActive = entity.getComponent('activePerks');
+    const activePerks = Array.isArray(rawActive) ? rawActive : [];
     const index = activePerks.indexOf(perkId);
-    
+
     if (index === -1) {
       return { error: 'Perk not active' };
     }
@@ -238,8 +242,10 @@ export class PerkSystem {
   }
 
   static getAvailablePerks(entity) {
-    const unlockedPerks = entity.getComponent('unlockedPerks') || [];
-    const activePerks = entity.getComponent('activePerks') || [];
+    const rawUnlocked = entity.getComponent('unlockedPerks');
+    const unlockedPerks = Array.isArray(rawUnlocked) ? rawUnlocked : [];
+    const rawActive = entity.getComponent('activePerks');
+    const activePerks = Array.isArray(rawActive) ? rawActive : [];
 
     return {
       unlocked: unlockedPerks.map(id => PERKS[id]).filter(Boolean),

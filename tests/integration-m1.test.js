@@ -161,8 +161,8 @@ async function runIntegrationTest() {
     prestige: 15,
     roster: [player.id, ...npcWrestlers.map(n => n.id)],
     shows: [
-      { day: 5, timeOfDay: 2 }, // Saturday Evening
-      { day: 6, timeOfDay: 2 }  // Sunday Evening
+      { day: 5 }, // Saturday
+      { day: 6 }  // Sunday
     ],
     stylePreference: 'Mixed'
   };

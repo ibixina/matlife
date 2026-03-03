@@ -115,7 +115,7 @@ export class AIPromotionSystem {
 
     // Calculate show rating
     const showRating = totalRating / numMatches;
-    
+
     // Store show result
     if (!promotion.recentShows) promotion.recentShows = [];
     promotion.recentShows.push({
@@ -123,7 +123,7 @@ export class AIPromotionSystem {
       rating: showRating,
       matches: numMatches
     });
-    
+
     // Keep only last 4 shows
     if (promotion.recentShows.length > 4) {
       promotion.recentShows.shift();
@@ -169,10 +169,10 @@ export class AIPromotionSystem {
    */
   static calculateEffectiveStats(stats, popularity) {
     if (!stats) return 50;
-    
+
     const overness = popularity?.overness || 50;
     const avgStats = (stats.brawling + stats.technical + stats.aerial + stats.psychology) / 4;
-    
+
     return (avgStats * 0.7) + (overness * 0.3);
   }
 
@@ -183,7 +183,7 @@ export class AIPromotionSystem {
   static getChemistry(wrestler1, wrestler2) {
     const relationship = RelationshipManager.getRelationship(wrestler1.id, wrestler2.id);
     if (!relationship) return 0;
-    
+
     // High affinity = better chemistry
     return relationship.affinity / 50;
   }
@@ -235,7 +235,7 @@ export class AIPromotionSystem {
     if (!promotion.recentShows || promotion.recentShows.length === 0) return;
 
     const avgRating = promotion.recentShows.reduce((a, b) => a + b.rating, 0) / promotion.recentShows.length;
-    
+
     // Prestige change based on show ratings
     let prestigeChange = 0;
     if (avgRating >= 4) prestigeChange = 2;
@@ -274,8 +274,8 @@ export class AIPromotionSystem {
     for (const entity of state.entities.values()) {
       const contract = entity.getComponent('contract');
       const popularity = entity.getComponent('popularity');
-      
-      if (!contract?.promotionId && popularity?.overness >= 20) {
+
+      if (!contract?.promotionId && !entity.isPlayer && popularity?.overness >= 20) {
         freeAgents.push({ entity, overness: popularity.overness });
       }
     }
@@ -284,16 +284,16 @@ export class AIPromotionSystem {
 
     // Sort by overness and pick top candidates
     freeAgents.sort((a, b) => b.overness - a.overness);
-    
+
     // 30% chance to sign someone if we found candidates
     if (Math.random() < 0.3 && freeAgents.length > 0) {
       const candidate = freeAgents[0];
       const contract = candidate.entity.getComponent('contract');
-      
+
       if (contract) {
         contract.promotionId = promotion.id;
         contract.weeklySalary = tier.salaryRange[0] + Math.floor(Math.random() * (tier.salaryRange[1] - tier.salaryRange[0]));
-        contract.remainingWeeks = 8;
+        contract.remainingWeeks = 1;
         promotion.roster.push(candidate.entity.id);
 
         // Log signing
@@ -321,11 +321,11 @@ export class AIPromotionSystem {
 
     // Find pairs with extreme affinity (high or low)
     const roster = promotion.roster.map(id => state.entities.get(id)).filter(e => e);
-    
+
     for (let i = 0; i < roster.length; i++) {
       for (let j = i + 1; j < roster.length; j++) {
         const relationship = RelationshipManager.getRelationship(roster[i].id, roster[j].id);
-        
+
         // Start feud if affinity is very negative
         if (relationship && relationship.affinity <= -50) {
           if (!state.feuds.has(`${roster[i].id}_${roster[j].id}`)) {
@@ -342,7 +342,7 @@ export class AIPromotionSystem {
    */
   static startFeud(wrestler1, wrestler2, promotion, state) {
     const feudId = [wrestler1.id, wrestler2.id].sort().join('_');
-    
+
     const feud = {
       id: feudId,
       entityA: wrestler1.id,
@@ -396,7 +396,7 @@ export class AIPromotionSystem {
       // Release lowest performer
       underperformers.sort((a, b) => a.score - b.score);
       const toRelease = underperformers[0].entity;
-      
+
       const contract = toRelease.getComponent('contract');
       if (contract) {
         contract.promotionId = null;
@@ -435,10 +435,10 @@ export class AIPromotionSystem {
     for (let i = 0; i < count; i++) {
       const tierKey = tiers[i];
       const tier = PROMOTION_TIERS[tierKey];
-      
+
       const prestige = randomInt(tier.prestigeRange[0], tier.prestigeRange[1]);
       const rosterSize = randomInt(tier.rosterSize[0], tier.rosterSize[1]);
-      
+
       const promotion = {
         id: `promo_${i}`,
         name: names[i],
@@ -462,19 +462,19 @@ export class AIPromotionSystem {
   static generateShowSchedule(tier) {
     if (tier === 'global' || tier === 'national') {
       return [
-        { day: 5, timeOfDay: 2 }, // Saturday Evening
+        { day: 5 }, // Saturday
       ];
     } else if (tier === 'regional') {
       return [
-        { day: 5, timeOfDay: 2 }, // Saturday Evening
-        { day: 6, timeOfDay: 2 }, // Sunday Evening
+        { day: 5 }, // Saturday
+        { day: 6 }, // Sunday
       ];
     } else {
       // Indie - shows multiple times a week
       return [
-        { day: 2, timeOfDay: 2 }, // Wednesday Evening
-        { day: 5, timeOfDay: 2 }, // Saturday Evening
-        { day: 6, timeOfDay: 2 }, // Sunday Evening
+        { day: 2 }, // Wednesday
+        { day: 5 }, // Saturday
+        { day: 6 }, // Sunday
       ];
     }
   }

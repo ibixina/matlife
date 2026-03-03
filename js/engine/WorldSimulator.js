@@ -31,7 +31,7 @@ import { rollD20, randomInt } from '../core/Utils.js';
  */
 export class WorldSimulator {
   /**
-   * Advances the world by one time slot
+   * Advances the world by one day
    * @param {object} state - Current game state
    * @returns {PendingAction[]} List of pending actions requiring player input
    */
@@ -45,16 +45,14 @@ export class WorldSimulator {
     TagEngine.runAllEntities(state);
 
     // 3. Tick injuries for all entities (once per day)
-    if (state.calendar.timeOfDay === 0) {
-      this._tickAllInjuries(state);
-      
-      // Process no-compete clauses daily
-      this._processNoCompeteClauses(state);
-    }
+    this._tickAllInjuries(state);
+
+    // Process no-compete clauses daily
+    this._processNoCompeteClauses(state);
 
     // 4. If new week, process weekly systems
     const calendar = state.calendar;
-    if (calendar.timeOfDay === 0 && calendar.day === 0) {
+    if (calendar.day === 0) {
       // Process finances for player
       const player = gameStateManager.getPlayerEntity();
       if (player) {
@@ -131,7 +129,7 @@ export class WorldSimulator {
         CardPositionSystem.evaluateAllRosters(state);
       }
 
-      // Process AI promotions (weekly, not every time slot)
+      // Process AI promotions (weekly, not every day)
       this._processAIPromotions(state);
     }
 
@@ -278,7 +276,7 @@ export class WorldSimulator {
       if (npcContract) {
         npcContract.promotionId = promotion.id;
         npcContract.weeklySalary = 100;
-        npcContract.remainingWeeks = 8;
+        npcContract.remainingWeeks = 1;
       }
       promotion.roster.push(npc.id);
       opponents = [npc];
@@ -307,7 +305,7 @@ export class WorldSimulator {
         // Find best championship (most prestigious) where current champion is not player
         const stateRef = gameStateManager.getStateRef();
         const availableTitles = championships
-          .filter(c => !c.currentChampionId || c.currentChampionId !== player.id)
+          .filter(c => c && (!c.currentChampionId || c.currentChampionId !== player.id))
           .sort((a, b) => b.prestige - a.prestige);
 
         if (availableTitles.length > 0) {

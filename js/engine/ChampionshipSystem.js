@@ -336,6 +336,7 @@ export class ChampionshipSystem {
 
     // Find best championship to challenge for
     const availableTitles = championships.filter(c => {
+      if (!c) return false;
       if (!c.currentChampionId) return true;
       return c.currentChampionId !== wrestler.id;
     });

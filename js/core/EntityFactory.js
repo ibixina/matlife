@@ -217,7 +217,7 @@ export class EntityFactory {
       age: 18 + Math.floor(Math.random() * 7), // 18-25
       hometown: region,
       gender: Math.random() > 0.5 ? 'Male' : 'Female',
-      gimmick: `Indie ${archetype}`,
+      gimmick: archetype,
       alignment,
       archetype,
       catchphrase: '',

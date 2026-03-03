@@ -140,7 +140,6 @@ class GameStateManager {
         month: config.startMonth ?? 1,
         week: config.startWeek ?? 1,
         day: config.startDay ?? 0, // 0 = Monday
-        timeOfDay: config.startTimeOfDay ?? 0, // 0 = Morning
         absoluteWeek: 0
       },
       player: {

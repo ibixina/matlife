@@ -11,7 +11,7 @@ import { clamp } from '../core/Utils.js';
 /**
  * Maximum contract length in weeks
  */
-const MAX_CONTRACT_LENGTH = 16;
+const MAX_CONTRACT_LENGTH = 1;
 
 /**
  * ContractEngine - Handles all contract-related operations
@@ -37,8 +37,8 @@ export class ContractEngine {
       promotionId: promotion.id,
       promotionName: promotion.name,
       weeklySalary: baseSalary,
-      lengthWeeks: Math.min(8, MAX_CONTRACT_LENGTH), // 8 week default, capped at max
-      remainingWeeks: Math.min(8, MAX_CONTRACT_LENGTH),
+      lengthWeeks: 1,
+      remainingWeeks: 1,
       hasCreativeControl: false,
       hasMerchCut: wrestlerPop >= 50 ? 5 : 0, // 5% default for popular wrestlers
       tvAppearanceBonus: Math.floor(baseSalary * 0.5),
@@ -276,9 +276,9 @@ export class ContractEngine {
 
     // Check for no-compete clause
     if (contract.noCompeteActive && contract.noCompeteWeeksRemaining > 0) {
-      return { 
-        success: false, 
-        error: `Cannot sign new contract: No-compete clause active (${contract.noCompeteWeeksRemaining} weeks remaining)` 
+      return {
+        success: false,
+        error: `Cannot sign new contract: No-compete clause active (${contract.noCompeteWeeksRemaining} weeks remaining)`
       };
     }
 
@@ -324,17 +324,34 @@ export class ContractEngine {
       }
     }
 
+    // Store old promotion ID before updating
+    const oldPromotionId = contract.promotionId;
+
+    // Update contract component via dispatch to trigger UI refresh
+    gameStateManager.dispatch('UPDATE_COMPONENT', {
+      entityId: wrestler.id,
+      componentName: 'contract',
+      updates: {
+        promotionId: offer.promotionId,
+        promotionName: offer.promotionName,
+        weeklySalary: offer.weeklySalary,
+        lengthWeeks: offer.lengthWeeks,
+        remainingWeeks: offer.remainingWeeks,
+        hasCreativeControl: offer.hasCreativeControl,
+        hasMerchCut: offer.hasMerchCut,
+        tvAppearanceBonus: offer.tvAppearanceBonus,
+        noCompeteWeeks: offer.noCompeteWeeks,
+        position: offer.position
+      }
+    });
+
     // Remove from old promotion roster if switching
-    if (contract.promotionId && contract.promotionId !== offer.promotionId) {
-      const oldPromotion = state.promotions.get(contract.promotionId);
+    if (oldPromotionId && oldPromotionId !== offer.promotionId) {
+      const oldPromotion = state.promotions.get(oldPromotionId);
       if (oldPromotion) {
         oldPromotion.roster = oldPromotion.roster.filter(id => id !== wrestler.id);
       }
     }
-
-    // Update contract component
-    Object.assign(contract, offer);
-    contract.promotionName = offer.promotionName;
 
     // Add to new roster
     const promotion = state.promotions.get(offer.promotionId);
@@ -404,9 +421,14 @@ export class ContractEngine {
     contract.remainingWeeks--;
 
     if (contract.remainingWeeks <= 0) {
-      // Contract expired
-      const promotion = gameStateManager.getStateRef().promotions.get(contract.promotionId);
+      if (!wrestler.isPlayer) {
+        // NPCs auto-renew to keep rosters populated
+        contract.remainingWeeks = MAX_CONTRACT_LENGTH;
+        return { expired: false, renewed: true };
+      }
 
+      // Player contract expired
+      const promotion = gameStateManager.getStateRef().promotions.get(contract.promotionId);
       if (promotion) {
         promotion.roster = promotion.roster.filter(id => id !== wrestler.id);
       }

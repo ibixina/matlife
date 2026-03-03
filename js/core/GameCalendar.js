@@ -11,7 +11,6 @@ import { gameStateManager } from './GameStateManager.js';
  */
 export class GameCalendar {
   constructor() {
-    this.TIME_SLOTS = ['Morning', 'Afternoon', 'Evening', 'Night'];
     this.DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     this.MONTHS = [
       'January', 'February', 'March', 'April', 'May', 'June',
@@ -21,47 +20,41 @@ export class GameCalendar {
   }
 
   /**
-   * Advances time by one slot
+   * Advances time by one day
    * @returns {object} The new calendar state
    */
   tick() {
     const state = gameStateManager.getStateRef();
     const calendar = state.calendar;
 
-    // Increment time of day
-    calendar.timeOfDay++;
+    // Increment day
+    calendar.day++;
 
-    // Check if we need to advance day
-    if (calendar.timeOfDay >= this.TIME_SLOTS.length) {
-      calendar.timeOfDay = 0;
-      calendar.day++;
+    // Check if we need to advance week
+    if (calendar.day >= this.DAYS.length) {
+      calendar.day = 0;
+      calendar.week++;
 
-      // Check if we need to advance week
-      if (calendar.day >= this.DAYS.length) {
-        calendar.day = 0;
-        calendar.week++;
+      // Check if we need to advance month
+      if (calendar.week > 4) {
+        calendar.week = 1;
+        calendar.month++;
 
-        // Check if we need to advance month
-        if (calendar.week > 4) {
-          calendar.week = 1;
-          calendar.month++;
-
-          // Check if we need to advance year
-          if (calendar.month > 12) {
-            calendar.month = 1;
-            calendar.year++;
-            
-            // Trigger year end callback
-            if (this.onYearEnd) {
-              this.onYearEnd(calendar.year);
-            }
+        // Check if we need to advance year
+        if (calendar.month > 12) {
+          calendar.month = 1;
+          calendar.year++;
+          
+          // Trigger year end callback
+          if (this.onYearEnd) {
+            this.onYearEnd(calendar.year);
           }
         }
       }
     }
 
     // Increment absolute week counter
-    if (calendar.timeOfDay === 0 && calendar.day === 0) {
+    if (calendar.day === 0) {
       calendar.absoluteWeek++;
     }
 
@@ -76,8 +69,7 @@ export class GameCalendar {
     const state = gameStateManager.getStateRef();
     const calendar = state.calendar;
     
-    return `${this.DAYS[calendar.day]}, ${this.TIME_SLOTS[calendar.timeOfDay]} - ` +
-           `Week ${calendar.week}, ${this.MONTHS[calendar.month - 1]}, Year ${calendar.year}`;
+    return `${this.DAYS[calendar.day]} - Week ${calendar.week}, ${this.MONTHS[calendar.month - 1]}, Year ${calendar.year}`;
   }
 
   /**
@@ -100,10 +92,7 @@ export class GameCalendar {
     
     if (!promotion.shows) return false;
 
-    return promotion.shows.some(show => 
-      show.day === calendar.day && 
-      show.timeOfDay === calendar.timeOfDay
-    );
+    return promotion.shows.some(show => show.day === calendar.day);
   }
 
   /**
@@ -132,14 +121,7 @@ export class GameCalendar {
     return this.DAYS[state.calendar.day];
   }
 
-  /**
-   * Gets the current time slot name
-   * @returns {string} Time slot name
-   */
-  getCurrentTimeSlot() {
-    const state = gameStateManager.getStateRef();
-    return this.TIME_SLOTS[state.calendar.timeOfDay];
-  }
+
 
   /**
    * Serializes the calendar state
