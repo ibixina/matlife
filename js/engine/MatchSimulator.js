@@ -62,7 +62,13 @@ export class MatchSimulator {
    */
   startMatch(config) {
     this.config = config;
-    const { wrestler1, wrestler2, matchType = 'Standard Singles', bookedWinner, finishType } = config;
+    const wrestler1 = config.wrestler1 ?? config.player ?? config.wrestler ?? config.actor;
+    const wrestler2 = config.wrestler2 ?? config.opponent ?? config.target;
+    const { matchType = 'Standard Singles', bookedWinner, finishType } = config;
+
+    if (!wrestler1 || !wrestler2) {
+      throw new Error('Match config must include both wrestlers');
+    }
 
     // Initialize match state
     this.matchState = {
@@ -110,13 +116,16 @@ export class MatchSimulator {
    */
   getCurrentPhase() {
     const turn = this.matchState.turn;
+    let currentPhase = null;
     for (let i = 0; i < PHASES.length; i++) {
       const phase = PHASES[i];
       if (turn >= phase.turns[0] && turn <= phase.turns[1]) {
-        return { ...phase, index: i };
+        currentPhase = { ...phase, index: i };
       }
     }
-    // Default to finish phase if beyond normal range
+    if (currentPhase) {
+      return currentPhase;
+    }
     return { ...PHASES[PHASES.length - 1], index: PHASES.length - 1 };
   }
 
@@ -159,8 +168,7 @@ export class MatchSimulator {
     attacker.stamina = Math.max(0, attacker.stamina - staminaCost);
 
     // Determine attacker stat
-    const attackerStat = this.getMoveStat(move, attacker.entity);
-    const defenderStat = defender.entity.getComponent('inRingStats').selling;
+    const attackerStatKey = this.getMoveStatKey(move);
 
     // Resolution check
     const context = {
@@ -172,13 +180,13 @@ export class MatchSimulator {
       actor: attacker.entity,
       action: move.name,
       target: defender.entity,
-      stat: attackerStat,
+      stat: attackerStatKey,
       dc: move.baseDC,
       context
     });
 
     // Process outcome
-    let result = this.processMoveOutcome(resolution, move, attacker, defender, phase);
+    let result = this.processMoveOutcome(resolution, move, attacker, defender, phase, attackerId);
     
     // Increment turn
     this.matchState.turn++;
@@ -212,9 +220,22 @@ export class MatchSimulator {
    * Processes the outcome of a move
    * @private
    */
-  processMoveOutcome(resolution, move, attacker, defender, phase) {
+  processMoveOutcome(resolution, move, attacker, defender, phase, attackerId) {
     const attackerName = attacker.entity.getComponent('identity').name;
     const defenderName = defender.entity.getComponent('identity').name;
+
+    if (defender.stamina <= 10) {
+      const narrative = `1... 2... 3! ${attackerName} gets the pin on the exhausted ${defenderName}!`;
+      this.finishMatch(attackerId);
+      this.logEvent('match', narrative);
+      return {
+        winner: attackerId,
+        narrative,
+        contested: null,
+        matchEnded: true,
+        matchState: this.getPublicState()
+      };
+    }
     
     let narrative = '';
     let damage = 0;
@@ -316,6 +337,19 @@ export class MatchSimulator {
     const attackerName = attacker.entity.getComponent('identity').name;
     const defenderName = defender.entity.getComponent('identity').name;
 
+    if (defender.stamina <= 10) {
+      const narrative = `1... 2... 3! ${attackerName} gets the pin on the exhausted ${defenderName}!`;
+      this.finishMatch(attackerId);
+      this.logEvent('match', narrative);
+      return {
+        winner: attackerId,
+        narrative,
+        contested: null,
+        matchEnded: true,
+        matchState: this.getPublicState()
+      };
+    }
+
     // Contested check
     const contested = ResolutionEngine.resolveContested({
       actor: attacker.entity,
@@ -368,35 +402,11 @@ export class MatchSimulator {
     // Calculate match rating
     this.matchState.matchRating = this.calculateMatchRating();
 
-    // Update career stats
-    const winnerCareer = winner.entity.getComponent('careerStats');
-    const loserCareer = loser.entity.getComponent('careerStats');
-
-    if (winnerCareer) {
-      winnerCareer.totalWins++;
-      winnerCareer.consecutiveWins = (winnerCareer.consecutiveWins || 0) + 1;
-    }
-
-    if (loserCareer) {
-      loserCareer.totalLosses++;
-      loserCareer.consecutiveWins = 0;
-    }
-
-    // Log finish
+    // Log match end
     const winnerName = winner.entity.getComponent('identity').name;
     this.logEvent('match', `Match over! Winner: ${winnerName}`, { 
       winner: winnerName,
       rating: this.matchState.matchRating
-    });
-
-    // Add to game log
-    gameStateManager.dispatch('ADD_LOG_ENTRY', {
-      entry: {
-        category: 'match',
-        text: `${winnerName} defeated ${loser.entity.getComponent('identity').name} (${this.matchState.matchRating.toFixed(1)} stars)`,
-        type: 'match-result',
-        rating: this.matchState.matchRating
-      }
     });
   }
 
@@ -438,8 +448,7 @@ export class MatchSimulator {
    * Gets the appropriate stat for a move
    * @private
    */
-  getMoveStat(move, entity) {
-    const stats = entity.getComponent('inRingStats');
+  getMoveStatKey(move) {
     const statMap = {
       strike: 'brawling',
       grapple: 'technical',
@@ -448,7 +457,7 @@ export class MatchSimulator {
       finisher: 'psychology'
     };
     
-    return stats[statMap[move.type]] || 10;
+    return statMap[move.type] || 'brawling';
   }
 
   /**
@@ -491,7 +500,34 @@ export class MatchSimulator {
       ...(phase.allowedMoveTypes.includes('finisher') ? moveset.finishers || [] : [])
     ];
 
-    return allMoves.filter(move => phase.allowedMoveTypes.includes(move.type));
+    const availableMoves = allMoves.filter(move => phase.allowedMoveTypes.includes(move.type));
+
+    if (availableMoves.length > 0) {
+      return availableMoves;
+    }
+
+    const defaultMoves = [
+      {
+        name: 'Basic Strike',
+        type: 'strike',
+        staminaCost: 5,
+        damageBase: 8,
+        spectacle: 2,
+        injuryRisk: 0.02,
+        baseDC: 8
+      },
+      {
+        name: 'Simple Grapple',
+        type: 'grapple',
+        staminaCost: 6,
+        damageBase: 10,
+        spectacle: 2,
+        injuryRisk: 0.03,
+        baseDC: 9
+      }
+    ];
+
+    return defaultMoves.filter(move => phase.allowedMoveTypes.includes(move.type));
   }
 
   /**

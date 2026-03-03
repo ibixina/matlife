@@ -15,10 +15,11 @@ html {
 }
 
 body {
-  font-family: var(--font-primary, 'Inter', sans-serif);
-  background-color: var(--bg-primary, #0a0a0f);
-  color: var(--text-primary, #e8e8e8);
-  line-height: 1.5;
+  font-family: 'Inter', sans-serif;
+  font-size: 17px;
+  background-color: var(--bg-primary, #000000);
+  color: var(--text-primary, #f0f0f0);
+  line-height: 1.6;
   min-height: 100vh;
 }
 
@@ -55,10 +56,15 @@ a {
   color: inherit;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-display, 'Bebas Neue', sans-serif);
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Press Start 2P', monospace;
   font-weight: 400;
-  line-height: 1.2;
+  line-height: 1.6;
 }
 
 p {
@@ -71,7 +77,7 @@ p {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent-primary, #e94560);
+  outline: 2px solid var(--accent-primary, #ffff00);
   outline-offset: 2px;
 }
 
@@ -82,20 +88,20 @@ p {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg-secondary, #12121a);
+  background: var(--bg-secondary, #111111);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-color, #2a2a3e);
-  border-radius: 4px;
+  background: var(--border-color, #444444);
+  border-radius: var(--radius-sm, 0px);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-primary, #e94560);
+  background: var(--accent-primary, #ffff00);
 }
 
 /* Selection styling */
 ::selection {
-  background: var(--accent-primary, #e94560);
-  color: white;
+  background: var(--accent-primary, #ffff00);
+  color: #000000;
 }

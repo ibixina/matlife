@@ -96,7 +96,7 @@
 
 .mode-card.selected {
   border-color: var(--accent-primary);
-  background: rgba(233, 69, 96, 0.1);
+  background: rgba(255, 255, 0, 0.2);
 }
 
 .mode-icon {
@@ -139,7 +139,7 @@
 
 .archetype-card.selected {
   border-color: var(--accent-secondary);
-  background: rgba(255, 200, 87, 0.1);
+  background: rgba(255, 0, 0, 0.2);
 }
 
 .archetype-card h3 {
@@ -304,7 +304,7 @@
 
 .nav-btn.active {
   background: var(--accent-primary);
-  color: white;
+  color: #000000;
 }
 
 .nav-icon {
@@ -321,27 +321,27 @@
   #game-screen.active {
     grid-template-columns: 1fr;
   }
-  
+
   #game-area {
     grid-template-columns: 1fr;
     grid-template-rows: 1fr 1fr;
   }
-  
+
   #player-info {
     flex-direction: column;
     gap: var(--space-md);
     text-align: center;
   }
-  
+
   .player-info-right {
     flex-direction: column;
     gap: var(--space-md);
   }
-  
+
   .archetype-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .mode-cards {
     grid-template-columns: 1fr;
   }
@@ -351,11 +351,11 @@
   .creation-container {
     padding: var(--space-md);
   }
-  
+
   .creation-steps {
     padding: var(--space-md);
   }
-  
+
   .nav-label {
     display: none;
   }

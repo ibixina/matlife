@@ -5,6 +5,8 @@
  */
 
 import { gameStateManager } from '../core/GameStateManager.js';
+import { gameCalendar } from '../core/GameCalendar.js';
+import { saveLoadManager } from '../engine/SaveLoadManager.js';
 import PlayerInfoPanel from './PlayerInfoPanel.js';
 import EventLogPanel from './EventLogPanel.js';
 import ActionPanel from './ActionPanel.js';
@@ -37,8 +39,109 @@ export class UIManager {
     // Initialize panels
     this.panels.navigationBar.init(this);
 
-    // Initial render
-    this.render(gameStateManager.getStateRef());
+    // Setup menu controls
+    this.setupMenuControls();
+  }
+
+  /**
+   * Sets up menu and save/load controls
+   * @private
+   */
+  setupMenuControls() {
+    // Menu button
+    const menuBtn = document.getElementById('menu-btn');
+    const menuModal = document.getElementById('menu-modal');
+    const closeMenuBtn = document.getElementById('close-menu');
+
+    if (menuBtn && menuModal) {
+      menuBtn.addEventListener('click', () => {
+        menuModal.classList.remove('hidden');
+        this.updateSaveStatus();
+      });
+
+      closeMenuBtn?.addEventListener('click', () => {
+        menuModal.classList.add('hidden');
+      });
+
+      // Close on backdrop click
+      menuModal.addEventListener('click', (e) => {
+        if (e.target === menuModal) {
+          menuModal.classList.add('hidden');
+        }
+      });
+    }
+
+    // Save button
+    const saveBtn = document.getElementById('save-game-btn');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', async () => {
+        const success = await saveLoadManager.save();
+        this.showSaveStatus(success ? 'Game saved successfully!' : 'Failed to save game.', success);
+      });
+    }
+
+    // Load button
+    const loadBtn = document.getElementById('load-game-btn');
+    if (loadBtn) {
+      loadBtn.addEventListener('click', async () => {
+        const success = await saveLoadManager.load();
+        if (success) {
+          this.showSaveStatus('Game loaded successfully!', true);
+          this.showScreen('game-screen');
+          this.render(gameStateManager.getStateRef());
+        } else {
+          this.showSaveStatus('No save found or failed to load.', false);
+        }
+      });
+    }
+
+    // Delete button
+    const deleteBtn = document.getElementById('delete-save-btn');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', async () => {
+        if (confirm('Are you sure you want to delete your save? This cannot be undone.')) {
+          const success = await saveLoadManager.deleteSave();
+          this.showSaveStatus(success ? 'Save deleted.' : 'Failed to delete save.', success);
+        }
+      });
+    }
+  }
+
+  /**
+   * Updates save status display
+   * @private
+   */
+  async updateSaveStatus() {
+    const saveInfo = await saveLoadManager.getSaveInfo();
+    const statusEl = document.getElementById('save-status');
+
+    if (statusEl) {
+      if (saveInfo) {
+        statusEl.innerHTML = `
+          <p><strong>Save Found</strong></p>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">
+            ${saveInfo.playerName} - ${saveInfo.inGameDate}<br>
+            Saved: ${new Date(saveInfo.timestamp).toLocaleDateString()}
+          </p>
+        `;
+      } else {
+        statusEl.innerHTML = '<p>No save found</p>';
+      }
+    }
+  }
+
+  /**
+   * Shows a save status message
+   * @private
+   */
+  showSaveStatus(message, success) {
+    const statusEl = document.getElementById('save-status');
+    if (statusEl) {
+      statusEl.innerHTML = `<p style="color: ${success ? 'var(--color-health)' : 'var(--color-injury)'}">${message}</p>`;
+
+      // Update save info after a brief delay
+      setTimeout(() => this.updateSaveStatus(), 1500);
+    }
   }
 
   /**
@@ -46,6 +149,7 @@ export class UIManager {
    * @param {object} state - Current game state
    */
   render(state) {
+    if (!state) return;
     // Render player info panel
     this.panels.playerInfo.render(state);
 
@@ -65,10 +169,10 @@ export class UIManager {
    */
   switchTab(tabName) {
     this.currentTab = tabName;
-    
+
     // Update navigation bar
     this.panels.navigationBar.setActiveTab(tabName);
-    
+
     // Re-render action panel
     this.panels.actionPanel.render(gameStateManager.getStateRef(), tabName);
   }
@@ -105,12 +209,30 @@ export class UIManager {
       const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
       const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
       const timeSlots = ['Morning', 'Afternoon', 'Evening', 'Night'];
-      
+
       const day = days[state.calendar.day];
       const time = timeSlots[state.calendar.timeOfDay];
       const month = months[state.calendar.month - 1];
-      
-      dateDisplay.textContent = `${day} ${time} - Week ${state.calendar.week}, ${month}`;
+
+      let dateText = `${day} ${time} - Week ${state.calendar.week}, ${month}`;
+
+      // Check if it's a show day for the player
+      const player = gameStateManager.getPlayerEntity();
+      if (player) {
+        const contract = player.getComponent('contract');
+        if (contract?.promotionId) {
+          const promotion = state.promotions.get(contract.promotionId);
+          const isShowDay = promotion ? gameCalendar.isShowDay(promotion) : false;
+          if (isShowDay) {
+            dateText += ' 📺 SHOW DAY!';
+            dateDisplay.style.color = 'var(--accent-primary)';
+          } else {
+            dateDisplay.style.color = '';
+          }
+        }
+      }
+
+      dateDisplay.textContent = dateText;
     }
   }
 

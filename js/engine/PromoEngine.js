@@ -72,16 +72,16 @@ export class PromoEngine {
 
     // Check for required perks
     if (toneConfig.requiresPerk && !actor.hasTag(toneConfig.requiresPerk)) {
-      return { 
+      return {
         error: `Requires ${toneConfig.requiresPerk} perk`,
-        allowed: false 
+        allowed: false
       };
     }
 
     // Get stats
     const stats = actor.getComponent('entertainmentStats');
     const primaryStat = stats[toneConfig.stat] || 10;
-    const secondaryStat = toneConfig.secondaryStat ? 
+    const secondaryStat = toneConfig.secondaryStat ?
       (actor.getComponent('inRingStats')[toneConfig.secondaryStat] || stats[toneConfig.secondaryStat] || 10) : 0;
 
     // Calculate effective stat
@@ -173,7 +173,7 @@ export class PromoEngine {
     // Generate narrative
     const winnerName = winner.getComponent('identity').name;
     const loserName = loser.getComponent('identity').name;
-    
+
     let narrative;
     if (margin > 10) {
       narrative = `${winnerName} absolutely destroyed ${loserName} on the mic! The crowd is buzzing!`;
@@ -201,7 +201,7 @@ export class PromoEngine {
   static calculatePromoEffects(resolution, toneConfig, actor, context) {
     const identity = actor.getComponent('identity');
     const popularity = actor.getComponent('popularity');
-    
+
     let momentumGained = 0;
     let overnessGained = 0;
     let narrative = '';
@@ -213,7 +213,7 @@ export class PromoEngine {
       case 'CRITICAL_SUCCESS':
         momentumGained = 20;
         overnessGained = 10;
-        
+
         if (toneConfig.risk === 'extreme') {
           narrative = `${name} just cut the promo of a lifetime! The entire industry is talking about it!`;
           // Pipebomb special effect
@@ -233,7 +233,7 @@ export class PromoEngine {
         momentumGained = 0;
         overnessGained = -2;
         narrative = `${name}'s promo falls a bit flat. The crowd isn't feeling it.`;
-        
+
         // Comedic failure is worse
         if (toneConfig.name === 'Comedic') {
           narrative = `${name} tries to be funny... awkward silence. The bit bombs.`;
@@ -245,7 +245,7 @@ export class PromoEngine {
         momentumGained = -10;
         overnessGained = -5;
         narrative = `${name} completely botches the promo. It's painful to watch.`;
-        
+
         if (toneConfig.risk === 'extreme') {
           narrative = `${name}'s pipebomb goes horribly wrong. This could hurt their career.`;
           overnessGained = -15;
@@ -268,10 +268,26 @@ export class PromoEngine {
       popularity.overness = Math.max(0, Math.min(100, popularity.overness + overnessGained));
     }
 
+    // Grant charisma XP for successful promos
+    const entertainmentStats = actor.getComponent('entertainmentStats');
+    if (entertainmentStats && (resolution.outcome === 'SUCCESS' || resolution.outcome === 'CRITICAL_SUCCESS')) {
+      const charismaGain = resolution.outcome === 'CRITICAL_SUCCESS' ? 0.5 : 0.2;
+      entertainmentStats.charisma = Math.min(20, entertainmentStats.charisma + charismaGain);
+    }
+
+    // Burnout cost for promos
+    const lifestyle = actor.getComponent('lifestyle');
+    if (lifestyle) {
+      const burnoutCost = toneConfig.risk === 'extreme' ? 5 : toneConfig.risk === 'high' ? 3 : 2;
+      lifestyle.burnout = Math.min(100, (lifestyle.burnout || 0) + burnoutCost);
+    }
+
     return {
       narrative,
       momentumGained,
       overnessGained,
+      charismaGained: (resolution.outcome === 'SUCCESS' || resolution.outcome === 'CRITICAL_SUCCESS') ?
+        (resolution.outcome === 'CRITICAL_SUCCESS' ? 0.5 : 0.2) : 0,
       consequences
     };
   }
@@ -282,6 +298,9 @@ export class PromoEngine {
    * @returns {object[]} Available tones
    */
   static getAvailableTones(wrestler) {
+    if (!wrestler || typeof wrestler.hasTag !== 'function') {
+      return [];
+    }
     return Object.entries(PROMO_TONES).map(([key, config]) => ({
       key,
       ...config,

@@ -139,14 +139,17 @@ export class EventManager {
       'CRITICAL_FAILURE': 'critFailure'
     };
 
-    // Fallback to lowercase just in case some logic passes strings directly
     const outcomeKey = outcomeMap[outcome] || outcome.toLowerCase();
 
-    // Get the outcome data
-    const outcomeData = choice.outcomes[outcomeKey];
+    // Graceful fallback: crits fall back to their base outcome, then to any first outcome
+    const fallbackKey = (outcome === 'CRITICAL_SUCCESS') ? 'success' : 'failure';
+    const outcomeData = choice.outcomes[outcomeKey]
+      || choice.outcomes[fallbackKey]
+      || Object.values(choice.outcomes)[0];
+
     if (!outcomeData) {
-      console.error(`No outcome data for: ${outcome} (mapped to ${outcomeKey})`, choice.outcomes);
-      throw new Error(`No outcome data for: ${outcome}`);
+      console.warn(`No outcome data for event choice, skipping effects.`);
+      return { narrative: 'Something happened...', outcome, resolutionResult, effects: [] };
     }
 
     // Apply effects
@@ -217,14 +220,23 @@ export class EventManager {
    */
   static _applyEffect(effect, entity, state) {
     switch (effect.type) {
-      case 'stat':
-        // Update component stat
-        gameStateManager.dispatch('UPDATE_COMPONENT', {
-          entityId: entity.id,
-          componentName: effect.component,
-          updates: { [effect.stat]: effect.value }
-        });
+      case 'stat': {
+        // Add delta to existing stat value
+        const comp = entity.getComponent(effect.component);
+        if (comp) {
+          const current = comp[effect.stat];
+          // Boolean stats (e.g. pedUsage) are set directly; numeric stats are incremented
+          const newVal = typeof current === 'boolean' || typeof effect.value === 'boolean'
+            ? effect.value
+            : (current ?? 0) + effect.value;
+          gameStateManager.dispatch('UPDATE_COMPONENT', {
+            entityId: entity.id,
+            componentName: effect.component,
+            updates: { [effect.stat]: newVal }
+          });
+        }
         break;
+      }
 
       case 'relationship':
         // Update relationship

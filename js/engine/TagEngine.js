@@ -16,7 +16,7 @@ const TAG_RULES = [
     condition: (entity, state) => {
       // Check if entity holds any title
       for (const championship of state.championships.values()) {
-        if (championship.currentHolder === entity.id) {
+        if (championship.currentChampion === entity.id) {
           return true;
         }
       }
@@ -179,7 +179,7 @@ const PERK_RULES = [
       }
       
       // Check if highest avg relationship in promotion
-      const promotion = this._getEntityPromotion(entity, state);
+      const promotion = TagEngine._getEntityPromotion(entity, state);
       if (!promotion) return false;
       
       const avgAffinity = RelationshipManager.getAverageAffinity(entity.id, promotion.roster);

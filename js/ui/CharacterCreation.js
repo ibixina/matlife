@@ -6,6 +6,9 @@
 
 import { gameStateManager } from '../core/GameStateManager.js';
 import EntityFactory from '../core/EntityFactory.js';
+import { capitalize } from '../core/Utils.js';
+import AIPromotionSystem from '../engine/AIPromotionSystem.js';
+import ChampionshipSystem from '../engine/ChampionshipSystem.js';
 
 /**
  * CharacterCreation - Handles the character creation flow
@@ -21,7 +24,7 @@ export class CharacterCreation {
       bonusPoints: {},
       pointsRemaining: 10
     };
-    
+
     this.steps = [
       'step-mode',
       'step-basic-info',
@@ -295,7 +298,7 @@ export class CharacterCreation {
    */
   adjustStat(stat, delta) {
     const current = this.formData.bonusPoints[stat] || 0;
-    
+
     if (delta > 0 && this.formData.pointsRemaining > 0 && current < 5) {
       this.formData.bonusPoints[stat] = current + 1;
       this.formData.pointsRemaining--;
@@ -426,7 +429,8 @@ export class CharacterCreation {
   startCareer() {
     // Create player entity
     const player = EntityFactory.createPlayerWrestler(this.formData);
-    
+    player.isPlayer = true;
+
     // Initialize game state
     gameStateManager.initializeState({
       playerId: player.id,
@@ -439,31 +443,9 @@ export class CharacterCreation {
     // Add player to state
     gameStateManager.dispatch('ADD_ENTITY', { entity: player });
 
-    // Create starting promotion if needed
+    // Create the wrestling world with multiple promotions
     if (this.formData.mode === 'WRESTLER') {
-      // Create indie promotion
-      const indiePromotion = {
-        id: 'indie_promo_start',
-        name: 'Indie Wrestling Alliance',
-        region: 'USA',
-        prestige: 15,
-        roster: [player.id],
-        shows: [
-          { day: 5, timeOfDay: 2 }, // Saturday Evening
-          { day: 6, timeOfDay: 2 }  // Sunday Evening
-        ],
-        stylePreference: 'Mixed'
-      };
-      
-      gameStateManager.getStateRef().promotions.set(indiePromotion.id, indiePromotion);
-      
-      // Give player a basic contract
-      const contract = player.getComponent('contract');
-      if (contract) {
-        contract.promotionId = indiePromotion.id;
-        contract.weeklySalary = 100;
-        contract.remainingWeeks = 52;
-      }
+      this.createWrestlingWorld(player);
     }
 
     // Log start
@@ -480,11 +462,72 @@ export class CharacterCreation {
       this.uiManager.showScreen('game-screen');
     }
   }
-}
 
-function capitalize(str) {
-  if (!str) return '';
-  return str.charAt(0).toUpperCase() + str.slice(1);
+  /**
+   * Creates the wrestling world with multiple promotions
+   * @private
+   */
+  createWrestlingWorld(player) {
+    const state = gameStateManager.getStateRef();
+
+    // Generate 6 promotions across different tiers
+    AIPromotionSystem.generateInitialPromotions(state, 6);
+
+    // Assign player to an indie promotion
+    const indiePromo = Array.from(state.promotions.values())
+      .find(p => p.prestige <= 20);
+
+    if (indiePromo) {
+      indiePromo.roster.push(player.id);
+
+      // Give player a basic contract
+      const contract = player.getComponent('contract');
+      if (contract) {
+        contract.promotionId = indiePromo.id;
+        contract.weeklySalary = 100;
+        contract.remainingWeeks = 8;
+        contract.position = 'opener';
+      }
+
+      // Generate NPC roster for all promotions
+      this.generateNPCRosters(state);
+    }
+
+    // Initialize championships for all promotions
+    for (const promotion of state.promotions.values()) {
+      ChampionshipSystem.initializePromotionChampionships(promotion);
+    }
+  }
+
+  /**
+   * Generates NPC rosters for all promotions
+   * @private
+   */
+  generateNPCRosters(state) {
+    for (const promotion of state.promotions.values()) {
+      // Calculate how many wrestlers needed
+      const targetSize = promotion.prestige <= 15 ? 6 :
+        promotion.prestige <= 40 ? 15 :
+          promotion.prestige <= 70 ? 30 : 50;
+
+      const needed = targetSize - promotion.roster.length;
+
+      for (let i = 0; i < needed; i++) {
+        const npc = EntityFactory.generateRandomIndie(promotion.region);
+        gameStateManager.dispatch('ADD_ENTITY', { entity: npc });
+
+        // Give them a contract
+        const contract = npc.getComponent('contract');
+        if (contract) {
+          contract.promotionId = promotion.id;
+          contract.weeklySalary = 50 + Math.floor(Math.random() * 150);
+          contract.remainingWeeks = 8;
+        }
+
+        promotion.roster.push(npc.id);
+      }
+    }
+  }
 }
 
 export default CharacterCreation;

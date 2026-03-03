@@ -4,7 +4,8 @@
  * Top bar with player stats and info
  */
 
-import { capitalize } from '../core/Utils.js';
+import { gameCalendar } from '../core/GameCalendar.js';
+import CardPositionSystem from '../engine/CardPositionSystem.js';
 
 /**
  * PlayerInfoPanel - Renders the player info header
@@ -42,31 +43,43 @@ export class PlayerInfoPanel {
     if (identity) {
       this.updateElement('player-name', identity.name);
       this.updateElement('player-gimmick', identity.gimmick || 'Unknown');
-      
+
       const alignmentEl = document.getElementById('player-alignment');
       if (alignmentEl) {
-        alignmentEl.textContent = identity.alignment;
-        alignmentEl.className = `alignment alignment-${identity.alignment.toLowerCase()}`;
+        const alignment = identity.alignment || 'Face';
+        alignmentEl.textContent = alignment;
+        alignmentEl.className = `alignment alignment-${alignment.toLowerCase()}`;
       }
     }
 
     // Update promotion info
     if (contract && contract.promotionId) {
       const promotion = state.promotions.get(contract.promotionId);
-      this.updateElement('promotion-name', promotion?.name || 'Unknown');
+      const isShowDay = gameCalendar.isShowDay(promotion);
+      const promotionText = promotion?.name || 'Unknown';
+      const positionText = contract.position ? ` (${CardPositionSystem.getPositionInfo(contract.position).name})` : '';
+      this.updateElement('promotion-name', isShowDay ? `${promotionText}${positionText} 📺 LIVE SHOW!` : `${promotionText}${positionText}`);
     } else {
       this.updateElement('promotion-name', 'Independent');
     }
 
+    // Update age display
+    if (identity && identity.age) {
+      const ageEl = document.getElementById('player-age');
+      if (ageEl) {
+        ageEl.textContent = `Age: ${identity.age}`;
+      }
+    }
+
     // Update key stats
     if (physicalStats) {
-      this.updateElement('stat-strength', physicalStats.strength);
+      this.updateElement('stat-strength', Math.round(physicalStats.strength));
     }
     if (inRingStats) {
-      this.updateElement('stat-aerial', inRingStats.aerial);
+      this.updateElement('stat-aerial', Math.round(inRingStats.aerial));
     }
     if (entertainmentStats) {
-      this.updateElement('stat-mic', entertainmentStats.micSkills);
+      this.updateElement('stat-mic', Math.round(entertainmentStats.micSkills));
     }
 
     // Update bars
@@ -111,12 +124,12 @@ export class PlayerInfoPanel {
   updateBar(type, current, max) {
     const fill = document.getElementById(`${type}-fill`);
     const value = document.getElementById(`${type}-value`);
-    
+
     if (fill) {
       const percentage = Math.max(0, Math.min(100, (current / max) * 100));
       fill.style.width = `${percentage}%`;
     }
-    
+
     if (value) {
       value.textContent = `${Math.round(current)}/${max}`;
     }

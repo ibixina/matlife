@@ -79,6 +79,13 @@ export class FinancialEngine {
       expenseBreakdown.livingExpenses = financial.weeklyExpenses;
     }
 
+    // 6b. Weekly road costs for contracted talent
+    if (contract?.promotionId) {
+      const roadCosts = 25;
+      totalExpenses += roadCosts;
+      expenseBreakdown.roadCosts = roadCosts;
+    }
+
     // 7. Agent Fees (percentage of income)
     if (financial.agent && financial.agent.percentage > 0) {
       const agentFee = totalIncome * (financial.agent.percentage / 100);

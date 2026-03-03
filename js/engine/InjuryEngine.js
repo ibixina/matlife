@@ -143,7 +143,7 @@ export class InjuryEngine {
     // Process each injury
     condition.injuries = condition.injuries.filter(injury => {
       // Apply recovery multiplier
-      const effectiveRecovery = 1 * recoveryMultiplier;
+      const effectiveRecovery = 1 / recoveryMultiplier;
       injury.daysRemaining -= effectiveRecovery;
 
       if (injury.daysRemaining <= 0) {
@@ -169,7 +169,7 @@ export class InjuryEngine {
     const injury = condition.injuries.find(i => i.bodyPart === bodyPart);
     if (!injury) return false;
 
-    injury.severity++;
+    injury.severity = Math.min(5, injury.severity + 1);
 
     // If severity was 4 and is now 5, make it chronic
     if (injury.severity === 5 && !injury.chronic) {
@@ -231,16 +231,31 @@ export class InjuryEngine {
       condition.injuries = [];
     }
 
+    const isKnownPart = BODY_PARTS.includes(bodyPart);
+    const daysRemaining = isKnownPart ? this.calculateRecovery(severity) : Math.max(1, severity);
+
     const injury = {
       bodyPart,
       severity,
-      daysRemaining: this.calculateRecovery(severity),
+      daysRemaining,
       chronic: false,
       cause,
       dateAcquired: { ...gameStateManager.getStateRef().calendar }
     };
 
     condition.injuries.push(injury);
+
+    const healthLoss = Math.max(1, severity * 5);
+    condition.health = Math.max(0, condition.health - healthLoss);
+  }
+
+  /**
+   * Processes daily recovery for an entity
+   * @param {Entity} entity - Entity to process
+   * @returns {string[]} Array of healed body parts
+   */
+  static processDailyRecovery(entity) {
+    return this.tickInjuries(entity);
   }
 
   /**

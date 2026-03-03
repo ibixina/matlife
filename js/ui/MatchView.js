@@ -25,17 +25,18 @@ export class MatchView {
    */
   show(matchConfig, container) {
     this.container = container;
+    this.config = matchConfig;
     this.playerSide = matchConfig.playerSide || 'wrestler1';
-    
+
     // Clear container
     container.innerHTML = '';
-    
+
     // Start match
     this.currentMatch = this.simulator.startMatch(matchConfig);
-    
+
     // Build UI
     this.buildMatchUI();
-    
+
     // Initial render
     this.updateDisplay();
   }
@@ -63,7 +64,7 @@ export class MatchView {
       grid-template-columns: 1fr 1fr;
       gap: 1rem;
     `;
-    
+
     wrestlerBars.innerHTML = `
       <div class="wrestler-status" id="wrestler1-status">
         <h4 id="w1-name">Wrestler 1</h4>
@@ -96,8 +97,29 @@ export class MatchView {
         </div>
       </div>
     `;
-    
+
     matchContainer.appendChild(wrestlerBars);
+
+    // Title indicator (if applicable)
+    if (this.config?.isTitleMatch && this.config?.titleId) {
+      const state = gameStateManager.getStateRef();
+      const title = state.championships.get(this.config.titleId);
+      if (title) {
+        const titleHeader = document.createElement('div');
+        titleHeader.style.cssText = `
+          text-align: center;
+          padding: 0.25rem;
+          background: var(--accent-primary);
+          color: black;
+          font-weight: bold;
+          font-size: 0.75rem;
+          margin-bottom: -0.5rem;
+          z-index: 1;
+        `;
+        titleHeader.textContent = `🏆 TITLE MATCH: ${title.name.toUpperCase()} 🏆`;
+        matchContainer.appendChild(titleHeader);
+      }
+    }
 
     // Phase indicator
     const phaseIndicator = document.createElement('div');
@@ -179,7 +201,7 @@ export class MatchView {
     document.getElementById('w1-stamina').style.width = `${state.wrestler1.stamina}%`;
     document.getElementById('w1-health').style.width = `${state.wrestler1.health}%`;
     document.getElementById('w1-momentum').style.width = `${state.wrestler1.momentum}%`;
-    
+
     document.getElementById('w2-stamina').style.width = `${state.wrestler2.stamina}%`;
     document.getElementById('w2-health').style.width = `${state.wrestler2.health}%`;
     document.getElementById('w2-momentum').style.width = `${state.wrestler2.momentum}%`;
@@ -225,10 +247,10 @@ export class MatchView {
     container.innerHTML = '';
 
     // Get available moves for player
-    const playerWrestler = this.playerSide === 'wrestler1' ? 
-      this.simulator.matchState.wrestler1 : 
+    const playerWrestler = this.playerSide === 'wrestler1' ?
+      this.simulator.matchState.wrestler1 :
       this.simulator.matchState.wrestler2;
-    
+
     const moves = this.simulator.getAvailableMoves(playerWrestler.entity);
 
     if (moves.length === 0) {
@@ -285,7 +307,7 @@ export class MatchView {
   executeMove(move) {
     // Player's turn
     const result = this.simulator.simulateTurn(this.playerSide, move);
-    
+
     if (result.error) {
       console.error(result.error);
       return;
@@ -306,7 +328,7 @@ export class MatchView {
   executeAIMove() {
     const aiSide = this.playerSide === 'wrestler1' ? 'wrestler2' : 'wrestler1';
     const aiWrestler = this.simulator.matchState[aiSide];
-    
+
     const moves = this.simulator.getAvailableMoves(aiWrestler.entity);
     if (moves.length === 0) {
       moves.push(...this.getDefaultMoves());
@@ -314,7 +336,7 @@ export class MatchView {
 
     // Simple AI: pick random move
     const move = moves[Math.floor(Math.random() * moves.length)];
-    
+
     this.simulator.simulateTurn(aiSide, move);
     this.updateDisplay();
 
@@ -334,7 +356,7 @@ export class MatchView {
    */
   attemptPin() {
     const result = this.simulator.attemptPin(this.playerSide);
-    
+
     if (result.error) {
       // Show error in log
       const log = document.getElementById('play-by-play');
@@ -387,10 +409,15 @@ export class MatchView {
    */
   endMatch() {
     // Dispatch event to return to normal game flow
-    const event = new CustomEvent('matchEnded', { 
-      detail: { 
-        winner: this.simulator.matchState.winner,
-        rating: this.simulator.matchState.matchRating 
+    const winnerSide = this.simulator.matchState.winner;
+    const winnerEntity = this.simulator.matchState[winnerSide]?.entity;
+    const winnerName = winnerEntity?.getComponent('identity')?.name || 'Unknown';
+    const event = new CustomEvent('matchEnded', {
+      detail: {
+        winnerSide,
+        winnerEntityId: winnerEntity?.id || null,
+        winnerName,
+        rating: this.simulator.matchState.matchRating
       }
     });
     document.dispatchEvent(event);

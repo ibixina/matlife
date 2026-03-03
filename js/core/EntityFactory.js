@@ -189,8 +189,8 @@ export class EntityFactory {
       name: jsonEntry.name,
       prestige: jsonEntry.prestige || 50,
       promotionId: jsonEntry.promotionId || null,
-      currentHolder: jsonEntry.currentHolder || null,
-      reignHistory: jsonEntry.reignHistory || []
+      currentChampion: jsonEntry.currentChampion || jsonEntry.currentHolder || null,
+      reigns: jsonEntry.reigns || jsonEntry.reignHistory || []
     };
   }
 
@@ -202,16 +202,16 @@ export class EntityFactory {
   static generateRandomIndie(region = 'USA') {
     const archetypes = ['Technical', 'High-Flyer', 'Brawler', 'Powerhouse', 'Strong Style', 'Lucha Libre'];
     const alignments = ['Face', 'Heel', 'Tweener'];
-    
+
     const archetype = archetypes[Math.floor(Math.random() * archetypes.length)];
     const alignment = alignments[Math.floor(Math.random() * alignments.length)];
-    
+
     const firstNames = ['Mike', 'John', 'Chris', 'Dave', 'Alex', 'Sam', 'Jordan', 'Casey', 'Riley', 'Morgan'];
     const lastNames = ['Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez'];
-    
+
     const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
     const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-    
+
     const formData = {
       name: `${firstName} ${lastName}`,
       age: 18 + Math.floor(Math.random() * 7), // 18-25
@@ -224,7 +224,9 @@ export class EntityFactory {
       entranceStyle: 'Simple'
     };
 
-    return this.createPlayerWrestler(formData);
+    const entity = this.createPlayerWrestler(formData);
+    entity.isPlayer = false;
+    return entity;
   }
 }
 
