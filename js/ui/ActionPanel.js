@@ -2027,6 +2027,94 @@ export class ActionPanel {
         );
         affairCard.style.borderLeft = '3px solid #f44336';
         this.container.appendChild(affairCard);
+
+        const roughCard = this.createActionCard(
+          'Rough Sex',
+          'Intense, aggressive physical encounter with passion and intensity',
+          () => this.roughSexEncounter(player, entity)
+        );
+        roughCard.style.borderLeft = '3px solid #9c27b0';
+        this.container.appendChild(roughCard);
+
+        const publicCard = this.createActionCard(
+          'Risky Public Play',
+          'Explicit encounter in a risky location - backstage, locker room, or venue',
+          () => this.publicRiskEncounter(player, entity)
+        );
+        publicCard.style.borderLeft = '3px solid #ff5722';
+        this.container.appendChild(publicCard);
+
+        const kinkCard = this.createActionCard(
+          'Explore Kinks',
+          'Experiment with fetishes, roleplay, and dominant/submissive dynamics',
+          () => this.kinkExploration(player, entity)
+        );
+        kinkCard.style.borderLeft = '3px solid #673ab7';
+        this.container.appendChild(kinkCard);
+
+        const groupCard = this.createActionCard(
+          'Group Activity',
+          'Invite others to join for an explicit multi-partner encounter',
+          () => this.groupEncounter(player, entity)
+        );
+        groupCard.style.borderLeft = '3px solid #795548';
+        this.container.appendChild(groupCard);
+
+        const seduceCard = this.createActionCard(
+          'Seduce in the Ring',
+          'Explicit encounter during or after a match - in the ropes or on the mat',
+          () => this.ringSeduction(player, entity)
+        );
+        seduceCard.style.borderLeft = '3px solid #ec407a';
+        this.container.appendChild(seduceCard);
+
+        const showerCard = this.createActionCard(
+          'Shower Together',
+          'Intimate encounter in the locker room showers with steam and soap',
+          () => this.showerEncounter(player, entity)
+        );
+        showerCard.style.borderLeft = '3px solid #00bcd4';
+        this.container.appendChild(showerCard);
+
+        const quickieCard = this.createActionCard(
+          'Quick Hookup',
+          'Fast, urgent encounter - no time for romance, just pure need',
+          () => this.quickHookup(player, entity)
+        );
+        quickieCard.style.borderLeft = '3px solid #ff9800';
+        this.container.appendChild(quickieCard);
+
+        const hotelCard = this.createActionCard(
+          'Hotel Room All-Nighter',
+          'Book a room and spend the entire night exploring every desire',
+          () => this.hotelAllNighter(player, entity)
+        );
+        hotelCard.style.borderLeft = '3px solid #4caf50';
+        this.container.appendChild(hotelCard);
+
+        const oilCard = this.createActionCard(
+          'Oil Wrestling',
+          'Slippery, sensual wrestling match that turns into much more',
+          () => this.oilWrestling(player, entity)
+        );
+        oilCard.style.borderLeft = '3px solid #ffc107';
+        this.container.appendChild(oilCard);
+
+        const spankingCard = this.createActionCard(
+          'Spanking Session',
+          'Discipline and punishment play with impact and control',
+          () => this.spankingSession(player, entity)
+        );
+        spankingCard.style.borderLeft = '3px solid #e91e63';
+        this.container.appendChild(spankingCard);
+
+        const videoCard = this.createActionCard(
+          'Make Private Video',
+          'Record an explicit video together - risky but incredibly intimate',
+          () => this.privateVideo(player, entity)
+        );
+        videoCard.style.borderLeft = '3px solid #9c27b0';
+        this.container.appendChild(videoCard);
       }
 
       const commitCard = this.createActionCard(
@@ -2041,8 +2129,20 @@ export class ActionPanel {
         'Risky: cheat if you are already committed to someone else',
         () => this.startSecretAffair(player, entity)
       );
-      cheatCard.style.borderLeft = '3px solid #ff9800';
+      cheatCard.style.borderLeft = '3px solid #ff5722';
       this.container.appendChild(cheatCard);
+
+      // Break up option - always available if in a romantic relationship
+      const rel = this._getRel(player.id, entity.id);
+      if (rel && rel.type === 'romantic') {
+        const breakupCard = this.createActionCard(
+          'Break Up',
+          rel.committed ? 'End your committed relationship' : 'End your romantic connection',
+          () => this.breakUp(player, entity)
+        );
+        breakupCard.style.borderLeft = '3px solid #f44336';
+        this.container.appendChild(breakupCard);
+      }
     }
   }
 
@@ -2596,6 +2696,1003 @@ export class ActionPanel {
         }
       });
     }
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Rough sex encounter (NSFW)
+   * @private
+   */
+  roughSexEncounter(player, target) {
+    const rel = this._getRel(player.id, target.id);
+    const gate = (rel.romanceLevel || 0) >= 35 || rel.affinity >= 45;
+    if (!gate) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '💬 The trust level is not high enough for rough intimacy. Build more chemistry first.',
+          type: 'social'
+        }
+      });
+      this.renderWrestlerDetails(target);
+      return;
+    }
+
+    const result = ResolutionEngine.resolve({
+      actor: player,
+      action: 'Rough Sex Encounter',
+      stat: 'strength',
+      dc: 14,
+      context: {}
+    });
+
+    const targetName = target.getComponent('identity')?.name || 'them';
+    let narrative;
+    let romanceDelta;
+    let trustDelta;
+    let affinityDelta;
+
+    switch(result.outcome) {
+      case 'CRITICAL_SUCCESS':
+        narrative = `You and ${targetName} share an intensely passionate and rough encounter. The power dynamic is electric, leaving both of you completely satisfied and deeply connected.`;
+        romanceDelta = 30;
+        trustDelta = 15;
+        affinityDelta = 18;
+        break;
+      case 'SUCCESS':
+        narrative = `The rough encounter with ${targetName} is incredibly intense. You push each other's limits in the best way, building a stronger physical connection.`;
+        romanceDelta = 22;
+        trustDelta = 10;
+        affinityDelta = 12;
+        break;
+      case 'FAILURE':
+        narrative = `The attempt at rough play with ${targetName} goes too far. You misread signals and need to slow down and communicate better.`;
+        romanceDelta = -10;
+        trustDelta = -15;
+        affinityDelta = -8;
+        break;
+      case 'CRITICAL_FAILURE':
+        narrative = `The rough encounter with ${targetName} becomes genuinely uncomfortable. You crossed boundaries and ${targetName} is upset and needs space.`;
+        romanceDelta = -20;
+        trustDelta = -25;
+        affinityDelta = -18;
+        break;
+    }
+
+    RelationshipManager.modifyAffinity(player.id, target.id, affinityDelta, 'Rough sex encounter');
+    RelationshipManager.setRelationship(player.id, target.id, {
+      type: 'romantic',
+      romanceLevel: Math.max(0, Math.min(100, (rel.romanceLevel || 0) + romanceDelta)),
+      trust: Math.max(0, Math.min(100, (rel.trust ?? 50) + trustDelta)),
+      committed: rel.committed || false,
+      secretAffair: rel.secretAffair || false
+    });
+
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: narrative,
+        type: 'social'
+      }
+    });
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Public/risky location encounter (NSFW)
+   * @private
+   */
+  publicRiskEncounter(player, target) {
+    const rel = this._getRel(player.id, target.id);
+    const gate = (rel.romanceLevel || 0) >= 40 || rel.affinity >= 50;
+    if (!gate) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '💬 You need a stronger bond before attempting something this risky. Build more trust first.',
+          type: 'social'
+        }
+      });
+      this.renderWrestlerDetails(target);
+      return;
+    }
+
+    const result = ResolutionEngine.resolve({
+      actor: player,
+      action: 'Public Risk Encounter',
+      stat: 'psychology',
+      dc: 16,
+      context: {}
+    });
+
+    const targetName = target.getComponent('identity')?.name || 'them';
+    let narrative;
+    let romanceDelta;
+    let trustDelta;
+    let affinityDelta;
+    let exposed = false;
+
+    switch(result.outcome) {
+      case 'CRITICAL_SUCCESS':
+        narrative = `You and ${targetName} find a secluded backstage area and engage in a thrilling, risky encounter. The possibility of being caught only heightens the intensity. No one discovers you.`;
+        romanceDelta = 28;
+        trustDelta = 20;
+        affinityDelta = 16;
+        break;
+      case 'SUCCESS':
+        narrative = `In a quiet corner of the locker room, you and ${targetName} share an explicit encounter. The adrenaline of the risky location makes it incredibly exciting.`;
+        romanceDelta = 20;
+        trustDelta = 12;
+        affinityDelta = 10;
+        break;
+      case 'FAILURE':
+        narrative = `You try to get intimate with ${targetName} in a risky location but get interrupted before things can get started. The moment is lost.`;
+        romanceDelta = -5;
+        trustDelta = -5;
+        affinityDelta = -3;
+        break;
+      case 'CRITICAL_FAILURE':
+        narrative = `You and ${targetName} are caught in a compromising position backstage! Other wrestlers witness your explicit encounter and word spreads quickly.`;
+        romanceDelta = -12;
+        trustDelta = -20;
+        affinityDelta = -15;
+        exposed = true;
+        break;
+    }
+
+    RelationshipManager.modifyAffinity(player.id, target.id, affinityDelta, 'Public risk encounter');
+    RelationshipManager.setRelationship(player.id, target.id, {
+      type: 'romantic',
+      romanceLevel: Math.max(0, Math.min(100, (rel.romanceLevel || 0) + romanceDelta)),
+      trust: Math.max(0, Math.min(100, (rel.trust ?? 50) + trustDelta)),
+      committed: rel.committed || false,
+      secretAffair: rel.secretAffair || false
+    });
+
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: narrative,
+        type: 'social'
+      }
+    });
+
+    if (exposed) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '⚠️ The locker room is buzzing about what they witnessed. Your reputation takes a hit.',
+          type: 'social'
+        }
+      });
+    }
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Kink and fetish exploration (NSFW)
+   * @private
+   */
+  kinkExploration(player, target) {
+    const rel = this._getRel(player.id, target.id);
+    const gate = (rel.romanceLevel || 0) >= 30 || rel.affinity >= 40;
+    if (!gate) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '💬 You need to establish more trust before exploring kinks together.',
+          type: 'social'
+        }
+      });
+      this.renderWrestlerDetails(target);
+      return;
+    }
+
+    const kinks = [
+      'dominant/submissive roleplay',
+      'wrestling-themed power exchange',
+      'light bondage and restraint',
+      'sensory deprivation play',
+      'costume and character roleplay'
+    ];
+    const chosenKink = kinks[Math.floor(Math.random() * kinks.length)];
+
+    const result = ResolutionEngine.resolve({
+      actor: player,
+      action: 'Kink Exploration',
+      stat: 'psychology',
+      dc: 13,
+      context: {}
+    });
+
+    const targetName = target.getComponent('identity')?.name || 'them';
+    let narrative;
+    let romanceDelta;
+    let trustDelta;
+    let affinityDelta;
+
+    switch(result.outcome) {
+      case 'CRITICAL_SUCCESS':
+        narrative = `You and ${targetName} explore ${chosenKink} together, discovering shared desires you never knew you had. The experience is mind-blowing and brings you incredibly close.`;
+        romanceDelta = 26;
+        trustDelta = 22;
+        affinityDelta = 14;
+        break;
+      case 'SUCCESS':
+        narrative = `The ${chosenKink} with ${targetName} opens new doors in your physical relationship. You both feel more connected and adventurous.`;
+        romanceDelta = 18;
+        trustDelta = 15;
+        affinityDelta = 10;
+        break;
+      case 'FAILURE':
+        narrative = `The attempt at ${chosenKink} with ${targetName} feels awkward and doesn't work for one of you. You decide to stick to more familiar territory.`;
+        romanceDelta = -6;
+        trustDelta = -5;
+        affinityDelta = -4;
+        break;
+      case 'CRITICAL_FAILURE':
+        narrative = `The ${chosenKink} exploration with ${targetName} goes wrong. Boundaries are crossed and the experience leaves ${targetName} uncomfortable and upset.`;
+        romanceDelta = -15;
+        trustDelta = -20;
+        affinityDelta = -12;
+        break;
+    }
+
+    RelationshipManager.modifyAffinity(player.id, target.id, affinityDelta, 'Kink exploration');
+    RelationshipManager.setRelationship(player.id, target.id, {
+      type: 'romantic',
+      romanceLevel: Math.max(0, Math.min(100, (rel.romanceLevel || 0) + romanceDelta)),
+      trust: Math.max(0, Math.min(100, (rel.trust ?? 50) + trustDelta)),
+      committed: rel.committed || false,
+      secretAffair: rel.secretAffair || false
+    });
+
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: narrative,
+        type: 'social'
+      }
+    });
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Group encounter (NSFW)
+   * @private
+   */
+  groupEncounter(player, target) {
+    const rel = this._getRel(player.id, target.id);
+    const gate = (rel.romanceLevel || 0) >= 45 || rel.affinity >= 55;
+    if (!gate) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '💬 You need an extremely strong connection before suggesting something this adventurous.',
+          type: 'social'
+        }
+      });
+      this.renderWrestlerDetails(target);
+      return;
+    }
+
+    const state = gameStateManager.getStateRef();
+    const potentialPartners = Array.from(state.entities.values())
+      .filter(e => e.id !== player.id && e.id !== target.id)
+      .slice(0, 3);
+
+    if (potentialPartners.length === 0) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '💬 There are no other wrestlers available to join right now.',
+          type: 'social'
+        }
+      });
+      this.renderWrestlerDetails(target);
+      return;
+    }
+
+    const result = ResolutionEngine.resolve({
+      actor: player,
+      action: 'Group Encounter',
+      stat: 'charisma',
+      dc: 18,
+      context: {}
+    });
+
+    const targetName = target.getComponent('identity')?.name || 'them';
+    const partnerNames = potentialPartners.map(p => p.getComponent('identity')?.name || 'someone').join(', ');
+    let narrative;
+    let romanceDelta;
+    let trustDelta;
+    let affinityDelta;
+
+    switch(result.outcome) {
+      case 'CRITICAL_SUCCESS':
+        narrative = `You, ${targetName}, and ${partnerNames} share an incredibly wild and satisfying group encounter. The chemistry is off the charts and everyone leaves completely fulfilled.`;
+        romanceDelta = 35;
+        trustDelta = 15;
+        affinityDelta = 20;
+        potentialPartners.forEach(partner => {
+          RelationshipManager.modifyAffinity(player.id, partner.id, 10, 'Group encounter');
+        });
+        break;
+      case 'SUCCESS':
+        narrative = `The group encounter with ${targetName} and ${partnerNames} is exciting and memorable. Everyone has a great time exploring together.`;
+        romanceDelta = 22;
+        trustDelta = 8;
+        affinityDelta = 12;
+        potentialPartners.forEach(partner => {
+          RelationshipManager.modifyAffinity(player.id, partner.id, 5, 'Group encounter');
+        });
+        break;
+      case 'FAILURE':
+        narrative = `${targetName} declines your invitation for a group encounter. They're not comfortable with that level of adventure.`;
+        romanceDelta = -8;
+        trustDelta = -10;
+        affinityDelta = -6;
+        break;
+      case 'CRITICAL_FAILURE':
+        narrative = `Your suggestion of a group encounter with ${targetName} and others is met with shock and rejection. ${targetName} questions your commitment to them.`;
+        romanceDelta = -18;
+        trustDelta = -25;
+        affinityDelta = -15;
+        break;
+    }
+
+    RelationshipManager.modifyAffinity(player.id, target.id, affinityDelta, 'Group encounter proposal');
+    RelationshipManager.setRelationship(player.id, target.id, {
+      type: 'romantic',
+      romanceLevel: Math.max(0, Math.min(100, (rel.romanceLevel || 0) + romanceDelta)),
+      trust: Math.max(0, Math.min(100, (rel.trust ?? 50) + trustDelta)),
+      committed: rel.committed || false,
+      secretAffair: rel.secretAffair || false
+    });
+
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: narrative,
+        type: 'social'
+      }
+    });
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Ring seduction (NSFW) - explicit encounter in the ring
+   * @private
+   */
+  ringSeduction(player, target) {
+    const rel = this._getRel(player.id, target.id);
+    const gate = (rel.romanceLevel || 0) >= 35 || rel.affinity >= 45;
+    if (!gate) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '💬 The chemistry is not strong enough for a ring encounter. Build more trust first.',
+          type: 'social'
+        }
+      });
+      this.renderWrestlerDetails(target);
+      return;
+    }
+
+    const result = ResolutionEngine.resolve({
+      actor: player,
+      action: 'Ring Seduction',
+      stat: 'charisma',
+      dc: 15,
+      context: {}
+    });
+
+    const targetName = target.getComponent('identity')?.name || 'them';
+    let narrative;
+    let romanceDelta;
+    let trustDelta;
+    let affinityDelta;
+    let exposed = false;
+
+    switch(result.outcome) {
+      case 'CRITICAL_SUCCESS':
+        narrative = `After the arena clears, you and ${targetName} find yourselves alone in the ring. The ropes become your playground as you explore each other in the very place you do battle. The symbolism is not lost on either of you.`;
+        romanceDelta = 28;
+        trustDelta = 18;
+        affinityDelta = 16;
+        break;
+      case 'SUCCESS':
+        narrative = `In a dark corner of the ring, hidden by the shadows, you and ${targetName} share a passionate encounter. The canvas beneath you, the ropes around you - it's incredibly intense.`;
+        romanceDelta = 20;
+        trustDelta = 12;
+        affinityDelta = 10;
+        break;
+      case 'FAILURE':
+        narrative = `You try to get intimate with ${targetName} in the ring, but the venue staff starts cleaning up sooner than expected. You have to stop before things get started.`;
+        romanceDelta = -5;
+        trustDelta = -3;
+        affinityDelta = -3;
+        break;
+      case 'CRITICAL_FAILURE':
+        narrative = `Security catches you and ${targetName} in a compromising position in the ring! They escort you both out, and word spreads quickly through the locker room.`;
+        romanceDelta = -15;
+        trustDelta = -20;
+        affinityDelta = -12;
+        exposed = true;
+        break;
+    }
+
+    RelationshipManager.modifyAffinity(player.id, target.id, affinityDelta, 'Ring seduction');
+    RelationshipManager.setRelationship(player.id, target.id, {
+      type: 'romantic',
+      romanceLevel: Math.max(0, Math.min(100, (rel.romanceLevel || 0) + romanceDelta)),
+      trust: Math.max(0, Math.min(100, (rel.trust ?? 50) + trustDelta)),
+      committed: rel.committed || false,
+      secretAffair: rel.secretAffair || false
+    });
+
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: narrative,
+        type: 'social'
+      }
+    });
+
+    if (exposed) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '⚠️ The locker room is buzzing about what security witnessed. Your reputation takes a hit.',
+          type: 'social'
+        }
+      });
+    }
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Shower encounter (NSFW) - in the locker room
+   * @private
+   */
+  showerEncounter(player, target) {
+    const rel = this._getRel(player.id, target.id);
+    const gate = (rel.romanceLevel || 0) >= 25 || rel.affinity >= 35;
+    if (!gate) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '💬 You need to build more chemistry before suggesting a shower together.',
+          type: 'social'
+        }
+      });
+      this.renderWrestlerDetails(target);
+      return;
+    }
+
+    const result = ResolutionEngine.resolve({
+      actor: player,
+      action: 'Shower Encounter',
+      stat: 'charisma',
+      dc: 12,
+      context: {}
+    });
+
+    const targetName = target.getComponent('identity')?.name || 'them';
+    let narrative;
+    let romanceDelta;
+    let trustDelta;
+    let affinityDelta;
+
+    switch(result.outcome) {
+      case 'CRITICAL_SUCCESS':
+        narrative = `The locker room shower becomes a steamy paradise as you and ${targetName} explore each other under the hot water. Soap-slicked bodies slide together in a sensual dance that leaves you both breathless and thoroughly satisfied.`;
+        romanceDelta = 24;
+        trustDelta = 16;
+        affinityDelta = 14;
+        break;
+      case 'SUCCESS':
+        narrative = `In the privacy of the shower, you and ${targetName} share an intimate encounter. The steam, the water, the heat - everything comes together perfectly.`;
+        romanceDelta = 16;
+        trustDelta = 10;
+        affinityDelta = 8;
+        break;
+      case 'FAILURE':
+        narrative = `Another wrestler enters the locker room just as things are getting started. You and ${targetName} have to separate quickly and pretend nothing was happening.`;
+        romanceDelta = -4;
+        trustDelta = -5;
+        affinityDelta = -2;
+        break;
+      case 'CRITICAL_FAILURE':
+        narrative = `The shower encounter goes wrong when you slip on the wet floor. ${targetName} has to help you up, and the moment is completely ruined.`;
+        romanceDelta = -10;
+        trustDelta = -8;
+        affinityDelta = -6;
+        break;
+    }
+
+    RelationshipManager.modifyAffinity(player.id, target.id, affinityDelta, 'Shower encounter');
+    RelationshipManager.setRelationship(player.id, target.id, {
+      type: 'romantic',
+      romanceLevel: Math.max(0, Math.min(100, (rel.romanceLevel || 0) + romanceDelta)),
+      trust: Math.max(0, Math.min(100, (rel.trust ?? 50) + trustDelta)),
+      committed: rel.committed || false,
+      secretAffair: rel.secretAffair || false
+    });
+
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: narrative,
+        type: 'social'
+      }
+    });
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Quick hookup (NSFW) - fast urgent encounter
+   * @private
+   */
+  quickHookup(player, target) {
+    const rel = this._getRel(player.id, target.id);
+    const gate = (rel.romanceLevel || 0) >= 20 || rel.affinity >= 30;
+    if (!gate) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '💬 You need at least some chemistry for a hookup. Try flirting first.',
+          type: 'social'
+        }
+      });
+      this.renderWrestlerDetails(target);
+      return;
+    }
+
+    const result = ResolutionEngine.resolve({
+      actor: player,
+      action: 'Quick Hookup',
+      stat: 'stamina',
+      dc: 10,
+      context: {}
+    });
+
+    const targetName = target.getComponent('identity')?.name || 'them';
+    let narrative;
+    let romanceDelta;
+    let trustDelta;
+    let affinityDelta;
+
+    switch(result.outcome) {
+      case 'CRITICAL_SUCCESS':
+        narrative = `Against the locker room wall, you and ${targetName} give in to urgent desire. It's fast, intense, and incredibly satisfying - pure animal passion without any pretense.`;
+        romanceDelta = 18;
+        trustDelta = 5;
+        affinityDelta = 12;
+        break;
+      case 'SUCCESS':
+        narrative = `You find a private spot and ${targetName} is eager and ready. The encounter is brief but passionate, both of you getting exactly what you need.`;
+        romanceDelta = 12;
+        trustDelta = 2;
+        affinityDelta = 8;
+        break;
+      case 'FAILURE':
+        narrative = `The quickie with ${targetName} feels rushed and unsatisfying. You both leave wanting more but neither knows how to ask.`;
+        romanceDelta = 2;
+        trustDelta = -3;
+        affinityDelta = 2;
+        break;
+      case 'CRITICAL_FAILURE':
+        narrative = `${targetName} seems uncomfortable with the rushed nature of the encounter. They stop you partway through and leave abruptly.`;
+        romanceDelta = -8;
+        trustDelta = -10;
+        affinityDelta = -5;
+        break;
+    }
+
+    RelationshipManager.modifyAffinity(player.id, target.id, affinityDelta, 'Quick hookup');
+    RelationshipManager.setRelationship(player.id, target.id, {
+      type: 'romantic',
+      romanceLevel: Math.max(0, Math.min(100, (rel.romanceLevel || 0) + romanceDelta)),
+      trust: Math.max(0, Math.min(100, (rel.trust ?? 50) + trustDelta)),
+      committed: rel.committed || false,
+      secretAffair: rel.secretAffair || false
+    });
+
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: narrative,
+        type: 'social'
+      }
+    });
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Hotel all-nighter (NSFW) - extended encounter
+   * @private
+   */
+  hotelAllNighter(player, target) {
+    const rel = this._getRel(player.id, target.id);
+    const gate = (rel.romanceLevel || 0) >= 40 || rel.affinity >= 50;
+    if (!gate) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '💬 An all-nighter requires deep trust and chemistry. Build your connection first.',
+          type: 'social'
+        }
+      });
+      this.renderWrestlerDetails(target);
+      return;
+    }
+
+    const result = ResolutionEngine.resolve({
+      actor: player,
+      action: 'Hotel All-Nighter',
+      stat: 'stamina',
+      dc: 14,
+      context: {}
+    });
+
+    const targetName = target.getComponent('identity')?.name || 'them';
+    let narrative;
+    let romanceDelta;
+    let trustDelta;
+    let affinityDelta;
+
+    switch(result.outcome) {
+      case 'CRITICAL_SUCCESS':
+        narrative = `The hotel room becomes your sanctuary for the night. You and ${targetName} explore every inch of each other, trying things you've only fantasized about. By morning, you're both exhausted, sore, and completely satisfied.`;
+        romanceDelta = 35;
+        trustDelta = 25;
+        affinityDelta = 20;
+        break;
+      case 'SUCCESS':
+        narrative = `The all-nighter with ${targetName} is incredible. Hours of passion, multiple rounds, deep conversations between - you feel closer than ever.`;
+        romanceDelta = 25;
+        trustDelta = 18;
+        affinityDelta = 15;
+        break;
+      case 'FAILURE':
+        narrative = `You book the hotel room but ${targetName} falls asleep halfway through the night. The morning is awkward and disappointing.`;
+        romanceDelta = 5;
+        trustDelta = -2;
+        affinityDelta = 3;
+        break;
+      case 'CRITICAL_FAILURE':
+        narrative = `The hotel all-nighter is a disaster. You and ${targetName} argue about logistics, the room is uncomfortable, and you both leave frustrated and annoyed with each other.`;
+        romanceDelta = -12;
+        trustDelta = -15;
+        affinityDelta = -8;
+        break;
+    }
+
+    RelationshipManager.modifyAffinity(player.id, target.id, affinityDelta, 'Hotel all-nighter');
+    RelationshipManager.setRelationship(player.id, target.id, {
+      type: 'romantic',
+      romanceLevel: Math.max(0, Math.min(100, (rel.romanceLevel || 0) + romanceDelta)),
+      trust: Math.max(0, Math.min(100, (rel.trust ?? 50) + trustDelta)),
+      committed: rel.committed || false,
+      secretAffair: rel.secretAffair || false
+    });
+
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: narrative,
+        type: 'social'
+      }
+    });
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Oil wrestling (NSFW) - slippery sensual wrestling
+   * @private
+   */
+  oilWrestling(player, target) {
+    const rel = this._getRel(player.id, target.id);
+    const gate = (rel.romanceLevel || 0) >= 30 || rel.affinity >= 40;
+    if (!gate) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '💬 Oil wrestling requires comfort with physical intimacy. Build more chemistry first.',
+          type: 'social'
+        }
+      });
+      this.renderWrestlerDetails(target);
+      return;
+    }
+
+    const result = ResolutionEngine.resolve({
+      actor: player,
+      action: 'Oil Wrestling',
+      stat: 'technical',
+      dc: 12,
+      context: {}
+    });
+
+    const targetName = target.getComponent('identity')?.name || 'them';
+    let narrative;
+    let romanceDelta;
+    let trustDelta;
+    let affinityDelta;
+
+    switch(result.outcome) {
+      case 'CRITICAL_SUCCESS':
+        narrative = `Covered in oil, you and ${targetName} grapple in a private room. Every hold becomes foreplay, every escape an invitation. The wrestling quickly turns into something much more intimate as slick bodies slide together.`;
+        romanceDelta = 26;
+        trustDelta = 15;
+        affinityDelta = 14;
+        break;
+      case 'SUCCESS':
+        narrative = `The oil wrestling with ${targetName} starts competitive but turns sensual quickly. The oil makes every touch electric, and soon you're both exploring each other rather than trying to win.`;
+        romanceDelta = 18;
+        trustDelta = 10;
+        affinityDelta = 10;
+        break;
+      case 'FAILURE':
+        narrative = `The oil makes everything too slippery. You and ${targetName} can't get any holds to work, and the mood is ruined by frustration.`;
+        romanceDelta = -3;
+        trustDelta = -3;
+        affinityDelta = -2;
+        break;
+      case 'CRITICAL_FAILURE':
+        narrative = `${targetName} slips during the oil wrestling and gets oil in their eye. The encounter ends immediately as you help them clean up. Not sexy at all.`;
+        romanceDelta = -8;
+        trustDelta = -5;
+        affinityDelta = -4;
+        break;
+    }
+
+    RelationshipManager.modifyAffinity(player.id, target.id, affinityDelta, 'Oil wrestling');
+    RelationshipManager.setRelationship(player.id, target.id, {
+      type: 'romantic',
+      romanceLevel: Math.max(0, Math.min(100, (rel.romanceLevel || 0) + romanceDelta)),
+      trust: Math.max(0, Math.min(100, (rel.trust ?? 50) + trustDelta)),
+      committed: rel.committed || false,
+      secretAffair: rel.secretAffair || false
+    });
+
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: narrative,
+        type: 'social'
+      }
+    });
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Spanking session (NSFW) - impact play
+   * @private
+   */
+  spankingSession(player, target) {
+    const rel = this._getRel(player.id, target.id);
+    const gate = (rel.romanceLevel || 0) >= 35 || rel.affinity >= 45;
+    if (!gate) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '💬 Impact play requires high trust levels. Build a stronger bond first.',
+          type: 'social'
+        }
+      });
+      this.renderWrestlerDetails(target);
+      return;
+    }
+
+    const result = ResolutionEngine.resolve({
+      actor: player,
+      action: 'Spanking Session',
+      stat: 'psychology',
+      dc: 14,
+      context: {}
+    });
+
+    const targetName = target.getComponent('identity')?.name || 'them';
+    let narrative;
+    let romanceDelta;
+    let trustDelta;
+    let affinityDelta;
+
+    switch(result.outcome) {
+      case 'CRITICAL_SUCCESS':
+        narrative = `You take complete control as ${targetName} surrenders over your knee. Each impact builds tension and desire, the mix of pain and pleasure driving you both wild. By the end, ${targetName} is begging for more and you deliver.`;
+        romanceDelta = 28;
+        trustDelta = 22;
+        affinityDelta = 16;
+        break;
+      case 'SUCCESS':
+        narrative = `The spanking session with ${targetName} is intense and satisfying. You establish clear boundaries and explore the power dynamic carefully, building incredible trust.`;
+        romanceDelta = 20;
+        trustDelta = 16;
+        affinityDelta = 12;
+        break;
+      case 'FAILURE':
+        narrative = `You misjudge ${targetName}'s limits during the spanking. They use the safeword and you stop immediately, but the mood is broken.`;
+        romanceDelta = -5;
+        trustDelta = -10;
+        affinityDelta = -3;
+        break;
+      case 'CRITICAL_FAILURE':
+        narrative = `The spanking session goes wrong when you hit too hard. ${targetName} is angry and hurt, physically and emotionally. They leave upset.`;
+        romanceDelta = -15;
+        trustDelta = -25;
+        affinityDelta = -12;
+        break;
+    }
+
+    RelationshipManager.modifyAffinity(player.id, target.id, affinityDelta, 'Spanking session');
+    RelationshipManager.setRelationship(player.id, target.id, {
+      type: 'romantic',
+      romanceLevel: Math.max(0, Math.min(100, (rel.romanceLevel || 0) + romanceDelta)),
+      trust: Math.max(0, Math.min(100, (rel.trust ?? 50) + trustDelta)),
+      committed: rel.committed || false,
+      secretAffair: rel.secretAffair || false
+    });
+
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: narrative,
+        type: 'social'
+      }
+    });
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Private video (NSFW) - recording encounter
+   * @private
+   */
+  privateVideo(player, target) {
+    const rel = this._getRel(player.id, target.id);
+    const gate = (rel.romanceLevel || 0) >= 45 || rel.affinity >= 55;
+    if (!gate) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '💬 Recording videos requires extreme trust. Build a much deeper connection first.',
+          type: 'social'
+        }
+      });
+      this.renderWrestlerDetails(target);
+      return;
+    }
+
+    const result = ResolutionEngine.resolve({
+      actor: player,
+      action: 'Private Video',
+      stat: 'psychology',
+      dc: 16,
+      context: {}
+    });
+
+    const targetName = target.getComponent('identity')?.name || 'them';
+    let narrative;
+    let romanceDelta;
+    let trustDelta;
+    let affinityDelta;
+    let leaked = false;
+
+    switch(result.outcome) {
+      case 'CRITICAL_SUCCESS':
+        narrative = `You set up the camera and you and ${targetName} create an incredibly erotic video together. Watching yourselves on the screen adds a whole new dimension to your intimacy. The video stays safely between you two.`;
+        romanceDelta = 32;
+        trustDelta = 20;
+        affinityDelta = 18;
+        break;
+      case 'SUCCESS':
+        narrative = `The private video with ${targetName} is exciting and intimate. Being recorded adds thrill to the encounter, and you both agree to keep it secret.`;
+        romanceDelta = 22;
+        trustDelta = 12;
+        affinityDelta = 12;
+        break;
+      case 'FAILURE':
+        narrative = `${targetName} gets uncomfortable with the camera halfway through. You delete the footage and just enjoy the moment without recording.`;
+        romanceDelta = 5;
+        trustDelta = -5;
+        affinityDelta = 4;
+        break;
+      case 'CRITICAL_FAILURE':
+        narrative = `DISASTER! Someone hacks your phone and the video of you and ${targetName} leaks online! The explicit footage spreads through the wrestling community.`;
+        romanceDelta = -20;
+        trustDelta = -30;
+        affinityDelta = -18;
+        leaked = true;
+        break;
+    }
+
+    RelationshipManager.modifyAffinity(player.id, target.id, affinityDelta, 'Private video');
+    RelationshipManager.setRelationship(player.id, target.id, {
+      type: 'romantic',
+      romanceLevel: Math.max(0, Math.min(100, (rel.romanceLevel || 0) + romanceDelta)),
+      trust: Math.max(0, Math.min(100, (rel.trust ?? 50) + trustDelta)),
+      committed: rel.committed || false,
+      secretAffair: rel.secretAffair || false
+    });
+
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: narrative,
+        type: 'social'
+      }
+    });
+
+    if (leaked) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '📱 The explicit video has gone viral! Your reputation is damaged and the promotion is asking questions. This is a major scandal.',
+          type: 'scandal'
+        }
+      });
+    }
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Break up with romantic partner
+   * @private
+   */
+  breakUp(player, target) {
+    const rel = this._getRel(player.id, target.id);
+    if (!rel || rel.type !== 'romantic') {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '💬 You are not in a romantic relationship with them.',
+          type: 'social'
+        }
+      });
+      this.renderWrestlerDetails(target);
+      return;
+    }
+
+    const targetName = target.getComponent('identity')?.name || 'them';
+    const wasCommitted = rel.committed;
+
+    // Set relationship to neutral/negative
+    RelationshipManager.setRelationship(player.id, target.id, {
+      type: 'acquaintance',
+      affinity: -20,
+      romanceLevel: 0,
+      trust: 20,
+      committed: false,
+      secretAffair: false
+    });
+
+    let narrative;
+    if (wasCommitted) {
+      narrative = `You sit down with ${targetName} and have a difficult conversation. You explain that you need to end your committed relationship. ${targetName} is hurt and disappointed, but accepts your decision.`;
+    } else {
+      narrative = `You let ${targetName} know that you want to stop seeing them romantically. They seem disappointed but understand.`;
+    }
+
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: narrative,
+        type: 'social'
+      }
+    });
+
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: wasCommitted 
+          ? `💔 You have ended your committed relationship with ${targetName}.`
+          : `💔 You have ended your romantic connection with ${targetName}.`,
+        type: 'social'
+      }
+    });
+
     this.renderWrestlerDetails(target);
   }
 

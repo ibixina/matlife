@@ -493,7 +493,7 @@
         }
       },
       {
-        "text": "Take selfies and post to social media",
+        "text": "Take selfies with multiple fans and immediately post them to your social media accounts to maximize exposure",
         "check": {
           "stat": "charisma",
           "dc": 10
@@ -531,7 +531,7 @@
     "cooldownWeeks": 4,
     "choices": [
       {
-        "text": "See a doctor immediately",
+        "text": "Immediately visit a medical professional to assess the injury severity and follow their treatment recommendations",
         "outcomes": {
           "success": {
             "narrative": "The doctor recommends rest. You'll heal properly but miss some shows.",
@@ -551,7 +551,7 @@
         }
       },
       {
-        "text": "Push through and work the show",
+        "text": "Ignore the pain and work your scheduled match, relying on adrenaline and toughness to get through the performance",
         "check": {
           "stat": "resilience",
           "dc": 14
@@ -594,7 +594,7 @@
         }
       },
       {
-        "text": "Take time off to heal",
+        "text": "Notify the promotion that you need time off to properly rest and recover from the injury before returning to action",
         "outcomes": {
           "success": {
             "narrative": "You take the time you need. You'll come back stronger.",
@@ -616,7 +616,7 @@
         }
       }
     ],
-    "description": "You've tweaked something in training, aggravating an old injury."
+    "description": "During a routine training session, you feel a sharp, familiar pain - you've aggravated an old injury that you thought was fully healed. The pain is significant enough to affect your in-ring performance, and you have a match scheduled soon. The promotion is counting on you, but wrestling hurt could worsen the injury and potentially endanger your long-term career. You need to make a difficult decision about whether to seek medical attention, push through the pain, or take time off to properly heal."
   },
   {
     "id": "scout_notice",
@@ -628,7 +628,7 @@
     "cooldownWeeks": 20,
     "choices": [
       {
-        "text": "Accept the developmental deal",
+        "text": "Immediately sign the developmental contract with {promotion.name} and begin your journey to the major leagues",
         "outcomes": {
           "success": {
             "narrative": "You sign the contract! Your career is about to take off.",
@@ -643,7 +643,7 @@
         }
       },
       {
-        "text": "Negotiate for better terms",
+        "text": "Attempt to negotiate for a higher starting salary ($500/week) and better contract terms before committing",
         "check": {
           "stat": "charisma",
           "dc": 12
@@ -674,7 +674,7 @@
         "description": "Try to leverage the deal into $500/week."
       },
       {
-        "text": "Decline and stay indie",
+        "text": "Politely decline the developmental offer and continue building your reputation on the independent wrestling circuit",
         "outcomes": {
           "success": {
             "narrative": "You stay true to the indie scene. Your reputation grows in the underground.",
@@ -690,7 +690,7 @@
         }
       }
     ],
-    "description": "A scout from {promotion.name} has noticed your work. They are offering a developmental deal: $300/week for 16 weeks."
+    "description": "A talent scout from {promotion.name}, one of the major wrestling promotions, has been watching your indie matches and is impressed with your potential. They approach you with an exciting opportunity: a developmental contract worth $300 per week for 16 weeks. This could be your big break into the major leagues, offering professional training, exposure to larger audiences, and a pathway to stardom. However, you'll be starting from the bottom of the card in a highly competitive environment. Your response to this offer could determine whether you make it to the big time or remain on the indie circuit."
   },
   {
     "id": "gimmick_stale",
@@ -702,7 +702,7 @@
     "cooldownWeeks": 12,
     "choices": [
       {
-        "text": "Reinvent yourself with a new gimmick",
+        "text": "Develop and debut a completely new character, with different mannerisms, attire, and personality to refresh your presentation",
         "check": {
           "stat": "charisma",
           "dc": 13
@@ -739,7 +739,7 @@
         }
       },
       {
-        "text": "Double down on your current gimmick",
+        "text": "Commit even harder to your existing character, intensifying its key traits and elements to win the crowd back over",
         "outcomes": {
           "success": {
             "narrative": "You lean into the gimmick harder. The dedication is noticed.",
@@ -755,7 +755,7 @@
         }
       },
       {
-        "text": "Ask the booker for direction",
+        "text": "Request a meeting with the booker to discuss your character direction and get their professional guidance on how to refresh your gimmick",
         "outcomes": {
           "success": {
             "narrative": "The booker has some ideas. You'll work together on a refresh.",
@@ -771,7 +771,7 @@
         }
       }
     ],
-    "description": "Crowd reactions have been noticeably quieter lately. Your gimmick might be losing steam."
+    "description": "The energy in the arena has shifted. Where you used to get massive pops and crowd reactions, now there's an uncomfortable silence or lukewarm response when your music hits. Fans seem bored with your current character, and social media chatter about you has decreased significantly. Your gimmick - the personality and character you've been portraying - appears to be going stale. This is a critical moment where you need to either reinvent yourself, double down on your current persona, or seek creative guidance from the booker before your career momentum stalls completely."
   },
   {
     "id": "social_media_blowup",
@@ -783,7 +783,7 @@
     "cooldownWeeks": 8,
     "choices": [
       {
-        "text": "Apologize publicly",
+        "text": "Issue a sincere, public apology acknowledging the offensive nature of your past post and expressing your personal growth since then",
         "check": {
           "stat": "charisma",
           "dc": 10
@@ -819,7 +819,7 @@
         }
       },
       {
-        "text": "Double down on your statement",
+        "text": "Refuse to apologize and stand firmly by your original statement, defending your right to express your opinions",
         "check": {
           "stat": "charisma",
           "dc": 16
@@ -861,7 +861,7 @@
         }
       },
       {
-        "text": "Delete and go silent",
+        "text": "Delete the controversial post immediately and go completely silent on social media, hoping the controversy will blow over",
         "outcomes": {
           "success": {
             "narrative": "The internet has a short attention span. Something else trends tomorrow.",
@@ -882,7 +882,7 @@
         }
       }
     ],
-    "description": "An old, controversial social media post of yours has resurfaced."
+    "description": "A controversial social media post you made years ago has suddenly resurfaced and is going viral within the wrestling community. The post contains comments that are now being viewed as offensive or inappropriate by today's standards. Wrestling news sites are picking up the story, fans are debating your character on social media, and your promotion is asking questions. This scandal threatens to damage your reputation, affect your merchandise sales, and potentially jeopardize your standing with the company. You need to respond carefully to control the narrative before it spirals further out of control."
   },
   {
     "id": "van_broke_down",
@@ -897,7 +897,7 @@
     "cooldownWeeks": 10,
     "choices": [
       {
-        "text": "Pay for repair out of pocket",
+        "text": "Use your own money to pay for immediate repairs so you can get back on the road and make it to the show",
         "outcomes": {
           "success": {
             "narrative": "The van is fixed but your wallet is lighter. You make the show.",
@@ -917,7 +917,7 @@
         }
       },
       {
-        "text": "Hitchhike to the venue",
+        "text": "Leave the broken van behind and attempt to hitchhike with passing motorists to get to the venue in time",
         "check": {
           "stat": "charisma",
           "dc": 12
@@ -954,7 +954,7 @@
         }
       },
       {
-        "text": "Miss the show",
+        "text": "Accept that you won't make it to the venue and call the promoter to explain the situation",
         "outcomes": {
           "success": {
             "narrative": "You call ahead and explain. The promoter is understanding... this time.",
@@ -970,7 +970,7 @@
         }
       }
     ],
-    "description": "Your ride to the next indie show breaks down on the highway."
+    "description": "Disaster strikes on the way to your next indie booking - the van you're traveling in has broken down on a remote stretch of highway. The show starts in just a few hours, and you're miles away from the venue with no other transportation options. The promoter is expecting you for a featured match, and missing the show could damage your reputation on the indie circuit. Your options are limited: pay for expensive repairs out of your own pocket, try to hitchhike with strangers, or accept that you'll miss the show. This is the harsh reality of life on the independent wrestling grind."
   },
   {
     "id": "promoter_no_pay",
@@ -982,7 +982,7 @@
     "cooldownWeeks": 12,
     "choices": [
       {
-        "text": "Confront the promoter",
+        "text": "Confront the promoter directly and aggressively, demanding immediate payment for yourself and the other wrestlers",
         "check": {
           "stat": "brawling",
           "dc": 12
@@ -1017,7 +1017,7 @@
         }
       },
       {
-        "text": "Let it go and move on",
+        "text": "Accept the financial loss and walk away from the situation to avoid further conflict and stress",
         "outcomes": {
           "success": {
             "narrative": "You decide it's not worth the trouble. Word spreads that this promoter can't be trusted.",
@@ -1033,7 +1033,7 @@
         }
       },
       {
-        "text": "Blast them on social media",
+        "text": "Take to social media to publicly expose the promoter's unethical behavior and warn other wrestlers",
         "check": {
           "stat": "charisma",
           "dc": 10
@@ -1069,7 +1069,7 @@
         }
       }
     ],
-    "description": "The promoter is trying to skip town without paying the talent."
+    "description": "The show has ended and the locker room is buzzing with anger - the promoter is attempting to leave without paying any of the wrestlers. This is a nightmare scenario that every indie wrestler fears: performing in good faith only to be stiffed by an unscrupulous promoter trying to skip out with the gate money. The other wrestlers are looking for someone to take the lead on confronting this situation. Your decision on how to handle this could determine whether you get paid, whether the promoter faces consequences, and how you're viewed by your peers in the wrestling community."
   },
   {
     "id": "faction_power_struggle",
@@ -1079,7 +1079,7 @@
     "cooldownWeeks": 16,
     "choices": [
       {
-        "text": "Challenge the leader",
+        "text": "Make a bold power play by publicly challenging the current faction leader for control of the group",
         "check": {
           "stat": "charisma",
           "dc": 15
@@ -1121,7 +1121,7 @@
         }
       },
       {
-        "text": "Stay loyal to the current leader",
+        "text": "Publicly reaffirm your loyalty to the current faction leader and help defend their position against challengers",
         "outcomes": {
           "success": {
             "narrative": "Your loyalty is noted. The leader trusts you more now.",
@@ -1137,7 +1137,7 @@
         }
       },
       {
-        "text": "Leave the faction",
+        "text": "Formally exit the faction on good terms to avoid the political drama and forge your own path",
         "outcomes": {
           "success": {
             "narrative": "You leave on good terms. Time to forge your own path.",
@@ -1159,7 +1159,7 @@
         }
       }
     ],
-    "description": "Tensions are high within your faction. The current leader's position is looking weak."
+    "description": "The political landscape within your faction has become increasingly volatile. The current leader, who has held power for some time, is showing signs of weakness and indecision. Other members are quietly questioning their authority, and rumors of a mutiny are circulating. This is a critical moment where the faction's future direction hangs in the balance. You need to decide whether to make a power play and challenge for leadership, demonstrate loyalty to preserve your position, or leave the group entirely to avoid the inevitable drama. Your choice will significantly impact your standing and future storylines."
   },
   {
     "id": "mentor_offer",
@@ -1171,7 +1171,7 @@
     "cooldownWeeks": 20,
     "choices": [
       {
-        "text": "Accept the mentor role",
+        "text": "Gratefully accept the veteran's mentorship offer and commit to learning everything they can teach you about the business",
         "outcomes": {
           "success": {
             "narrative": "You take a young wrestler under your wing. Passing on knowledge feels good.",
@@ -1193,7 +1193,7 @@
         }
       },
       {
-        "text": "Decline - focus on your own career",
+        "text": "Politely decline the mentorship offer, explaining that you need to remain focused on your own individual career path",
         "outcomes": {
           "success": {
             "narrative": "You politely decline. You need to focus on your own matches right now.",
@@ -1209,7 +1209,7 @@
         }
       }
     ],
-    "description": "A veteran wrestler offers to take you under their wing."
+    "description": "One of the respected veterans in the locker room has approached you with a generous offer. They've been watching your matches and see potential in you that could be developed further. They want to take you under their wing as a mentor - teaching you the finer points of psychology, helping you improve your promo skills, and guiding you through the political landscape of the wrestling business. This is a rare opportunity to learn from someone who has survived decades in the industry, but it will also require significant time and commitment that might distract from your own career focus."
   },
   {
     "id": "burnout_warning",
@@ -1221,7 +1221,7 @@
     "cooldownWeeks": 8,
     "choices": [
       {
-        "text": "Take a vacation",
+        "text": "Book time off for a proper vacation to rest, recover, and mentally recharge away from the wrestling business",
         "outcomes": {
           "success": {
             "narrative": "The time off does wonders. You return refreshed and ready.",
@@ -1252,7 +1252,7 @@
         }
       },
       {
-        "text": "See a therapist",
+        "text": "Seek professional mental health support from a therapist who can help you process the emotional toll of the wrestling lifestyle",
         "check": {
           "stat": "psychology",
           "dc": 10
@@ -1291,7 +1291,7 @@
         }
       },
       {
-        "text": "Ignore it and keep working",
+        "text": "Push through the burnout and continue working your scheduled matches, hoping the feeling will pass on its own",
         "outcomes": {
           "success": {
             "narrative": "You push through. But at what cost?",
@@ -1313,7 +1313,7 @@
         }
       }
     ],
-    "description": "The grueling schedule is catching up to you. You're feeling incredibly burned out."
+    "description": "The relentless pace of professional wrestling has finally taken its toll. After months of constant travel, brutal matches, and never-ending promotional obligations, you're experiencing severe burnout. You find it hard to get motivated for matches, your energy levels are depleted, and mentally you're struggling to maintain the passion that drove you to this career. The physical and emotional exhaustion is affecting your performance and happiness. This is a serious career crossroads - you need to take action to recover or risk permanent damage to both your health and your career trajectory."
   },
   {
     "id": "exp_free_agent_001",
@@ -1325,7 +1325,7 @@
     },
     "choices": [
       {
-        "text": "Take the aggressive route",
+        "text": "Accept the risky opportunity and deliver an aggressive performance",
         "check": {
           "stat": "charisma",
           "dc": 13
@@ -1390,7 +1390,7 @@
         }
       },
       {
-        "text": "Take the conservative option",
+        "text": "Accept the booking but approach it conservatively",
         "outcomes": {
           "success": {
             "narrative": "You stabilize the situation and keep options open.",
@@ -1406,7 +1406,7 @@
         }
       },
       {
-        "text": "Decline involvement",
+        "text": "Decline the risky booking to protect your health and reputation",
         "outcomes": {
           "success": {
             "narrative": "You step back and avoid immediate risk, but miss potential upside.",
@@ -1422,7 +1422,7 @@
         }
       }
     ],
-    "description": "A local promoter offers a risky opportunity with upside."
+    "description": "While grinding on the indies without a major contract, a local promoter offers you a risky but potentially lucrative opportunity. They want to put you in a high-stakes main event that could generate significant buzz and exposure - if it goes well. The match involves a dangerous opponent with a reputation for stiffness, and there's little upfront pay. However, if you deliver a spectacular performance, it could go viral and attract attention from bigger promotions. This is the kind of gamble that can make or break an indie career."
   },
   {
     "id": "exp_free_agent_002",
@@ -1434,7 +1434,7 @@
     },
     "choices": [
       {
-        "text": "Make a bold public statement",
+        "text": "Make a bold public statement at the indie show",
         "check": {
           "stat": "micSkills",
           "dc": 14
@@ -1495,7 +1495,7 @@
         }
       },
       {
-        "text": "Take the conservative option",
+        "text": "Accept the booking but maintain a conservative approach",
         "outcomes": {
           "success": {
             "narrative": "You avoid unnecessary risk and maintain trust.",
@@ -1511,7 +1511,7 @@
         }
       },
       {
-        "text": "Decline involvement",
+        "text": "Decline the opportunity to avoid potential risks",
         "outcomes": {
           "success": {
             "narrative": "You step back and avoid immediate risk, but miss potential upside.",
@@ -1527,7 +1527,7 @@
         }
       }
     ],
-    "description": "An indie partner asks for a favor that could raise your profile."
+    "description": "An indie wrestling partner who you've worked with before approaches you with a special request. They want you to do them a favor - making a bold on-mic promo or taking part in a controversial angle that could significantly raise both of your profiles in the wrestling community. The favor involves sticking your neck out professionally and could either generate major buzz or backfire spectacularly. How you handle this request will affect your reputation and relationships on the indie circuit."
   },
   {
     "id": "exp_free_agent_003",
@@ -1539,7 +1539,7 @@
     },
     "choices": [
       {
-        "text": "Take the aggressive route",
+        "text": "Accept the main event and deliver an aggressive performance",
         "check": {
           "stat": "charisma",
           "dc": 13
@@ -1604,7 +1604,7 @@
         }
       },
       {
-        "text": "Take the conservative option",
+        "text": "Accept the spot but focus on safe, solid wrestling",
         "outcomes": {
           "success": {
             "narrative": "You keep your profile steady while minimizing downside.",
@@ -1620,7 +1620,7 @@
         }
       },
       {
-        "text": "Decline involvement",
+        "text": "Decline the high-pressure main event spot",
         "outcomes": {
           "success": {
             "narrative": "You step back and avoid immediate risk, but miss potential upside.",
@@ -1636,7 +1636,7 @@
         }
       }
     ],
-    "description": "A regional show wants you in a high-pressure spot."
+    "description": "A well-established regional promotion wants to book you in their main event - a high-pressure spot with significant exposure but also high expectations. The promoter is putting their reputation on the line by featuring an unsigned indie wrestler in the top match. This could be your chance to prove you belong on bigger stages, but there's also the risk of bombing in front of a large crowd and damaging your credibility. The eyes of the wrestling world will be watching to see if you can handle the pressure."
   },
   {
     "id": "exp_free_agent_004",
@@ -1648,7 +1648,7 @@
     },
     "choices": [
       {
-        "text": "Make a bold public statement",
+        "text": "Deliver a controversial promo to generate buzz",
         "check": {
           "stat": "micSkills",
           "dc": 14
@@ -1709,7 +1709,7 @@
         }
       },
       {
-        "text": "Take the conservative option",
+        "text": "Accept the booking but keep things low-risk",
         "outcomes": {
           "success": {
             "narrative": "You stabilize the situation and keep options open.",
@@ -1725,7 +1725,7 @@
         }
       },
       {
-        "text": "Decline involvement",
+        "text": "Pass on the opportunity entirely",
         "outcomes": {
           "success": {
             "narrative": "You step back and avoid immediate risk, but miss potential upside.",
@@ -1741,7 +1741,7 @@
         }
       }
     ],
-    "description": "A local promoter offers a risky opportunity with upside."
+    "description": "A local promoter approaches you with a controversial but potentially lucrative opportunity. They want you to cut a provocative, edgy promo that targets a rival promotion or wrestler - something that will generate major heat and social media buzz. The promo could go viral and put you on the map, but it also risks alienating important people in the business and damaging your reputation. It's a classic high-risk, high-reward scenario that defines life on the independent circuit."
   },
   {
     "id": "exp_free_agent_005",
@@ -1753,7 +1753,7 @@
     },
     "choices": [
       {
-        "text": "Take the aggressive route",
+        "text": "Go all-in with a high-risk performance",
         "check": {
           "stat": "charisma",
           "dc": 13
@@ -1818,7 +1818,7 @@
         }
       },
       {
-        "text": "Take the conservative option",
+        "text": "Play it safe and protect your reputation",
         "outcomes": {
           "success": {
             "narrative": "You avoid unnecessary risk and maintain trust.",
@@ -1834,7 +1834,7 @@
         }
       },
       {
-        "text": "Decline involvement",
+        "text": "Turn down the indie booking",
         "outcomes": {
           "success": {
             "narrative": "You step back and avoid immediate risk, but miss potential upside.",
@@ -1850,7 +1850,7 @@
         }
       }
     ],
-    "description": "An indie partner asks for a favor that could raise your profile."
+    "description": "A fellow indie wrestler you've worked with before asks for a significant favor. They need you to team with them in a high-stakes match against a dangerous opponent duo - the kind of match that could elevate both your careers if you win, but could also result in serious injury. They're offering you the spotlight and a bigger cut of the gate, but there's genuine risk involved. Turning them down might damage your relationship, but accepting could put your body on the line for someone else's opportunity."
   },
   {
     "id": "exp_free_agent_006",
@@ -1955,7 +1955,7 @@
         }
       }
     ],
-    "description": "A regional show wants you in a high-pressure spot."
+    "description": "A regional wrestling show contacts you with an opportunity to be the featured attraction in their main event - a high-pressure spot that could make or break your reputation on the circuit. The promoter is offering you creative freedom to do whatever you want in the ring, including the chance to cut an unfiltered promo about the state of the wrestling business. This is your platform to make a statement, but it also puts you in the spotlight where every mistake will be magnified. The indie faithful will be watching to see if you can deliver in the clutch."
   },
   {
     "id": "exp_free_agent_007",
