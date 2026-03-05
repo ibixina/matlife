@@ -1012,6 +1012,7 @@ export class ActionPanel {
       const card = document.createElement('div');
       card.className = 'panel mb-md';
       card.style.borderLeft = `3px solid ${color}`;
+      card.style.cursor = 'pointer';
       const romanceLevel = relationship.romanceLevel || 0;
       const trust = relationship.trust ?? 50;
       const romanticStatus = relationship.type === 'romantic'
@@ -1028,7 +1029,11 @@ export class ActionPanel {
         ${relationship.type === 'romantic' ? `<p style="font-size: 0.8rem;">Romance: ${romanceLevel} | Trust: ${trust}</p>` : ''}
         ${relationship.affinity >= 50 ? '<p style="font-size: 0.8rem; color: #4caf50;">✓ Chemistry bonus in matches</p>' : ''}
         ${relationship.affinity <= -50 ? '<p style="font-size: 0.8rem; color: #f44336;">⚠️ Risk of backstage conflict</p>' : ''}
+        <p style="font-size: 0.75rem; color: #4fc3f7; margin-top: 0.5rem;">👆 Click for actions</p>
       `;
+      card.addEventListener('click', () => {
+        this.renderRelationshipActions(player, entity, relationship);
+      });
       this.container.appendChild(card);
     });
 
@@ -1046,6 +1051,293 @@ export class ActionPanel {
       </p>
     `;
     this.container.appendChild(info);
+  }
+
+  /**
+   * Renders action options for a specific relationship
+   * @private
+   */
+  renderRelationshipActions(player, target, relationship) {
+    this.container.innerHTML = '';
+
+    const backBtn = document.createElement('button');
+    backBtn.className = 'btn mb-md';
+    backBtn.textContent = '← Back to Relationships';
+    backBtn.addEventListener('click', () => {
+      this.renderRelationships(player);
+    });
+    this.container.appendChild(backBtn);
+
+    const identity = target.getComponent('identity');
+    const name = identity?.name || 'Unknown';
+
+    const title = document.createElement('h4');
+    title.textContent = `Actions with ${name}`;
+    title.style.marginBottom = '1rem';
+    this.container.appendChild(title);
+
+    // Show current relationship status
+    const statusDiv = document.createElement('div');
+    statusDiv.className = 'panel mb-md';
+    const romanticStatus = relationship.type === 'romantic'
+      ? `💘 Romantic${relationship.committed ? ' · Committed' : ''}${relationship.secretAffair ? ' · Secret Affair' : ''}`
+      : (relationship.type === 'rival' ? '🔥 Rivalry' : 'Professional Relationship');
+    statusDiv.innerHTML = `
+      <p><strong>Status:</strong> ${romanticStatus}</p>
+      <p><strong>Affinity:</strong> ${relationship.affinity}</p>
+      ${relationship.type === 'romantic' ? `<p><strong>Romance Level:</strong> ${relationship.romanceLevel || 0}</p><p><strong>Trust:</strong> ${relationship.trust ?? 50}</p>` : ''}
+    `;
+    this.container.appendChild(statusDiv);
+
+    // Basic social actions
+    const socializeCard = this.createActionCard(
+      'Socialize',
+      'Spend time together and improve your relationship',
+      () => {
+        this.socializeWithWrestler(player, target);
+        this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+      }
+    );
+    this.container.appendChild(socializeCard);
+
+    const trashTalkCard = this.createActionCard(
+      'Talk Trash',
+      'Lower relationship and stir conflict',
+      () => {
+        this.talkTrash(player, target);
+        this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+      }
+    );
+    this.container.appendChild(trashTalkCard);
+
+    // Romance section
+    const playerAge = player.getComponent('identity')?.age || 18;
+    const targetAge = target.getComponent('identity')?.age || 18;
+    if (playerAge >= 18 && targetAge >= 18) {
+      const romanceTitle = document.createElement('h4');
+      romanceTitle.textContent = 'Romance';
+      romanceTitle.style.margin = '1rem 0';
+      this.container.appendChild(romanceTitle);
+
+      const flirtCard = this.createActionCard(
+        'Flirt',
+        'Light romantic approach to test chemistry',
+        () => {
+          this.flirtWithWrestler(player, target);
+          this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+        }
+      );
+      this.container.appendChild(flirtCard);
+
+      const dateCard = this.createActionCard(
+        'Ask on Date',
+        'Try to start a romantic connection',
+        () => {
+          this.askOnDate(player, target);
+          this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+        }
+      );
+      this.container.appendChild(dateCard);
+
+      const privateCard = this.createActionCard(
+        'Private Night',
+        'Mature interaction (fade-to-black, non-explicit)',
+        () => {
+          this.privateNight(player, target);
+          this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+        }
+      );
+      this.container.appendChild(privateCard);
+
+      // NSFW actions - only show if NSFW content is enabled
+      const nsfwEnabled = gameStateManager.getStateRef().settings.nsfwContent;
+      if (nsfwEnabled) {
+        const nsfwTitle = document.createElement('h4');
+        nsfwTitle.textContent = 'Intimate Actions';
+        nsfwTitle.style.margin = '1rem 0';
+        nsfwTitle.style.color = '#e91e63';
+        this.container.appendChild(nsfwTitle);
+
+        const intimateCard = this.createActionCard(
+          'Intimate Encounter',
+          'Passionate and explicit physical intimacy',
+          () => {
+            this.intimateEncounter(player, target);
+            this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+          }
+        );
+        intimateCard.style.borderLeft = '3px solid #e91e63';
+        this.container.appendChild(intimateCard);
+
+        const affairCard = this.createActionCard(
+          'Explicit Affair',
+          'Risky: Explicit secret affair if already committed',
+          () => {
+            this.explicitSecretAffair(player, target);
+            this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+          }
+        );
+        affairCard.style.borderLeft = '3px solid #f44336';
+        this.container.appendChild(affairCard);
+
+        const roughCard = this.createActionCard(
+          'Rough Sex',
+          'Intense, aggressive physical encounter with passion and intensity',
+          () => {
+            this.roughSexEncounter(player, target);
+            this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+          }
+        );
+        roughCard.style.borderLeft = '3px solid #9c27b0';
+        this.container.appendChild(roughCard);
+
+        const publicCard = this.createActionCard(
+          'Risky Public Play',
+          'Explicit encounter in a risky location - backstage, locker room, or venue',
+          () => {
+            this.publicRiskEncounter(player, target);
+            this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+          }
+        );
+        publicCard.style.borderLeft = '3px solid #ff5722';
+        this.container.appendChild(publicCard);
+
+        const kinkCard = this.createActionCard(
+          'Explore Kinks',
+          'Experiment with fetishes, roleplay, and dominant/submissive dynamics',
+          () => {
+            this.kinkExploration(player, target);
+            this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+          }
+        );
+        kinkCard.style.borderLeft = '3px solid #673ab7';
+        this.container.appendChild(kinkCard);
+
+        const groupCard = this.createActionCard(
+          'Group Activity',
+          'Invite others to join for an explicit multi-partner encounter',
+          () => {
+            this.groupEncounter(player, target);
+            this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+          }
+        );
+        groupCard.style.borderLeft = '3px solid #795548';
+        this.container.appendChild(groupCard);
+
+        const seduceCard = this.createActionCard(
+          'Seduce in the Ring',
+          'Explicit encounter during or after a match - in the ropes or on the mat',
+          () => {
+            this.ringSeduction(player, target);
+            this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+          }
+        );
+        seduceCard.style.borderLeft = '3px solid #ec407a';
+        this.container.appendChild(seduceCard);
+
+        const showerCard = this.createActionCard(
+          'Shower Together',
+          'Intimate encounter in the locker room showers with steam and soap',
+          () => {
+            this.showerEncounter(player, target);
+            this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+          }
+        );
+        showerCard.style.borderLeft = '3px solid #00bcd4';
+        this.container.appendChild(showerCard);
+
+        const quickieCard = this.createActionCard(
+          'Quick Hookup',
+          'Fast, urgent encounter - no time for romance, just pure need',
+          () => {
+            this.quickHookup(player, target);
+            this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+          }
+        );
+        quickieCard.style.borderLeft = '3px solid #ff9800';
+        this.container.appendChild(quickieCard);
+
+        const hotelCard = this.createActionCard(
+          'Hotel Room All-Nighter',
+          'Book a room and spend the entire night exploring every desire',
+          () => {
+            this.hotelAllNighter(player, target);
+            this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+          }
+        );
+        hotelCard.style.borderLeft = '3px solid #4caf50';
+        this.container.appendChild(hotelCard);
+
+        const oilCard = this.createActionCard(
+          'Oil Wrestling',
+          'Slippery, sensual wrestling match that turns into much more',
+          () => {
+            this.oilWrestling(player, target);
+            this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+          }
+        );
+        oilCard.style.borderLeft = '3px solid #ffc107';
+        this.container.appendChild(oilCard);
+
+        const spankingCard = this.createActionCard(
+          'Spanking Session',
+          'Discipline and punishment play with impact and control',
+          () => {
+            this.spankingSession(player, target);
+            this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+          }
+        );
+        spankingCard.style.borderLeft = '3px solid #e91e63';
+        this.container.appendChild(spankingCard);
+
+        const videoCard = this.createActionCard(
+          'Make Private Video',
+          'Record an explicit video together - risky but incredibly intimate',
+          () => {
+            this.privateVideo(player, target);
+            this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+          }
+        );
+        videoCard.style.borderLeft = '3px solid #9c27b0';
+        this.container.appendChild(videoCard);
+      }
+
+      const commitCard = this.createActionCard(
+        'Commit to Relationship',
+        'Become an official couple if chemistry is high',
+        () => {
+          this.commitRelationship(player, target);
+          this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+        }
+      );
+      this.container.appendChild(commitCard);
+
+      const cheatCard = this.createActionCard(
+        'Start Secret Affair',
+        'Risky: cheat if you are already committed to someone else',
+        () => {
+          this.startSecretAffair(player, target);
+          this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+        }
+      );
+      cheatCard.style.borderLeft = '3px solid #ff5722';
+      this.container.appendChild(cheatCard);
+
+      // Break up option - always available if in a romantic relationship
+      const rel = this._getRel(player.id, target.id);
+      if (rel && rel.type === 'romantic') {
+        const breakupCard = this.createActionCard(
+          'Break Up',
+          rel.committed ? 'End your committed relationship' : 'End your romantic connection',
+          () => {
+            this.breakUp(player, target);
+            this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
+          }
+        );
+        breakupCard.style.borderLeft = '3px solid #f44336';
+        this.container.appendChild(breakupCard);
+      }
+    }
   }
 
   /**
