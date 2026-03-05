@@ -90,17 +90,56 @@ export class MatchSimulator {
   }
 
   /**
-   * Calculates match rating (0-5.5 stars)
+   * Calculates match rating (0-7.0 stars)
    * @returns {number} Match rating
    */
   calculateMatchRating() {
     const w1 = this.matchState.wrestler1;
     const w2 = this.matchState.wrestler2;
     const baseAvg = (w1.avgInRing + w2.avgInRing) / 2;
-    let rating = 0.5 + (baseAvg / 100) * 4.5;
+    
+    // Calculate consistency based on wrestler skill
+    // Higher skill = more consistent (less random variation)
+    const avgSkill = baseAvg;
+    const consistency = Math.min(0.9, 0.3 + (avgSkill / 100) * 0.6);
+    
+    // Base rating calculation (now allows up to 7.0 for legendary matches)
+    let rating = 0.5 + (baseAvg / 100) * 5.5;
+    
+    // Add synergy bonus
     rating += this.matchState.synergy?.bonus || 0;
+    
+    // Add random variation (±0.1 to ±0.5 depending on consistency)
+    const maxVariation = 0.5;
+    const minVariation = 0.1;
+    const variationRange = maxVariation - minVariation;
+    const actualVariation = minVariation + (variationRange * (1 - consistency));
+    const randomFactor = (Math.random() * 2 - 1) * actualVariation;
+    rating += randomFactor;
+    
+    // Elite bonus for truly exceptional wrestlers (80+ avg) - applied per wrestler
+    // If both wrestlers are elite, they get DOUBLE bonus
+    let eliteBonus = 0;
+    if (w1.avgInRing >= 80) {
+      eliteBonus += (w1.avgInRing - 80) / 20 * 0.5; // Up to +0.5 bonus per wrestler
+    }
+    if (w2.avgInRing >= 80) {
+      eliteBonus += (w2.avgInRing - 80) / 20 * 0.5; // Up to +0.5 bonus per wrestler
+    }
+    rating += eliteBonus;
+    
+    // Legendary bonus for perfect wrestlers (90+ avg) - applied per wrestler
+    // If both wrestlers are legendary, they get DOUBLE bonus
+    let legendaryBonus = 0;
+    if (w1.avgInRing >= 90) {
+      legendaryBonus += (w1.avgInRing - 90) / 10 * 0.3; // Up to +0.3 bonus per wrestler
+    }
+    if (w2.avgInRing >= 90) {
+      legendaryBonus += (w2.avgInRing - 90) / 10 * 0.3; // Up to +0.3 bonus per wrestler
+    }
+    rating += legendaryBonus;
 
-    return clamp(rating, 0.5, 5.5);
+    return clamp(rating, 0.5, 7.0);
   }
 
   /**

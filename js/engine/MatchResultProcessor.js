@@ -57,8 +57,59 @@ export class MatchResultProcessor {
       }
     }
 
-    // 8. Log results
+    // 8. Update promotion prestige for high-rated matches
+    this.updatePromotionPrestige(winner, matchRating);
+
+    // 9. Log results
     this.logMatchResults(winner, loser, matchRating, matchResult);
+  }
+
+  /**
+   * Updates promotion prestige based on match quality
+   * @private
+   */
+  static updatePromotionPrestige(wrestler, matchRating) {
+    if (matchRating < 5) return; // Only 5+ star matches boost prestige
+
+    const state = gameStateManager.getStateRef();
+    const contract = wrestler.getComponent('contract');
+    if (!contract || !contract.promotionId) return;
+
+    const promotion = state.promotions.get(contract.promotionId);
+    if (!promotion) return;
+
+    let prestigeBoost = 0;
+    let announcement = '';
+
+    if (matchRating >= 7.0) {
+      prestigeBoost = 8;
+      announcement = `🏆🏆🏆 ${promotion.name}'s prestige skyrockets after hosting a PERFECT match!`;
+    } else if (matchRating >= 6.5) {
+      prestigeBoost = 5;
+      announcement = `🌟 ${promotion.name} gains massive prestige from a legendary ${matchRating.toFixed(1)}-star match!`;
+    } else if (matchRating >= 6.0) {
+      prestigeBoost = 3;
+      announcement = `👑 ${promotion.name}'s reputation grows after an elite ${matchRating.toFixed(1)}-star performance!`;
+    } else if (matchRating >= 5.5) {
+      prestigeBoost = 2;
+      announcement = `⭐ ${promotion.name} benefits from a perfect ${matchRating.toFixed(1)}-star match!`;
+    } else if (matchRating >= 5.0) {
+      prestigeBoost = 1;
+    }
+
+    if (prestigeBoost > 0) {
+      promotion.prestige = Math.min(100, promotion.prestige + prestigeBoost);
+
+      if (announcement) {
+        gameStateManager.dispatch('ADD_LOG_ENTRY', {
+          entry: {
+            category: 'match',
+            text: announcement + ` (+${prestigeBoost} prestige)`,
+            type: 'special'
+          }
+        });
+      }
+    }
   }
 
   /**
@@ -156,10 +207,73 @@ export class MatchResultProcessor {
         winnerPop.overness = Math.min(100, winnerPop.overness + 3);
       }
 
+      // Bonus for 4.5+ star matches
+      if (matchRating >= 4.5) {
+        winnerPop.overness = Math.min(100, winnerPop.overness + 4);
+        winnerPop.momentum = Math.min(100, (winnerPop.momentum || 0) + 8);
+      }
+
       // Bonus for 5-star classic
       if (matchRating >= 5) {
-        winnerPop.overness = Math.min(100, (winnerPop.overness || 0) + 5);
-        winnerPop.momentum = Math.min(100, (winnerPop.momentum || 0) + 10);
+        winnerPop.overness = Math.min(100, (winnerPop.overness || 0) + 6);
+        winnerPop.momentum = Math.min(100, (winnerPop.momentum || 0) + 15);
+      }
+
+      // Major bonus for 5.5-star perfect matches
+      if (matchRating >= 5.5) {
+        winnerPop.overness = Math.min(100, (winnerPop.overness || 0) + 10);
+        winnerPop.momentum = Math.min(100, (winnerPop.momentum || 0) + 25);
+        
+        // Dispatch special announcement for perfect matches
+        gameStateManager.dispatch('ADD_LOG_ENTRY', {
+          entry: {
+            category: 'match',
+            text: `🏆 PERFECT MATCH! A truly legendary performance that will be remembered forever!`,
+            type: 'special'
+          }
+        });
+      }
+      
+      // ELITE TIER: 6.0-6.4 star matches - Once in a lifetime
+      if (matchRating >= 6.0 && matchRating < 6.5) {
+        winnerPop.overness = Math.min(100, (winnerPop.overness || 0) + 15);
+        winnerPop.momentum = Math.min(100, (winnerPop.momentum || 0) + 35);
+        
+        gameStateManager.dispatch('ADD_LOG_ENTRY', {
+          entry: {
+            category: 'match',
+            text: `👑 ELITE CLASS! ${winnerPop.overness >= 90 ? 'Two masters at their peak!' : 'A career-defining performance!'} Overness +15!`,
+            type: 'special'
+          }
+        });
+      }
+      
+      // LEGENDARY TIER: 6.5-6.9 star matches - Hall of Fame worthy
+      if (matchRating >= 6.5 && matchRating < 7.0) {
+        winnerPop.overness = Math.min(100, (winnerPop.overness || 0) + 20);
+        winnerPop.momentum = Math.min(100, (winnerPop.momentum || 0) + 50);
+        
+        gameStateManager.dispatch('ADD_LOG_ENTRY', {
+          entry: {
+            category: 'match',
+            text: `🌟 LEGENDARY! This match will be talked about for decades! Overness +20!`,
+            type: 'special'
+          }
+        });
+      }
+      
+      // PERFECT TIER: 7.0 star matches - The greatest of all time
+      if (matchRating >= 7.0) {
+        winnerPop.overness = 100; // Max out overness
+        winnerPop.momentum = 100; // Max out momentum
+        
+        gameStateManager.dispatch('ADD_LOG_ENTRY', {
+          entry: {
+            category: 'match',
+            text: `⭐⭐⭐ GREATEST OF ALL TIME! ⭐⭐⭐ This is wrestling perfection! Overness MAXED!`,
+            type: 'special'
+          }
+        });
       }
     }
 
@@ -171,6 +285,42 @@ export class MatchResultProcessor {
       // Protect overness for good matches even in defeat
       if (matchRating >= 4) {
         loserPop.overness = Math.min(100, (loserPop.overness || 0) + 1); // Compensate loss
+      }
+
+      // Bonus for excellent matches even in defeat
+      if (matchRating >= 4.5) {
+        loserPop.overness = Math.min(100, (loserPop.overness || 0) + 2);
+        loserPop.momentum = Math.min(100, (loserPop.momentum || 0) + 5);
+      }
+
+      // Even losing in a 5-star match is good for your career
+      if (matchRating >= 5) {
+        loserPop.overness = Math.min(100, (loserPop.overness || 0) + 3);
+        loserPop.momentum = Math.min(100, (loserPop.momentum || 0) + 10);
+      }
+
+      // Perfect match participation is career-defining regardless of outcome
+      if (matchRating >= 5.5) {
+        loserPop.overness = Math.min(100, (loserPop.overness || 0) + 5);
+        loserPop.momentum = Math.min(100, (loserPop.momentum || 0) + 20);
+      }
+      
+      // ELITE TIER bonuses for loser too
+      if (matchRating >= 6.0 && matchRating < 6.5) {
+        loserPop.overness = Math.min(100, (loserPop.overness || 0) + 8);
+        loserPop.momentum = Math.min(100, (loserPop.momentum || 0) + 25);
+      }
+      
+      // LEGENDARY TIER bonuses for loser
+      if (matchRating >= 6.5 && matchRating < 7.0) {
+        loserPop.overness = Math.min(100, (loserPop.overness || 0) + 12);
+        loserPop.momentum = Math.min(100, (loserPop.momentum || 0) + 35);
+      }
+      
+      // PERFECT TIER - even the loser benefits
+      if (matchRating >= 7.0) {
+        loserPop.overness = Math.min(100, (loserPop.overness || 0) + 15);
+        loserPop.momentum = Math.min(100, (loserPop.momentum || 0) + 50);
       }
     }
   }
@@ -258,8 +408,17 @@ export class MatchResultProcessor {
 
     // Add stat changes to log
     if (winnerPop) {
-      const overnessChange = matchRating >= 4 ? 5 : 2;
-      resultText += ` | ${winnerName}: Overness +${overnessChange}, Momentum +${Math.floor(5 + (matchRating / 5.5) * 10)}`;
+      // Exponential overness gain based on match rating
+      let overnessChange = 2; // Base overness gain
+      if (matchRating >= 7.0) overnessChange = 100; // Max out
+      else if (matchRating >= 6.5) overnessChange = 50;
+      else if (matchRating >= 6.0) overnessChange = 35;
+      else if (matchRating >= 5.5) overnessChange = 25;
+      else if (matchRating >= 5) overnessChange = 17;
+      else if (matchRating >= 4.5) overnessChange = 11;
+      else if (matchRating >= 4) overnessChange = 5;
+      
+      resultText += ` | ${winnerName}: Overness +${overnessChange}, Momentum +${Math.floor(5 + (matchRating / 7.0) * 10)}`;
     }
 
     gameStateManager.dispatch('ADD_LOG_ENTRY', {
@@ -274,12 +433,52 @@ export class MatchResultProcessor {
       }
     });
 
-    // Special announcement for 5-star matches
-    if (matchRating >= 5) {
+    // Special announcement for high-star matches
+    if (matchRating >= 7.0) {
       gameStateManager.dispatch('ADD_LOG_ENTRY', {
         entry: {
           category: 'match',
-          text: `⭐⭐⭐ MATCH OF THE YEAR CANDIDATE! ⭐⭐⭐ ${winnerName} vs ${loserName} delivers a ${matchRating.toFixed(1)}-star classic!`,
+          text: `⭐⭐⭐ GREATEST OF ALL TIME! ⭐⭐⭐ ${winnerName} vs ${loserName} achieves WRESTLING PERFECTION with a ${matchRating.toFixed(1)}-star match! Overness MAXED!`,
+          type: 'special'
+        }
+      });
+    } else if (matchRating >= 6.5) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'match',
+          text: `🌟 LEGENDARY CLASS! ${winnerName} vs ${loserName} creates a ${matchRating.toFixed(1)}-star masterpiece! This will be remembered for decades! Overness +50!`,
+          type: 'special'
+        }
+      });
+    } else if (matchRating >= 6.0) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'match',
+          text: `👑 ELITE CLASS! ${winnerName} vs ${loserName} delivers a ${matchRating.toFixed(1)}-star classic! Two masters at their absolute peak! Overness +35!`,
+          type: 'special'
+        }
+      });
+    } else if (matchRating >= 5.5) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'match',
+          text: `🏆 PERFECT MATCH! ${winnerName} vs ${loserName} delivers a ${matchRating.toFixed(1)}-star PERFECT match! Overness boost +25!`,
+          type: 'special'
+        }
+      });
+    } else if (matchRating >= 5) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'match',
+          text: `⭐⭐⭐ MATCH OF THE YEAR CANDIDATE! ⭐⭐⭐ ${winnerName} vs ${loserName} delivers a ${matchRating.toFixed(1)}-star classic! Overness boost +17!`,
+          type: 'special'
+        }
+      });
+    } else if (matchRating >= 4.5) {
+      gameStateManager.dispatch('ADDD_LOG_ENTRY', {
+        entry: {
+          category: 'match',
+          text: `🌟 EXCELLENT MATCH! ${winnerName} vs ${loserName} puts on a ${matchRating.toFixed(1)}-star show! Overness boost +11!`,
           type: 'special'
         }
       });
