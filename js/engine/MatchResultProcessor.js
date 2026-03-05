@@ -475,7 +475,7 @@ export class MatchResultProcessor {
         }
       });
     } else if (matchRating >= 4.5) {
-      gameStateManager.dispatch('ADDD_LOG_ENTRY', {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
         entry: {
           category: 'match',
           text: `🌟 EXCELLENT MATCH! ${winnerName} vs ${loserName} puts on a ${matchRating.toFixed(1)}-star show! Overness boost +11!`,
