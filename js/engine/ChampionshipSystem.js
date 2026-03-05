@@ -227,6 +227,13 @@ export class ChampionshipSystem {
       if (championship.promotionId !== promotionId) continue;
       if (championship.currentChampion !== departingId) continue;
 
+      // End the previous reign before assigning new champion
+      const currentReign = championship.reigns[championship.reigns.length - 1];
+      if (currentReign && !currentReign.endWeek) {
+        currentReign.endWeek = state.calendar.absoluteWeek;
+        currentReign.duration = state.calendar.absoluteWeek - currentReign.startWeek;
+      }
+
       const roster = (promotion.roster || [])
         .filter(id => id !== departingId)
         .map(id => state.entities.get(id))
@@ -243,7 +250,8 @@ export class ChampionshipSystem {
         return popB - popA;
       });
 
-      this.awardChampionship(championship.id || championshipId, roster[0]);
+      // Award with previousChampion flag to properly end old reign
+      this.awardChampionship(championship.id || championshipId, roster[0], departingId);
     }
   }
 
