@@ -3289,31 +3289,75 @@ export class ActionPanel {
     // Get target's gender for matching
     const targetGender = target.getComponent('identity')?.gender || 'Male';
     
-    // Get all relationships for the player and sort by affinity, filtering by matching gender
+    // Get all relationships for the player (key format is idA|idB)
     const relationships = Array.from(state.relationships.entries())
-      .filter(([key, rel]) => key.startsWith(player.id + '_') || key.endsWith('_' + player.id))
+      .filter(([key, rel]) => key.includes(player.id))
       .map(([key, rel]) => {
         // Extract the other person's ID from the key
-        const otherId = key.replace(player.id, '').replace('_', '');
+        const parts = key.split('|');
+        const otherId = parts.find(id => id !== player.id);
         return { id: otherId, ...rel };
       });
     
-    // Filter by gender match and relationship quality, then sort by closeness
-    const potentialPartners = relationships
-      .filter(rel => {
-        if (rel.id === player.id || rel.id === target.id) return false;
+    // Get all relationships and sort by closeness
+    const sortedRelationships = relationships
+      .map(rel => {
         const entity = state.entities.get(rel.id);
-        if (!entity) return false;
-        const entityGender = entity.getComponent('identity')?.gender || 'Male';
-        // Only include same-gender wrestlers
-        if (entityGender !== targetGender) return false;
-        // Must have some relationship
-        return (rel.affinity > 20 || rel.romanceLevel > 20);
+        const entityGender = entity?.getComponent('identity')?.gender;
+        return {
+          ...rel,
+          entity,
+          gender: entityGender,
+          score: (rel.affinity || 0) + (rel.romanceLevel || 0)
+        };
       })
-      .sort((a, b) => (b.affinity || 0) + (b.romanceLevel || 0) - ((a.affinity || 0) + (a.romanceLevel || 0)))
+      .filter(rel => {
+        if (!rel.entity || rel.id === player.id || rel.id === target.id) return false;
+        // Only include same-gender wrestlers (if gender is known)
+        if (rel.gender && rel.gender !== targetGender) return false;
+        // Must have some relationship
+        return (rel.affinity > 0 || rel.romanceLevel > 0);
+      })
+      .sort((a, b) => b.score - a.score);
+    
+    let potentialPartners = sortedRelationships
       .slice(0, 3)
-      .map(rel => state.entities.get(rel.id))
-      .filter(e => e !== undefined);
+      .map(rel => rel.entity);
+    
+    // If not enough partners, try to find wrestlers in your promotion with good relationship
+    if (potentialPartners.length < 3) {
+      const playerContract = player.getComponent('contract');
+      const promotionId = playerContract?.promotionId;
+      
+      if (promotionId) {
+        const promotion = state.promotions.get(promotionId);
+        if (promotion?.roster) {
+          const promotionPartners = promotion.roster
+            .map(id => {
+              const entity = state.entities.get(id);
+              const rel = relationships.find(r => r.id === id);
+              const entityGender = entity?.getComponent('identity')?.gender;
+              return {
+                entity,
+                rel,
+                gender: entityGender,
+                score: (rel?.affinity || 0) + (rel?.romanceLevel || 0)
+              };
+            })
+            .filter(p => {
+              if (!p.entity || p.entity.id === player.id || p.entity.id === target.id) return false;
+              if (p.gender && p.gender !== targetGender) return false;
+              // Must have some relationship
+              return (p.rel?.affinity > 0 || p.rel?.romanceLevel > 0);
+            })
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 3 - potentialPartners.length)
+            .map(p => p.entity);
+          
+          potentialPartners = [...potentialPartners, ...promotionPartners];
+        }
+      }
+    }
 
     if (potentialPartners.length === 0) {
       gameStateManager.dispatch('ADD_LOG_ENTRY', {
