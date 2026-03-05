@@ -155,9 +155,10 @@ export class AIPromotionSystem {
     const winner = score1 > score2 ? wrestler1 : wrestler2;
     const loser = winner === wrestler1 ? wrestler2 : wrestler1;
 
-    // Calculate match rating
-    const baseRating = (effective1 + effective2) / 20;
-    const randomFactor = randomInt(-5, 5) / 10;
+    // Calculate match rating.
+    // /40 keeps typical AI matches in the 2.5-4.0 band instead of hard-capping at 5.0.
+    const baseRating = (effective1 + effective2) / 40;
+    const randomFactor = randomInt(-8, 8) / 10;
     const chemistry = this.getChemistry(wrestler1, wrestler2);
     const rating = Math.max(0.5, Math.min(5, baseRating + randomFactor + chemistry));
 
@@ -239,15 +240,37 @@ export class AIPromotionSystem {
 
     // Prestige change based on show ratings
     let prestigeChange = 0;
-    if (avgRating >= 4) prestigeChange = 2;
-    else if (avgRating >= 3) prestigeChange = 1;
-    else if (avgRating < 2) prestigeChange = -1;
+    if (avgRating >= 4.25) prestigeChange = 2;
+    else if (avgRating >= 3.5) prestigeChange = 1;
+    else if (avgRating < 2.5) prestigeChange = -1;
 
-    // Apply tier-based growth rate
+    // Aggressive decay that scales with prestige level
+    // Higher prestige = harder to maintain, exponentially so
+    const prestige = promotion.prestige;
+    if (prestige > 100) {
+      // Exponential decay above 100 prestige
+      const excess = prestige - 100;
+      prestigeChange -= Math.floor(excess / 10) + 1;
+    }
+    if (prestige >= 150 && avgRating < 4.5) {
+      prestigeChange -= 2;
+    } else if (prestige >= 120 && avgRating < 4.3) {
+      prestigeChange -= 1;
+    } else if (prestige >= 95 && avgRating < 4.3) {
+      prestigeChange -= 1;
+    } else if (prestige >= 85 && avgRating < 3.8) {
+      prestigeChange -= 1;
+    }
+
+    // Apply tier-based growth rate (reduced for very high prestige)
     const tier = this.getPromotionTier(promotion.prestige);
-    prestigeChange += Math.floor(promotion.prestige * tier.growthRate);
+    let growthRate = tier.growthRate;
+    if (prestige > 100) {
+      growthRate *= Math.max(0.1, 1 - ((prestige - 100) / 200));
+    }
+    prestigeChange += Math.floor(promotion.prestige * growthRate);
 
-    promotion.prestige = Math.max(5, Math.min(100, promotion.prestige + prestigeChange));
+    promotion.prestige = Math.max(5, promotion.prestige + prestigeChange);
   }
 
   /**

@@ -24,13 +24,26 @@ export class EventLogPanel {
       return;
     }
 
-    // Fast path: single log entry appended
+    // Fast path: append any entries added since last render.
+    // UIManager coalesces updates per frame, so multiple ADD_LOG_ENTRY
+    // actions can arrive as one render call.
     if (actionType === 'ADD_LOG_ENTRY' && this.container) {
-      const latest = state.history[state.history.length - 1];
-      if (latest) {
-        this.addEntry(latest);
-        this.lastRenderedCount = Math.min(this.maxEntries, this.lastRenderedCount + 1);
-        this.lastRenderedId = latest.id ?? null;
+      const entries = state.history.slice(-this.maxEntries);
+
+      if (this.lastRenderedCount > 0 && entries.length >= this.lastRenderedCount) {
+        const newEntries = entries.slice(this.lastRenderedCount);
+
+        if (newEntries.length > 0) {
+          newEntries.forEach(entry => this.addEntry(entry));
+          this.lastRenderedCount = entries.length;
+          this.lastRenderedId = entries[entries.length - 1]?.id ?? null;
+          return;
+        }
+      } else if (this.lastRenderedCount === 0 && entries.length === 1) {
+        // Fresh panel with exactly one entry can still use incremental add.
+        this.addEntry(entries[0]);
+        this.lastRenderedCount = 1;
+        this.lastRenderedId = entries[0]?.id ?? null;
         return;
       }
     }

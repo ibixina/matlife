@@ -320,6 +320,53 @@
           "age": 36,
           "overness": 78,
           "archetype": "Brawler"
+        },
+        {
+          "name": "AJ Lee",
+          "age": 37,
+          "overness": 91,
+          "archetype": "Technical",
+          "gender": "Female"
+        },
+        {
+          "name": "Nikki Bella",
+          "age": 41,
+          "overness": 89,
+          "archetype": "Powerhouse",
+          "gender": "Female"
+        },
+        {
+          "name": "Alexa Bliss",
+          "age": 33,
+          "overness": 90,
+          "archetype": "Technical",
+          "gender": "Female"
+        },
+        {
+          "name": "Brock Lesnar",
+          "age": 47,
+          "overness": 97,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "The Miz",
+          "age": 44,
+          "overness": 85,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Charlotte Flair",
+          "age": 38,
+          "overness": 93,
+          "archetype": "Powerhouse",
+          "gender": "Female"
+        },
+        {
+          "name": "Becky Lynch",
+          "age": 37,
+          "overness": 94,
+          "archetype": "Brawler",
+          "gender": "Female"
         }
       ]
     },
@@ -640,6 +687,19 @@
           "age": 36,
           "overness": 80,
           "archetype": "Brawler"
+        },
+        {
+          "name": "Sting",
+          "age": 65,
+          "overness": 95,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Kris Statlander",
+          "age": 29,
+          "overness": 88,
+          "archetype": "Powerhouse",
+          "gender": "Female"
         }
       ]
     },

@@ -44,6 +44,7 @@ export class ActionPanel {
     this.currentPromotionId = null;
     this.careerView = 'main';
     this.fastForwarding = false;
+    this.previousTab = null; // Track previous tab for scroll restoration
   }
 
   /**
@@ -86,6 +87,21 @@ export class ActionPanel {
 
     // Clear container
     this.container.innerHTML = '';
+
+    // Handle scroll position:
+    // - If returning to the same tab, restore scroll position
+    // - If going to a different tab/submenu, scroll to top
+    if (this.previousTab === currentTab) {
+      // Same tab - restore scroll (but use setTimeout to let DOM update first)
+      const savedScroll = this.container.scrollTop;
+      requestAnimationFrame(() => {
+        this.container.scrollTop = savedScroll;
+      });
+    } else {
+      // Different tab - scroll to top
+      this.container.scrollTop = 0;
+    }
+    this.previousTab = currentTab;
 
     // Render based on tab
     switch (currentTab) {
@@ -2184,6 +2200,7 @@ export class ActionPanel {
       : null;
 
     this.container.innerHTML = '';
+    this.container.scrollTop = 0; // Start at top for new submenu
 
     const backBtn = document.createElement('button');
     backBtn.className = 'btn mb-md';

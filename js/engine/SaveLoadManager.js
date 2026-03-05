@@ -7,6 +7,8 @@ import { gameStateManager } from '../core/GameStateManager.js';
 import { Entity } from '../core/Entity.js';
 import { deserializeComponent } from '../core/Component.js';
 import { deepClone } from '../core/Utils.js';
+import { dataManager } from '../core/DataManager.js';
+import { EntityFactory } from '../core/EntityFactory.js';
 
 /**
  * SaveLoadManager - Handles game persistence
@@ -239,6 +241,98 @@ export class SaveLoadManager {
   }
 
   /**
+   * Checks for and adds new roster members from updated real_life.json
+   * @returns {Promise<number>} Number of new wrestlers added
+   */
+  async checkAndUpdateRosters() {
+    try {
+      const realLifeData = dataManager.getRealLife();
+      if (!realLifeData || !realLifeData.promotions) {
+        console.log('No real life data available for roster update');
+        return 0;
+      }
+
+      const state = gameStateManager.getStateRef();
+      if (!state) {
+        console.log('No game state available for roster update');
+        return 0;
+      }
+
+      let addedCount = 0;
+
+      // Check each promotion in the real life data
+      for (const realPromo of realLifeData.promotions) {
+        const savedPromo = state.promotions.get(realPromo.id);
+        if (!savedPromo) continue;
+
+        // Get current roster names for comparison
+        const currentRosterNames = new Set();
+        for (const entityId of savedPromo.roster || []) {
+          const entity = state.entities.get(entityId);
+          if (entity) {
+            const identity = entity.getComponent('identity');
+            if (identity && identity.name) {
+              currentRosterNames.add(identity.name.toLowerCase());
+            }
+          }
+        }
+
+        // Check for new roster members in real life data
+        if (realPromo.roster && Array.isArray(realPromo.roster)) {
+          for (const wrestlerData of realPromo.roster) {
+            if (!wrestlerData.name) continue;
+
+            const wrestlerName = wrestlerData.name.toLowerCase();
+            if (!currentRosterNames.has(wrestlerName)) {
+              // Create new NPC from JSON data
+              const npc = EntityFactory.createNPCFromJSON({
+                ...wrestlerData,
+                hometown: realPromo.region || savedPromo.region || 'Unknown'
+              });
+
+              // Add to game state
+              gameStateManager.dispatch('ADD_ENTITY', { entity: npc });
+
+              // Set up contract
+              const contract = npc.getComponent('contract');
+              if (contract) {
+                contract.promotionId = savedPromo.id;
+                contract.weeklySalary = 500 + (wrestlerData.overness * 10);
+                contract.lengthWeeks = 16;
+                contract.remainingWeeks = 16;
+              }
+
+              // Add to promotion roster
+              savedPromo.roster.push(npc.id);
+
+              // Log the addition
+              gameStateManager.dispatch('ADD_LOG_ENTRY', {
+                entry: {
+                  category: 'business',
+                  text: `${wrestlerData.name} has been added to ${savedPromo.name}'s roster from updated data files.`,
+                  type: 'contract'
+                }
+              });
+
+              addedCount++;
+              console.log(`Added ${wrestlerData.name} to ${savedPromo.name} roster`);
+            }
+          }
+        }
+      }
+
+      if (addedCount > 0) {
+        console.log(`Roster update complete: Added ${addedCount} new wrestler(s)`);
+      }
+
+      return addedCount;
+    } catch (error) {
+      console.error('Error checking for roster updates:', error);
+      return 0;
+    }
+  }
+
+  /**
    * Saves the game to localforage
    * @returns {Promise<boolean>} True if successful
    */
@@ -328,6 +422,8 @@ export class SaveLoadManager {
       const success = this.deserializeState(saveData);
       if (success) {
         console.log('Game loaded successfully');
+        // Check for and add any new roster members from updated data files
+        await this.checkAndUpdateRosters();
       }
       return success;
     } catch (error) {

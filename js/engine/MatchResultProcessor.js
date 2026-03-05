@@ -98,7 +98,7 @@ export class MatchResultProcessor {
     }
 
     if (prestigeBoost > 0) {
-      promotion.prestige = Math.min(100, promotion.prestige + prestigeBoost);
+      promotion.prestige = promotion.prestige + prestigeBoost;
 
       if (announcement) {
         gameStateManager.dispatch('ADD_LOG_ENTRY', {
@@ -127,25 +127,9 @@ export class MatchResultProcessor {
     if (winner.id !== previousChampionId) {
       const prevChamp = previousChampionId ? state.entities.get(previousChampionId) : null;
       ChampionshipSystem.awardChampionship(titleId, winner, prevChamp);
-
-      gameStateManager.dispatch('ADD_LOG_ENTRY', {
-        entry: {
-          category: 'match',
-          text: `🏆 NEW CHAMPION! ${winner.getComponent('identity').name} has won the ${title.name}!`,
-          type: 'special'
-        }
-      });
     } else {
       // Champion retained, record defense
       ChampionshipSystem.recordDefense(titleId, matchRating);
-
-      gameStateManager.dispatch('ADD_LOG_ENTRY', {
-        entry: {
-          category: 'match',
-          text: `👑 AND STILL CHAMPION! ${winner.getComponent('identity').name} successfully defended the ${title.name}.`,
-          type: 'match'
-        }
-      });
     }
   }
 
@@ -223,57 +207,24 @@ export class MatchResultProcessor {
       if (matchRating >= 5.5) {
         winnerPop.overness = Math.min(100, (winnerPop.overness || 0) + 10);
         winnerPop.momentum = Math.min(100, (winnerPop.momentum || 0) + 25);
-        
-        // Dispatch special announcement for perfect matches
-        gameStateManager.dispatch('ADD_LOG_ENTRY', {
-          entry: {
-            category: 'match',
-            text: `🏆 PERFECT MATCH! A truly legendary performance that will be remembered forever!`,
-            type: 'special'
-          }
-        });
       }
-      
+
       // ELITE TIER: 6.0-6.4 star matches - Once in a lifetime
       if (matchRating >= 6.0 && matchRating < 6.5) {
         winnerPop.overness = Math.min(100, (winnerPop.overness || 0) + 15);
         winnerPop.momentum = Math.min(100, (winnerPop.momentum || 0) + 35);
-        
-        gameStateManager.dispatch('ADD_LOG_ENTRY', {
-          entry: {
-            category: 'match',
-            text: `👑 ELITE CLASS! ${winnerPop.overness >= 90 ? 'Two masters at their peak!' : 'A career-defining performance!'} Overness +15!`,
-            type: 'special'
-          }
-        });
       }
-      
+
       // LEGENDARY TIER: 6.5-6.9 star matches - Hall of Fame worthy
       if (matchRating >= 6.5 && matchRating < 7.0) {
         winnerPop.overness = Math.min(100, (winnerPop.overness || 0) + 20);
         winnerPop.momentum = Math.min(100, (winnerPop.momentum || 0) + 50);
-        
-        gameStateManager.dispatch('ADD_LOG_ENTRY', {
-          entry: {
-            category: 'match',
-            text: `🌟 LEGENDARY! This match will be talked about for decades! Overness +20!`,
-            type: 'special'
-          }
-        });
       }
-      
+
       // PERFECT TIER: 7.0 star matches - The greatest of all time
       if (matchRating >= 7.0) {
         winnerPop.overness = 100; // Max out overness
         winnerPop.momentum = 100; // Max out momentum
-        
-        gameStateManager.dispatch('ADD_LOG_ENTRY', {
-          entry: {
-            category: 'match',
-            text: `⭐⭐⭐ GREATEST OF ALL TIME! ⭐⭐⭐ This is wrestling perfection! Overness MAXED!`,
-            type: 'special'
-          }
-        });
       }
     }
 
@@ -304,19 +255,19 @@ export class MatchResultProcessor {
         loserPop.overness = Math.min(100, (loserPop.overness || 0) + 5);
         loserPop.momentum = Math.min(100, (loserPop.momentum || 0) + 20);
       }
-      
+
       // ELITE TIER bonuses for loser too
       if (matchRating >= 6.0 && matchRating < 6.5) {
         loserPop.overness = Math.min(100, (loserPop.overness || 0) + 8);
         loserPop.momentum = Math.min(100, (loserPop.momentum || 0) + 25);
       }
-      
+
       // LEGENDARY TIER bonuses for loser
       if (matchRating >= 6.5 && matchRating < 7.0) {
         loserPop.overness = Math.min(100, (loserPop.overness || 0) + 12);
         loserPop.momentum = Math.min(100, (loserPop.momentum || 0) + 35);
       }
-      
+
       // PERFECT TIER - even the loser benefits
       if (matchRating >= 7.0) {
         loserPop.overness = Math.min(100, (loserPop.overness || 0) + 15);
@@ -417,7 +368,7 @@ export class MatchResultProcessor {
       else if (matchRating >= 5) overnessChange = 17;
       else if (matchRating >= 4.5) overnessChange = 11;
       else if (matchRating >= 4) overnessChange = 5;
-      
+
       resultText += ` | ${winnerName}: Overness +${overnessChange}, Momentum +${Math.floor(5 + (matchRating / 7.0) * 10)}`;
     }
 
