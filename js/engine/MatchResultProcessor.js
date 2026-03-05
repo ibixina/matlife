@@ -8,6 +8,7 @@ import { gameStateManager } from '../core/GameStateManager.js';
 import RelationshipManager from './RelationshipManager.js';
 import InjuryEngine from './InjuryEngine.js';
 import ChampionshipSystem from './ChampionshipSystem.js';
+import DynamicFeudSystem from './DynamicFeudSystem.js';
 import { randomInt } from '../core/Utils.js';
 
 /**
@@ -43,7 +44,20 @@ export class MatchResultProcessor {
       this.handleChampionshipMatch(matchResult.titleId, winner, loser, matchRating);
     }
 
-    // 7. Log results
+    // 7. Handle Feud Escalation if this is a feud match
+    if (matchResult.feudId) {
+      DynamicFeudSystem.escalateAfterMatch(matchResult.feudId, matchRating, matchResult);
+    } else {
+      // Check if there's an active feud between these wrestlers
+      const feudId = [winner.id, loser.id].sort().join('_');
+      const state = gameStateManager.getStateRef();
+      const feud = state.feuds.get(feudId);
+      if (feud && !feud.resolved) {
+        DynamicFeudSystem.escalateAfterMatch(feudId, matchRating, matchResult);
+      }
+    }
+
+    // 8. Log results
     this.logMatchResults(winner, loser, matchRating, matchResult);
   }
 

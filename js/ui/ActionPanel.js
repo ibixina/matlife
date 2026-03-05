@@ -26,6 +26,7 @@ import CardPositionSystem from '../engine/CardPositionSystem.js';
 import EntityFactory from '../core/EntityFactory.js';
 import ResolutionEngine from '../engine/ResolutionEngine.js';
 import { randomInt } from '../core/Utils.js';
+import { dataManager } from '../core/DataManager.js';
 
 /**
  * ActionPanel - Renders the action panel
@@ -35,10 +36,14 @@ export class ActionPanel {
     this.container = document.getElementById('action-content');
     this.titleEl = document.getElementById('action-title');
     this.currentEvent = null;
+    this.currentMatchAction = null;
     this.matchView = new MatchView();
     this.inMatch = false;
     this.currentOffer = null;
     this.currentPromotion = null;
+    this.currentPromotionId = null;
+    this.careerView = 'main';
+    this.fastForwarding = false;
   }
 
   /**
@@ -53,7 +58,17 @@ export class ActionPanel {
 
     // If there's a pending event, show it
     if (this.currentEvent) {
-      this.renderEvent(this.currentEvent);
+      if (this.currentEvent.result) {
+        this.renderEventOutcome(this.currentEvent.event, this.currentEvent.result);
+      } else {
+        this.renderEvent(this.currentEvent.event);
+      }
+      return;
+    }
+
+    // If there's a pending match action, show it
+    if (this.currentMatchAction) {
+      this.renderMatchPreparation(this.currentMatchAction);
       return;
     }
 
@@ -97,6 +112,25 @@ export class ActionPanel {
         this.renderPeopleTab(state);
         break;
       case 'career':
+        if (this.careerView === 'offer' && this.currentOffer && this.currentPromotionId) {
+          const player = gameStateManager.getPlayerEntity();
+          const promotion = state.promotions.get(this.currentPromotionId);
+          if (player && promotion) {
+            this.renderContractOffer(player, promotion, this.currentOffer);
+            break;
+          }
+          this.currentOffer = null;
+          this.currentPromotion = null;
+          this.currentPromotionId = null;
+          this.careerView = 'main';
+        } else if (this.careerView === 'browser') {
+          const player = gameStateManager.getPlayerEntity();
+          if (player) {
+            this.renderPromotionBrowser(player);
+            break;
+          }
+          this.careerView = 'main';
+        }
         this.renderCareerTab(state);
         break;
       default:
@@ -133,102 +167,133 @@ export class ActionPanel {
    * @private
    */
   _advanceToNextShow(player) {
+    if (this.fastForwarding) return;
+    this.fastForwarding = true;
+
     let contract = player.getComponent('contract');
-    if (!contract?.promotionId) return;
+    if (!contract?.promotionId) {
+      this.fastForwarding = false;
+      return;
+    }
 
     const state = gameStateManager.getStateRef();
     let promotion = state.promotions.get(contract.promotionId);
-    if (!promotion) return;
+    if (!promotion) {
+      this.fastForwarding = false;
+      return;
+    }
 
     // Check if player is injured before starting
     if (this._isPlayerInjured(player)) {
       this.render(gameStateManager.getStateRef(), 'match');
+      this.fastForwarding = false;
       return;
     }
 
-    // Fast-forward to show day
+    // Fast-forward to show day (chunked to avoid UI lock)
     const maxTicks = 28;
-    for (let i = 0; i < maxTicks; i++) {
-      const pendingActions = WorldSimulator.tick(state);
+    let i = 0;
+    const step = () => {
+      if (i < maxTicks) {
+        const pendingActions = WorldSimulator.tick(state);
 
-      // Check if contract expired during this tick
+        // Check if contract expired during this tick
+        contract = player.getComponent('contract');
+        if (!contract?.promotionId) {
+          // Contract expired - stop advancing and refresh the UI
+          this.render(gameStateManager.getStateRef(), 'match');
+          this.fastForwarding = false;
+          return;
+        }
+
+        // Check if player became injured during this tick
+        if (this._isPlayerInjured(player)) {
+          this.render(gameStateManager.getStateRef(), 'match');
+          this.fastForwarding = false;
+          return;
+        }
+
+        if (pendingActions?.length > 0) {
+          const matchAction = pendingActions.find(a => a.type === 'match');
+          if (matchAction) {
+            this.currentMatchAction = matchAction;
+            this.renderMatchPreparation(matchAction);
+            this.fastForwarding = false;
+            return;
+          }
+        }
+
+        // Check for events AFTER ticking and processing match/injury/contract
+        // Events have a 30% chance to occur (average every 3-4 days)
+        if (Math.random() < 0.3) {
+          const event = eventManager.generateEvents(player, state);
+          if (event) {
+            this.displayEvent(event);
+            this.fastForwarding = false;
+            return;
+          }
+        }
+
+        i++;
+        setTimeout(step, 0);
+        return;
+      }
+
+      // Refresh promotion reference in case it changed
       contract = player.getComponent('contract');
       if (!contract?.promotionId) {
-        // Contract expired - stop advancing and refresh the UI
         this.render(gameStateManager.getStateRef(), 'match');
+        this.fastForwarding = false;
+        return;
+      }
+      promotion = state.promotions.get(contract.promotionId);
+      if (!promotion) {
+        this.fastForwarding = false;
         return;
       }
 
-      // Check if player became injured during this tick
+      // Check if player is still injured before forcing a match
       if (this._isPlayerInjured(player)) {
         this.render(gameStateManager.getStateRef(), 'match');
+        this.fastForwarding = false;
         return;
       }
 
-      if (pendingActions?.length > 0) {
-        const matchAction = pendingActions.find(a => a.type === 'match');
-        if (matchAction) {
-          this.renderMatchPreparation(matchAction);
-          return;
+      // If loop completed without a match, force-generate one
+      const rosterIds = (promotion.roster || []).filter(id => id !== player.id);
+      let opponent = null;
+
+      for (const id of rosterIds) {
+        const entity = state.entities.get(id);
+        if (entity) { opponent = entity; break; }
+      }
+
+      if (!opponent) {
+        // Generate an opponent
+        opponent = EntityFactory.generateRandomIndie(promotion.region || 'USA');
+        gameStateManager.dispatch('ADD_ENTITY', { entity: opponent });
+        const npcContract = opponent.getComponent('contract');
+        if (npcContract) {
+          npcContract.promotionId = promotion.id;
+          npcContract.lengthWeeks = 52;
+          npcContract.remainingWeeks = 52;
         }
+        if (!promotion.roster) promotion.roster = [];
+        promotion.roster.push(opponent.id);
       }
 
-      // Check for events AFTER ticking and processing match/injury/contract
-      // Events have a 30% chance to occur (average every 3-4 days)
-      if (Math.random() < 0.3) {
-        const event = eventManager.generateEvents(player, state);
-        if (event) {
-          this.displayEvent(event);
-          return;
-        }
-      }
-    }
+      this.renderMatchPreparation({
+        type: 'match',
+        player,
+        opponent,
+        promotion,
+        matchType: 'Standard Singles',
+        bookedWinner: Math.random() < 0.5 ? 'wrestler1' : 'wrestler2'
+      });
+      this.fastForwarding = false;
+    };
 
-    // Refresh promotion reference in case it changed
-    contract = player.getComponent('contract');
-    if (!contract?.promotionId) {
-      this.render(gameStateManager.getStateRef(), 'match');
-      return;
-    }
-    promotion = state.promotions.get(contract.promotionId);
-    if (!promotion) return;
-
-    // Check if player is still injured before forcing a match
-    if (this._isPlayerInjured(player)) {
-      this.render(gameStateManager.getStateRef(), 'match');
-      return;
-    }
-
-    // If loop completed without a match, force-generate one
-    const rosterIds = (promotion.roster || []).filter(id => id !== player.id);
-    let opponent = null;
-
-    for (const id of rosterIds) {
-      const entity = state.entities.get(id);
-      if (entity) { opponent = entity; break; }
-    }
-
-    if (!opponent) {
-      // Generate an opponent
-      opponent = EntityFactory.generateRandomIndie(promotion.region || 'USA');
-      gameStateManager.dispatch('ADD_ENTITY', { entity: opponent });
-      const npcContract = opponent.getComponent('contract');
-      if (npcContract) {
-        npcContract.promotionId = promotion.id;
-        npcContract.remainingWeeks = 1;
-      }
-      if (!promotion.roster) promotion.roster = [];
-      promotion.roster.push(opponent.id);
-    }
-
-    this.renderMatchPreparation({
-      type: 'match',
-      player,
-      opponent,
-      promotion,
-      matchType: 'Standard Singles',
-      bookedWinner: Math.random() < 0.5 ? 'wrestler1' : 'wrestler2'
-    });
+    step();
   }
 
   /**
@@ -288,6 +353,7 @@ export class ActionPanel {
           if (pendingActions?.length > 0) {
             const matchAction = pendingActions.find(a => a.type === 'match');
             if (matchAction) {
+              this.currentMatchAction = matchAction;
               this.renderMatchPreparation(matchAction);
               return;
             }
@@ -557,6 +623,7 @@ export class ActionPanel {
     }
 
     const promotion = state.promotions.get(contract.promotionId);
+    CardPositionSystem.syncChampionPositions(state, promotion?.id || null);
     const popularity = player.getComponent('popularity');
 
     // Current standing
@@ -576,6 +643,32 @@ export class ActionPanel {
       'Request Title Shot',
       `Requires high overness and good standing (Charisma check DC 14)`,
       () => {
+        if (contract?.pendingTitleShot) {
+          gameStateManager.dispatch('ADD_LOG_ENTRY', {
+            entry: {
+              category: 'backstage',
+              text: '📋 You already have a title shot queued for an upcoming show.',
+              type: 'booker'
+            }
+          });
+          this.renderBookerOffice(player);
+          return;
+        }
+
+        const championships = ChampionshipSystem.getPromotionChampionships(promotion.id);
+        const challengableTitles = championships.filter(c => c && c.currentChampionId !== player.id);
+        if (challengableTitles.length === 0) {
+          gameStateManager.dispatch('ADD_LOG_ENTRY', {
+            entry: {
+              category: 'backstage',
+              text: '📋 No available championship matches right now.',
+              type: 'booker'
+            }
+          });
+          this.renderBookerOffice(player);
+          return;
+        }
+
         const result = ResolutionEngine.resolve({
           actor: player, action: 'Request Title Shot',
           stat: 'charisma', dc: 14, context: {}
@@ -802,19 +895,62 @@ export class ActionPanel {
     `;
     this.container.appendChild(details);
 
-    // Show available match types for this feud
+    // Show available match types for this feud - now clickable!
     const matchTypes = DynamicFeudSystem.getFeudMatchTypes(feud.id);
     const matchTitle = document.createElement('h5');
-    matchTitle.textContent = 'Available Match Types:';
+    matchTitle.textContent = 'Available Match Types (Click to Book):';
     matchTitle.style.margin = '1rem 0 0.5rem';
     this.container.appendChild(matchTitle);
 
+    const state = gameStateManager.getStateRef();
+    const opponent = state.entities.get(feud.opponentId);
+    const player = gameStateManager.getPlayerEntity();
+
     matchTypes.forEach(type => {
-      const typeDiv = document.createElement('div');
-      typeDiv.className = 'panel mb-sm';
-      typeDiv.textContent = type;
-      this.container.appendChild(typeDiv);
+      const card = this.createActionCard(type, 'Click to book this match type', () => {
+        if (player && opponent) {
+          this._bookMatchWithType(player, opponent, type);
+        }
+      });
+      this.container.appendChild(card);
     });
+
+    // Add option to settle/resolve the feud if in blowoff or bloodfeud phase
+    if (feud.phase === 'blowoff' || feud.phase === 'bloodfeud') {
+      const settleTitle = document.createElement('h5');
+      settleTitle.textContent = 'End the War:';
+      settleTitle.style.margin = '1.5rem 0 0.5rem';
+      settleTitle.style.color = '#e94560';
+      this.container.appendChild(settleTitle);
+
+      const settleCard = this.createActionCard(
+        '💀 Settle the Score',
+        'Agree to end this feud after one final match. The winner takes all.',
+        () => {
+          if (player && opponent) {
+            // Book a final "feud ender" match
+            const matchTypes = DynamicFeudSystem.getFeudMatchTypes(feud.id);
+            const finalMatchType = matchTypes.includes('Retirement Match') 
+              ? 'Retirement Match' 
+              : matchTypes.includes('Loser Leaves Town')
+                ? 'Loser Leaves Town'
+                : matchTypes[matchTypes.length - 1];
+            
+            this._bookMatchWithType(player, opponent, finalMatchType);
+            
+            gameStateManager.dispatch('ADD_LOG_ENTRY', {
+              entry: {
+                category: 'backstage',
+                text: `💀 THE WAR ENDS HERE! This is the FINAL BATTLE between you and ${opponent.getComponent('identity')?.name || 'them'}!`,
+                type: 'feud'
+              }
+            });
+          }
+        }
+      );
+      settleCard.style.border = '2px solid #e94560';
+      this.container.appendChild(settleCard);
+    }
   }
 
   /**
@@ -876,14 +1012,20 @@ export class ActionPanel {
       const card = document.createElement('div');
       card.className = 'panel mb-md';
       card.style.borderLeft = `3px solid ${color}`;
+      const romanceLevel = relationship.romanceLevel || 0;
+      const trust = relationship.trust ?? 50;
+      const romanticStatus = relationship.type === 'romantic'
+        ? `💘 Romantic${relationship.committed ? ' · Committed' : ''}${relationship.secretAffair ? ' · Secret Affair' : ''}`
+        : (relationship.type === 'rival' ? '🔥 Rivalry' : 'Professional Relationship');
       card.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <strong>${name}</strong>
           <span style="color: ${color}; font-weight: 600;">${label} (${relationship.affinity})</span>
         </div>
         <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">
-          ${relationship.type === 'rival' ? '🔥 Rivalry' : 'Professional Relationship'}
+          ${romanticStatus}
         </p>
+        ${relationship.type === 'romantic' ? `<p style="font-size: 0.8rem;">Romance: ${romanceLevel} | Trust: ${trust}</p>` : ''}
         ${relationship.affinity >= 50 ? '<p style="font-size: 0.8rem; color: #4caf50;">✓ Chemistry bonus in matches</p>' : ''}
         ${relationship.affinity <= -50 ? '<p style="font-size: 0.8rem; color: #f44336;">⚠️ Risk of backstage conflict</p>' : ''}
       `;
@@ -899,6 +1041,7 @@ export class ActionPanel {
       <p style="font-size: 0.85rem; margin-top: 0.5rem;">
         <strong>Allies (+50):</strong> Match chemistry bonus, tag team offers<br>
         <strong>Enemies (-50):</strong> Backstage conflict risk, feud opportunities<br>
+        <strong>Romance:</strong> Optional personal storyline with trust/commitment dynamics<br>
         <strong>Relationships drift over time</strong> toward neutral
       </p>
     `;
@@ -1165,11 +1308,22 @@ export class ActionPanel {
 
     // Filter by promotion if player has one
     let rosterIds = [];
+    let promotionId = null;
     if (playerContract && playerContract.promotionId) {
       const promotion = state.promotions.get(playerContract.promotionId);
       rosterIds = promotion?.roster || [];
+      promotionId = promotion?.id || null;
     } else {
       rosterIds = Array.from(state.entities.keys());
+    }
+
+    const championTitlesById = new Map();
+    for (const championship of state.championships.values()) {
+      if (promotionId && championship.promotionId !== promotionId) continue;
+      if (!championship.currentChampion) continue;
+      const list = championTitlesById.get(championship.currentChampion) || [];
+      list.push(championship);
+      championTitlesById.set(championship.currentChampion, list);
     }
 
     rosterIds.forEach(entityId => {
@@ -1187,8 +1341,31 @@ export class ActionPanel {
         ? `${identity.gimmick || 'Wrestler'} · ${position}`
         : (identity.gimmick || 'Wrestler');
 
+      const titles = championTitlesById.get(entityId) || [];
+      const titleWrap = document.createElement('div');
+      titleWrap.className = 'person-title-row';
+
+      const nameEl = document.createElement('span');
+      nameEl.className = 'person-name';
+      nameEl.textContent = identity.name;
+      titleWrap.appendChild(nameEl);
+
+      if (titles.length) {
+        const beltGroup = document.createElement('div');
+        beltGroup.className = 'belt-group';
+
+        titles.forEach(championship => {
+          const belt = document.createElement('span');
+          belt.className = `belt-badge belt-${championship.type || 'generic'}`;
+          belt.title = championship.name;
+          beltGroup.appendChild(belt);
+        });
+
+        titleWrap.appendChild(beltGroup);
+      }
+
       const card = this.createActionCard(
-        identity.name,
+        titleWrap,
         subtitle,
         () => {
           this.renderWrestlerDetails(entity);
@@ -1211,7 +1388,11 @@ export class ActionPanel {
     card.className = 'action-card';
 
     const titleEl = document.createElement('h4');
-    titleEl.textContent = title;
+    if (title instanceof HTMLElement) {
+      titleEl.appendChild(title);
+    } else {
+      titleEl.textContent = title;
+    }
 
     const descEl = document.createElement('p');
     descEl.textContent = description;
@@ -1229,7 +1410,7 @@ export class ActionPanel {
    * @param {object} event - Event to display
    */
   displayEvent(event) {
-    this.currentEvent = event;
+    this.currentEvent = { event, result: null };
     this.renderEvent(event);
   }
 
@@ -1307,6 +1488,21 @@ export class ActionPanel {
       }
     });
 
+    // Scout/buyout events should open the contract negotiation screen, not auto-sign.
+    if (event.id === 'scout_notice' && result.generatedOffer && result.generatedPromotionId) {
+      const promotion = state.promotions.get(result.generatedPromotionId);
+      if (promotion) {
+        this.currentEvent = null;
+        this.careerView = 'offer';
+        this.currentOffer = result.generatedOffer;
+        this.currentPromotion = promotion;
+        this.currentPromotionId = promotion.id;
+        this.renderContractOffer(player, promotion, result.generatedOffer);
+        return;
+      }
+    }
+
+    this.currentEvent = { event, result };
     this.renderEventOutcome(event, result);
   }
 
@@ -1487,7 +1683,7 @@ export class ActionPanel {
 
       const intensityCard = this.createActionCard(
         'Intense Session',
-        '50% more gains but +50% stamina cost and +1 burnout',
+        '100% more gains but +50% stamina cost and +1 burnout',
         () => {
           if (!player) return;
 
@@ -1496,10 +1692,13 @@ export class ActionPanel {
           const result = TrainingSystem.train(player, randomCat.key, true);
 
           if (!result.error) {
+            const gainsText = result.gains && result.gains.length > 0
+              ? result.gains.map(g => `${g.stat} +${g.gain.toFixed(1)}`).join(', ')
+              : 'no gains (maxed out)';
             gameStateManager.dispatch('ADD_LOG_ENTRY', {
               entry: {
                 category: 'personal',
-                text: `🔥 HIGH INTENSITY ${result.narrative}`,
+                text: `🔥 HIGH INTENSITY ${result.category}: ${result.narrative} (${gainsText}). Burnout +${result.burnoutCost}${result.injury ? ` INJURY: ${result.injury.bodyPart}!` : ''}`,
                 type: 'training',
                 gains: result.gains,
                 intensity: 'high'
@@ -1585,6 +1784,7 @@ export class ActionPanel {
    */
   startMatch(match) {
     this.inMatch = true;
+    this.currentMatchAction = null;
 
     if (this.titleEl) {
       this.titleEl.textContent = 'Match in Progress';
@@ -1605,6 +1805,11 @@ export class ActionPanel {
       const winnerEntityId = e.detail.winnerEntityId;
       const winnerName = e.detail.winnerName || e.detail.winner;
       const rating = e.detail.rating;
+      const stateRef = gameStateManager.getStateRef();
+      const preMatchTitle = (match.isTitleMatch && match.titleId)
+        ? stateRef.championships.get(match.titleId)
+        : null;
+      const wasPlayerChampionBefore = preMatchTitle?.currentChampion === match.player.id;
 
       // Determine winner/loser entities
       const playerWon = winnerEntityId ? winnerEntityId === match.player.id : winnerSide === 'wrestler1';
@@ -1618,11 +1823,24 @@ export class ActionPanel {
       );
 
       // Evaluate booking success
+      const playerContract = match.player.getComponent('contract');
+      const hasCreativeControl = !!playerContract?.hasCreativeControl;
       const followedBooking = match.bookedWinner ?
         ((match.bookedWinner === 'wrestler1' && playerWon) || (match.bookedWinner === 'wrestler2' && !playerWon)) :
         true;
-      const bookingStatus = followedBooking ? ' [FOLLOWED BOOKING]' : ' [WENT OFF SCRIPT]';
-      const titleBonus = (match.isTitleMatch && playerWon) ? ' 🏆 AND NEW CHAMPION!' : '';
+      const bookingStatus = followedBooking
+        ? ' [FOLLOWED BOOKING]'
+        : (hasCreativeControl ? ' [CREATIVE CONTROL OVERRIDE]' : ' [WENT OFF SCRIPT]');
+      let titleBonus = '';
+      if (match.isTitleMatch) {
+        if (playerWon && !wasPlayerChampionBefore) {
+          titleBonus = ' 🏆 AND NEW CHAMPION!';
+        } else if (playerWon && wasPlayerChampionBefore) {
+          titleBonus = ' 👑 AND STILL CHAMPION!';
+        } else if (!playerWon && wasPlayerChampionBefore) {
+          titleBonus = ' ❌ TITLE LOST!';
+        }
+      }
 
       gameStateManager.dispatch('ADD_LOG_ENTRY', {
         entry: {
@@ -1632,7 +1850,7 @@ export class ActionPanel {
         }
       });
 
-      if (!followedBooking) {
+      if (!followedBooking && !hasCreativeControl) {
         gameStateManager.dispatch('ADD_LOG_ENTRY', {
           entry: {
             category: 'backstage',
@@ -1656,10 +1874,23 @@ export class ActionPanel {
   renderWrestlerDetails(entity) {
     if (!this.container) return;
 
+    const state = gameStateManager.getStateRef();
+    const player = gameStateManager.getPlayerEntity();
     const identity = entity.getComponent('identity');
     const inRingStats = entity.getComponent('inRingStats');
     const popularity = entity.getComponent('popularity');
     const careerStats = entity.getComponent('careerStats');
+    const playerContract = player?.getComponent('contract');
+    const targetContract = entity.getComponent('contract');
+    const samePromotion = !!(playerContract?.promotionId &&
+      targetContract?.promotionId &&
+      playerContract.promotionId === targetContract.promotionId);
+    const relationship = player && player.id !== entity.id
+      ? RelationshipManager.getRelationship(player.id, entity.id)
+      : null;
+    const activeFeud = player && player.id !== entity.id
+      ? this._getActiveFeud(player.id, entity.id)
+      : null;
 
     this.container.innerHTML = '';
 
@@ -1689,9 +1920,755 @@ export class ActionPanel {
       ${careerStats ? `
         <p><strong>Record:</strong> ${careerStats.totalWins}-${careerStats.totalLosses}-${careerStats.draws}</p>
       ` : ''}
+      ${relationship ? `
+        <p style="margin-top: 1rem;"><strong>Relationship:</strong> ${relationship.affinity} (${relationship.type})</p>
+      ` : ''}
+      ${activeFeud ? `
+        <p style="color: #ff8c42;"><strong>Active Feud:</strong> ${activeFeud.phase} phase, heat ${activeFeud.heat}</p>
+      ` : ''}
     `;
 
     this.container.appendChild(details);
+
+    if (!player || player.id === entity.id) {
+      return;
+    }
+
+    const actionTitle = document.createElement('h4');
+    actionTitle.textContent = 'Interactions';
+    actionTitle.style.margin = '1rem 0';
+    this.container.appendChild(actionTitle);
+
+    if (!samePromotion) {
+      const info = document.createElement('div');
+      info.className = 'panel mb-md';
+      info.innerHTML = '<p>You can only book matches/feuds with wrestlers in your current promotion.</p>';
+      this.container.appendChild(info);
+    }
+
+    if (samePromotion) {
+      const askMatchCard = this.createActionCard(
+        'Ask for Match',
+        'Pitch a singles match with this wrestler (Charisma check DC 10)',
+        () => this.askForMatch(player, entity)
+      );
+      this.container.appendChild(askMatchCard);
+
+      const feudLabel = activeFeud ? 'Escalate Feud' : 'Start Feud';
+      const feudDesc = activeFeud
+        ? 'Push your rivalry hotter before the next show'
+        : 'Turn this into an on-screen rivalry';
+      const feudCard = this.createActionCard(
+        feudLabel,
+        feudDesc,
+        () => this.handleFeudAction(player, entity)
+      );
+      this.container.appendChild(feudCard);
+    }
+
+    const respectCard = this.createActionCard(
+      'Show Respect',
+      'Build trust and improve chemistry',
+      () => this.showRespect(player, entity)
+    );
+    this.container.appendChild(respectCard);
+
+    const trashTalkCard = this.createActionCard(
+      'Talk Trash',
+      'Lower relationship and stir conflict',
+      () => this.talkTrash(player, entity)
+    );
+    this.container.appendChild(trashTalkCard);
+
+    const playerAge = player.getComponent('identity')?.age || 18;
+    const targetAge = entity.getComponent('identity')?.age || 18;
+    if (playerAge >= 18 && targetAge >= 18) {
+      const romanceTitle = document.createElement('h4');
+      romanceTitle.textContent = 'Romance';
+      romanceTitle.style.margin = '1rem 0';
+      this.container.appendChild(romanceTitle);
+
+      const flirtCard = this.createActionCard(
+        'Flirt',
+        'Light romantic approach to test chemistry',
+        () => this.flirtWithWrestler(player, entity)
+      );
+      this.container.appendChild(flirtCard);
+
+      const dateCard = this.createActionCard(
+        'Ask on Date',
+        'Try to start a romantic connection',
+        () => this.askOnDate(player, entity)
+      );
+      this.container.appendChild(dateCard);
+
+      const privateCard = this.createActionCard(
+        'Private Night',
+        'Mature interaction (fade-to-black, non-explicit)',
+        () => this.privateNight(player, entity)
+      );
+      this.container.appendChild(privateCard);
+
+      // NSFW actions - only show if NSFW content is enabled
+      const nsfwEnabled = gameStateManager.getStateRef().settings.nsfwContent;
+      if (nsfwEnabled) {
+        const intimateCard = this.createActionCard(
+          'Intimate Encounter',
+          'Passionate and explicit physical intimacy',
+          () => this.intimateEncounter(player, entity)
+        );
+        intimateCard.style.borderLeft = '3px solid #e91e63';
+        this.container.appendChild(intimateCard);
+
+        const affairCard = this.createActionCard(
+          'Explicit Affair',
+          'Risky: Explicit secret affair if already committed',
+          () => this.explicitSecretAffair(player, entity)
+        );
+        affairCard.style.borderLeft = '3px solid #f44336';
+        this.container.appendChild(affairCard);
+      }
+
+      const commitCard = this.createActionCard(
+        'Commit to Relationship',
+        'Become an official couple if chemistry is high',
+        () => this.commitRelationship(player, entity)
+      );
+      this.container.appendChild(commitCard);
+
+      const cheatCard = this.createActionCard(
+        'Start Secret Affair',
+        'Risky: cheat if you are already committed to someone else',
+        () => this.startSecretAffair(player, entity)
+      );
+      cheatCard.style.borderLeft = '3px solid #ff9800';
+      this.container.appendChild(cheatCard);
+    }
+  }
+
+  /**
+   * Gets an active feud between two wrestlers
+   * @private
+   * @param {string} playerId
+   * @param {string} targetId
+   * @returns {object|null}
+   */
+  _getActiveFeud(playerId, targetId) {
+    const state = gameStateManager.getStateRef();
+    const feudId = [playerId, targetId].sort().join('_');
+    const feud = state.feuds.get(feudId);
+    return feud && !feud.resolved ? feud : null;
+  }
+
+  /**
+   * Creates a player-requested match and opens match prep
+   * @private
+   * @param {Entity} player
+   * @param {Entity} opponent
+   */
+  askForMatch(player, opponent) {
+    const result = ResolutionEngine.resolve({
+      actor: player,
+      action: 'Request Match',
+      stat: 'charisma',
+      dc: 10,
+      context: {}
+    });
+
+    if (result.outcome === 'FAILURE' || result.outcome === 'CRITICAL_FAILURE') {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: `📋 Match request denied for now. You were not convincing enough.`,
+          type: 'booker'
+        }
+      });
+      this.renderWrestlerDetails(opponent);
+      return;
+    }
+
+    const activeFeud = this._getActiveFeud(player.id, opponent.id);
+    const feudMatchTypes = activeFeud ? DynamicFeudSystem.getFeudMatchTypes(activeFeud.id) : [];
+    
+    // Show match type selection if multiple options available
+    if (feudMatchTypes.length > 1) {
+      this._showMatchTypeSelection(player, opponent, feudMatchTypes);
+      return;
+    }
+    
+    // Single option or no feud - proceed directly
+    const matchType = feudMatchTypes.length ? feudMatchTypes[0] : 'Standard Singles';
+    this._bookMatchWithType(player, opponent, matchType);
+  }
+
+  /**
+   * Shows match type selection screen
+   * @private
+   */
+  _showMatchTypeSelection(player, opponent, matchTypes) {
+    this.container.innerHTML = '';
+
+    const backBtn = document.createElement('button');
+    backBtn.className = 'btn mb-md';
+    backBtn.textContent = '← Back';
+    backBtn.addEventListener('click', () => this.renderWrestlerDetails(opponent));
+    this.container.appendChild(backBtn);
+
+    const title = document.createElement('h4');
+    title.textContent = 'Select Match Type';
+    title.style.marginBottom = '1rem';
+    this.container.appendChild(title);
+
+    const opponentName = opponent.getComponent('identity')?.name || 'your opponent';
+    const info = document.createElement('p');
+    info.textContent = `Booker approved your match vs ${opponentName}. Choose the stipulation:`;
+    info.style.marginBottom = '1rem';
+    this.container.appendChild(info);
+
+    matchTypes.forEach(type => {
+      const card = this.createActionCard(type, 'Select this match type', () => {
+        this._bookMatchWithType(player, opponent, type);
+      });
+      this.container.appendChild(card);
+    });
+  }
+
+  /**
+   * Books a match with the selected type
+   * @private
+   */
+  _bookMatchWithType(player, opponent, matchType) {
+    const playerOverness = player.getComponent('popularity')?.overness || 0;
+    const opponentOverness = opponent.getComponent('popularity')?.overness || 0;
+    const playerFavored = playerOverness >= (opponentOverness - 8);
+    const bookedWinner = playerFavored
+      ? (Math.random() < 0.65 ? 'wrestler1' : 'wrestler2')
+      : (Math.random() < 0.7 ? 'wrestler2' : 'wrestler1');
+
+    // Check if this is part of an active feud
+    const activeFeud = this._getActiveFeud(player.id, opponent.id);
+    const feudId = activeFeud ? activeFeud.id : null;
+
+    this.currentMatchAction = {
+      type: 'match',
+      player,
+      opponent,
+      matchType,
+      bookedWinner,
+      feudId
+    };
+
+    const opponentName = opponent.getComponent('identity')?.name || 'your opponent';
+    const feudText = activeFeud ? ' (Feud Match)' : '';
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: `📋 Match booked: You vs ${opponentName} (${matchType})${feudText}.`,
+        type: 'booker'
+      }
+    });
+
+    this.renderMatchPreparation(this.currentMatchAction);
+  }
+
+  /**
+   * Starts or escalates a feud with a wrestler
+   * @private
+   * @param {Entity} player
+   * @param {Entity} opponent
+   */
+  handleFeudAction(player, opponent) {
+    const activeFeud = this._getActiveFeud(player.id, opponent.id);
+
+    if (activeFeud) {
+      const result = DynamicFeudSystem.escalateFeud(activeFeud.id);
+      if (result.error) {
+        gameStateManager.dispatch('ADD_LOG_ENTRY', {
+          entry: {
+            category: 'backstage',
+            text: `🔥 Could not escalate feud: ${result.error}`,
+            type: 'feud'
+          }
+        });
+      }
+      this.renderWrestlerDetails(opponent);
+      return;
+    }
+
+    const startResult = DynamicFeudSystem.startFeud(player, opponent, 'Challenge issued in the locker room');
+    if (!startResult.error) {
+      RelationshipManager.modifyAffinity(player.id, opponent.id, -20, 'Feud started');
+    } else {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: `🔥 Could not start feud: ${startResult.error}`,
+          type: 'feud'
+        }
+      });
+    }
+
+    this.renderWrestlerDetails(opponent);
+  }
+
+  /**
+   * Friendly interaction with another wrestler
+   * @private
+   * @param {Entity} player
+   * @param {Entity} target
+   */
+  showRespect(player, target) {
+    const targetName = target.getComponent('identity')?.name || 'them';
+    RelationshipManager.modifyAffinity(player.id, target.id, 8, 'Showed respect');
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: `🤝 You showed respect to ${targetName}. Relationship improved.`,
+        type: 'social'
+      }
+    });
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Hostile interaction with another wrestler
+   * @private
+   * @param {Entity} player
+   * @param {Entity} target
+   */
+  talkTrash(player, target) {
+    const targetName = target.getComponent('identity')?.name || 'them';
+    RelationshipManager.modifyAffinity(player.id, target.id, -10, 'Talked trash backstage');
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: `🗣️ You talked trash about ${targetName}. Tension is rising.`,
+        type: 'social'
+      }
+    });
+
+    // Small chance to ignite a feud from repeated trash talk if none exists yet
+    if (!this._getActiveFeud(player.id, target.id) && Math.random() < 0.25) {
+      DynamicFeudSystem.startFeud(player, target, 'Backstage trash talk crossed the line');
+    }
+
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Gets relationship edge for two entities.
+   * @private
+   */
+  _getRel(aId, bId) {
+    return RelationshipManager.getRelationship(aId, bId);
+  }
+
+  /**
+   * Gets committed romantic partner id (if any), excluding a specific target.
+   * @private
+   */
+  _getCommittedPartnerId(playerId, excludeId = null) {
+    const rels = RelationshipManager.getEntityRelationships(playerId);
+    const committed = rels.find(r =>
+      r.entityId !== excludeId &&
+      r.relationship?.type === 'romantic' &&
+      r.relationship?.committed === true
+    );
+    return committed?.entityId || null;
+  }
+
+  /**
+   * Flirt interaction.
+   * @private
+   */
+  flirtWithWrestler(player, target) {
+    const result = ResolutionEngine.resolve({
+      actor: player,
+      action: 'Flirt',
+      stat: 'charisma',
+      dc: 10,
+      context: {}
+    });
+    const rel = this._getRel(player.id, target.id);
+    const delta = (result.outcome === 'CRITICAL_SUCCESS' || result.outcome === 'SUCCESS') ? 8 : -4;
+    const romanceDelta = delta > 0 ? 10 : -6;
+
+    RelationshipManager.modifyAffinity(player.id, target.id, delta, 'Flirting');
+    RelationshipManager.setRelationship(player.id, target.id, {
+      type: (rel.type === 'rival' ? 'professional' : (rel.type || 'professional')),
+      romanceLevel: Math.max(0, Math.min(100, (rel.romanceLevel || 0) + romanceDelta)),
+      trust: Math.max(0, Math.min(100, (rel.trust ?? 50) + (delta > 0 ? 4 : -5)))
+    });
+
+    const targetName = target.getComponent('identity')?.name || 'them';
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: delta > 0 ? `💘 Your flirting lands well with ${targetName}.` : `💔 ${targetName} is not impressed by your flirting.`,
+        type: 'social'
+      }
+    });
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Ask target on a date.
+   * @private
+   */
+  askOnDate(player, target) {
+    const rel = this._getRel(player.id, target.id);
+    const dc = (rel.affinity >= 25 || (rel.romanceLevel || 0) >= 20) ? 10 : 14;
+    const result = ResolutionEngine.resolve({
+      actor: player,
+      action: 'Ask on Date',
+      stat: 'charisma',
+      dc,
+      context: {}
+    });
+
+    const success = result.outcome === 'CRITICAL_SUCCESS' || result.outcome === 'SUCCESS';
+    RelationshipManager.modifyAffinity(player.id, target.id, success ? 10 : -6, 'Date request');
+    RelationshipManager.setRelationship(player.id, target.id, {
+      type: success ? 'romantic' : (rel.type || 'professional'),
+      romanceLevel: Math.max(0, Math.min(100, (rel.romanceLevel || 0) + (success ? 18 : -8))),
+      trust: Math.max(0, Math.min(100, (rel.trust ?? 50) + (success ? 8 : -8))),
+      committed: success ? (rel.committed || false) : (rel.committed || false),
+      secretAffair: rel.secretAffair || false
+    });
+
+    const targetName = target.getComponent('identity')?.name || 'them';
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: success ? `💘 ${targetName} agrees to a date. Romance is building.` : `💔 ${targetName} declines the date invitation.`,
+        type: 'social'
+      }
+    });
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Mature relationship progression (non-explicit).
+   * @private
+   */
+  privateNight(player, target) {
+    const rel = this._getRel(player.id, target.id);
+    const gate = (rel.romanceLevel || 0) >= 25 || rel.affinity >= 35;
+    if (!gate) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '💬 The chemistry is not there yet for that level of closeness.',
+          type: 'social'
+        }
+      });
+      this.renderWrestlerDetails(target);
+      return;
+    }
+
+    RelationshipManager.modifyAffinity(player.id, target.id, 8, 'Private time together');
+    RelationshipManager.setRelationship(player.id, target.id, {
+      type: 'romantic',
+      romanceLevel: Math.min(100, (rel.romanceLevel || 0) + 15),
+      trust: Math.min(100, (rel.trust ?? 50) + 10),
+      committed: rel.committed || false,
+      secretAffair: rel.secretAffair || false
+    });
+
+    const targetName = target.getComponent('identity')?.name || 'them';
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: `🌙 You and ${targetName} spend a private night together. (Fade to black.)`,
+        type: 'social'
+      }
+    });
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Commits relationship when chemistry is high.
+   * @private
+   */
+  commitRelationship(player, target) {
+    const rel = this._getRel(player.id, target.id);
+    if ((rel.romanceLevel || 0) < 45 || rel.affinity < 35) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '💬 Commitment talks fall flat. Build the relationship further first.',
+          type: 'social'
+        }
+      });
+      this.renderWrestlerDetails(target);
+      return;
+    }
+
+    // End committed status with any other partner.
+    const otherPartnerId = this._getCommittedPartnerId(player.id, target.id);
+    if (otherPartnerId) {
+      const prevRel = this._getRel(player.id, otherPartnerId);
+      RelationshipManager.setRelationship(player.id, otherPartnerId, {
+        ...prevRel,
+        committed: false
+      });
+      RelationshipManager.modifyAffinity(player.id, otherPartnerId, -20, 'Broke commitment');
+    }
+
+    RelationshipManager.setRelationship(player.id, target.id, {
+      ...rel,
+      type: 'romantic',
+      committed: true,
+      secretAffair: false,
+      trust: Math.min(100, (rel.trust ?? 50) + 12),
+      romanceLevel: Math.min(100, (rel.romanceLevel || 0) + 8)
+    });
+
+    const targetName = target.getComponent('identity')?.name || 'them';
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: `💍 You and ${targetName} are now officially together.`,
+        type: 'social'
+      }
+    });
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Explicit intimate encounter (NSFW)
+   * @private
+   */
+  intimateEncounter(player, target) {
+    const rel = this._getRel(player.id, target.id);
+    const gate = (rel.romanceLevel || 0) >= 30 || rel.affinity >= 40;
+    if (!gate) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '💬 The chemistry is not strong enough for that level of intimacy yet.',
+          type: 'social'
+        }
+      });
+      this.renderWrestlerDetails(target);
+      return;
+    }
+
+    const result = ResolutionEngine.resolve({
+      actor: player,
+      action: 'Intimate Encounter',
+      stat: 'charisma',
+      dc: 12,
+      context: {}
+    });
+
+    const targetName = target.getComponent('identity')?.name || 'them';
+    let narrativeKey;
+    let romanceDelta;
+    let trustDelta;
+    let affinityDelta;
+
+    switch(result.outcome) {
+      case 'CRITICAL_SUCCESS':
+        narrativeKey = 'nsfw_intimate_critical_success';
+        romanceDelta = 25;
+        trustDelta = 20;
+        affinityDelta = 15;
+        break;
+      case 'SUCCESS':
+        narrativeKey = 'nsfw_intimate_success';
+        romanceDelta = 18;
+        trustDelta = 15;
+        affinityDelta = 10;
+        break;
+      case 'FAILURE':
+        narrativeKey = 'nsfw_intimate_failure';
+        romanceDelta = -8;
+        trustDelta = -10;
+        affinityDelta = -6;
+        break;
+      case 'CRITICAL_FAILURE':
+        narrativeKey = 'nsfw_intimate_critical_failure';
+        romanceDelta = -15;
+        trustDelta = -20;
+        affinityDelta = -15;
+        break;
+    }
+
+    const narrative = dataManager.getRandomNarrative(narrativeKey)
+      ?.replace('{actor}', 'You')
+      .replace('{target}', targetName) || `You and ${targetName} share an intimate moment.`;
+
+    RelationshipManager.modifyAffinity(player.id, target.id, affinityDelta, 'Intimate encounter');
+    RelationshipManager.setRelationship(player.id, target.id, {
+      type: 'romantic',
+      romanceLevel: Math.max(0, Math.min(100, (rel.romanceLevel || 0) + romanceDelta)),
+      trust: Math.max(0, Math.min(100, (rel.trust ?? 50) + trustDelta)),
+      committed: rel.committed || false,
+      secretAffair: rel.secretAffair || false
+    });
+
+    gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      entry: {
+        category: 'backstage',
+        text: narrative,
+        type: 'social'
+      }
+    });
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Explicit secret affair (NSFW)
+   * @private
+   */
+  explicitSecretAffair(player, target) {
+    const currentPartnerId = this._getCommittedPartnerId(player.id, target.id);
+    if (!currentPartnerId) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '💬 You are not currently committed to anyone. No affair to start.',
+          type: 'social'
+        }
+      });
+      this.renderWrestlerDetails(target);
+      return;
+    }
+
+    const rel = this._getRel(player.id, target.id);
+    const result = ResolutionEngine.resolve({
+      actor: player,
+      action: 'Explicit Secret Affair',
+      stat: 'charisma',
+      dc: 14,
+      context: {}
+    });
+    const success = result.outcome === 'CRITICAL_SUCCESS' || result.outcome === 'SUCCESS';
+
+    const targetName = target.getComponent('identity')?.name || 'them';
+    let narrative;
+
+    if (success) {
+      RelationshipManager.setRelationship(player.id, target.id, {
+        ...rel,
+        type: 'romantic',
+        secretAffair: true,
+        committed: false,
+        romanceLevel: Math.min(100, (rel.romanceLevel || 0) + 25),
+        trust: Math.min(100, (rel.trust ?? 50) + 10)
+      });
+      RelationshipManager.modifyAffinity(player.id, target.id, 12, 'Explicit affair began');
+      narrative = dataManager.getRandomNarrative('nsfw_affair_success')
+        ?.replace('{actor}', 'You')
+        .replace('{target}', targetName) || `You and ${targetName} share a passionate but risky intimate encounter.`;
+    } else {
+      RelationshipManager.modifyAffinity(player.id, target.id, -15, 'Explicit affair attempt failed');
+      const narrativeKey = result.outcome === 'CRITICAL_FAILURE' ? 'nsfw_intimate_critical_failure' : 'nsfw_intimate_failure';
+      narrative = dataManager.getRandomNarrative(narrativeKey)
+        ?.replace('{actor}', 'You')
+        .replace('{target}', targetName) || `The secret approach fails and creates tension with ${targetName}.`;
+    }
+
+    // Fallout risk with committed partner
+    const partnerRel = this._getRel(player.id, currentPartnerId);
+    const exposure = Math.random() < (success ? 0.35 : 0.6);
+    if (exposure) {
+      RelationshipManager.modifyAffinity(player.id, currentPartnerId, -40, 'Explicit affair exposed');
+      RelationshipManager.setRelationship(player.id, currentPartnerId, {
+        ...partnerRel,
+        trust: Math.max(0, (partnerRel.trust ?? 50) - 45),
+        committed: false
+      });
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '⚠️ The explicit affair is exposed! Major trust damage, public scandal, and relationship fallout.',
+          type: 'social'
+        }
+      });
+    } else {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: narrative,
+          type: 'social'
+        }
+      });
+    }
+    this.renderWrestlerDetails(target);
+  }
+
+  /**
+   * Starts an affair if player is already committed elsewhere.
+   * @private
+   */
+  startSecretAffair(player, target) {
+    const currentPartnerId = this._getCommittedPartnerId(player.id, target.id);
+    if (!currentPartnerId) {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '💬 You are not currently committed to anyone. No affair to start.',
+          type: 'social'
+        }
+      });
+      this.renderWrestlerDetails(target);
+      return;
+    }
+
+    const rel = this._getRel(player.id, target.id);
+    const result = ResolutionEngine.resolve({
+      actor: player,
+      action: 'Start Secret Affair',
+      stat: 'charisma',
+      dc: 13,
+      context: {}
+    });
+    const success = result.outcome === 'CRITICAL_SUCCESS' || result.outcome === 'SUCCESS';
+
+    if (success) {
+      RelationshipManager.setRelationship(player.id, target.id, {
+        ...rel,
+        type: 'romantic',
+        secretAffair: true,
+        committed: false,
+        romanceLevel: Math.min(100, (rel.romanceLevel || 0) + 20),
+        trust: Math.min(100, (rel.trust ?? 50) + 6)
+      });
+      RelationshipManager.modifyAffinity(player.id, target.id, 8, 'Secret affair began');
+    } else {
+      RelationshipManager.modifyAffinity(player.id, target.id, -10, 'Affair attempt failed');
+    }
+
+    // Fallout risk with committed partner
+    const partnerRel = this._getRel(player.id, currentPartnerId);
+    const exposure = Math.random() < (success ? 0.25 : 0.5);
+    if (exposure) {
+      RelationshipManager.modifyAffinity(player.id, currentPartnerId, -30, 'Affair exposed');
+      RelationshipManager.setRelationship(player.id, currentPartnerId, {
+        ...partnerRel,
+        trust: Math.max(0, (partnerRel.trust ?? 50) - 35),
+        committed: false
+      });
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: '⚠️ The affair is exposed. Major trust damage and relationship fallout.',
+          type: 'social'
+        }
+      });
+    } else {
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'backstage',
+          text: success ? '🕶️ A secret affair begins quietly.' : '💥 The secret approach fails and creates tension.',
+          type: 'social'
+        }
+      });
+    }
+
+    this.renderWrestlerDetails(target);
   }
 
   /**
@@ -1717,6 +2694,7 @@ export class ActionPanel {
       const positionInfo = contract.position ?
         CardPositionSystem.getPositionInfo(contract.position).name.toUpperCase() :
         'DARK MATCH';
+      const buyoutCost = (contract.remainingWeeks || 0) * (contract.weeklySalary || 0);
 
       const contractCard = document.createElement('div');
       contractCard.className = 'panel mb-md';
@@ -1725,10 +2703,91 @@ export class ActionPanel {
         <p>Position: <strong>${positionInfo}</strong></p>
         <p>Salary: $${contract.weeklySalary}/week</p>
         <p>Remaining: ${contract.remainingWeeks} weeks</p>
+        <p>Dates/Month: ${contract.datesPerMonth || 4}</p>
+        <p>Injury Coverage: ${contract.injuryCoveragePct || 0}%</p>
+        <p>Title Opportunity: ${contract.titleOpportunityGuaranteed ? `Yes (${contract.championshipOpportunityWeeks || 12} weeks)` : 'No'}</p>
+        <p>Buyout Cost: $${buyoutCost}</p>
         ${contract.hasCreativeControl ? '<p style="color: var(--accent-secondary);">✓ Creative Control</p>' : ''}
         ${contract.hasMerchCut > 0 ? `<p>Merch Cut: ${contract.hasMerchCut}%</p>` : ''}
       `;
       this.container.appendChild(contractCard);
+
+      if ((contract.renewalWindowWeeks || 0) > 0) {
+        const renewalCard = document.createElement('div');
+        renewalCard.className = 'panel mb-md';
+        renewalCard.style.borderLeft = '3px solid #ff9800';
+        renewalCard.innerHTML = `
+          <h4>⚠️ Contract Renewal Window</h4>
+          <p>You have ${contract.renewalWindowWeeks} week(s) to renew before free agency.</p>
+        `;
+        this.container.appendChild(renewalCard);
+
+        const renewalOfferCard = this.createActionCard(
+          '🤝 Negotiate Renewal',
+          'Open renewal contract terms with your current promotion',
+          () => {
+            const renewalOffer = contract.pendingRenewalOffer || ContractEngine.generateRenewalOffer(player);
+            if (renewalOffer) {
+              contract.pendingRenewalOffer = renewalOffer;
+              this.careerView = 'offer';
+              this.currentPromotionId = promotion.id;
+              this.renderContractOffer(player, promotion, renewalOffer);
+            } else {
+              gameStateManager.dispatch('ADD_LOG_ENTRY', {
+                entry: { category: 'personal', text: 'No renewal offer available right now.', type: 'contract' }
+              });
+              this.render(gameStateManager.getStateRef(), 'career');
+            }
+          }
+        );
+        this.container.appendChild(renewalOfferCard);
+
+        const declineRenewalCard = this.createActionCard(
+          '🚪 Decline Renewal',
+          'Leave immediately and become a free agent',
+          () => {
+            const result = ContractEngine.declineRenewal(player);
+            gameStateManager.dispatch('ADD_LOG_ENTRY', {
+              entry: {
+                category: 'personal',
+                text: result?.success ? 'You declined renewal and entered free agency.' : (result?.error || 'Could not decline renewal.'),
+                type: 'contract'
+              }
+            });
+            this.render(gameStateManager.getStateRef(), 'career');
+          }
+        );
+        declineRenewalCard.style.borderLeft = '3px solid #f44336';
+        this.container.appendChild(declineRenewalCard);
+      }
+
+      const leaveCard = this.createActionCard(
+        '⚠️ Get Out of Contract',
+        `Pay buyout ($${buyoutCost}) and become a free agent`,
+        () => {
+          const result = ContractEngine.releaseWrestler(player);
+          if (result?.success) {
+            gameStateManager.dispatch('ADD_LOG_ENTRY', {
+              entry: {
+                category: 'personal',
+                text: `You bought out your contract for $${result.buyoutCost} and became a free agent.`,
+                type: 'contract'
+              }
+            });
+          } else {
+            gameStateManager.dispatch('ADD_LOG_ENTRY', {
+              entry: {
+                category: 'personal',
+                text: result?.error || 'Could not exit contract.',
+                type: 'contract'
+              }
+            });
+          }
+          this.render(gameStateManager.getStateRef(), 'career');
+        }
+      );
+      leaveCard.style.borderLeft = '3px solid #ff9800';
+      this.container.appendChild(leaveCard);
     } else {
       const freeAgentCard = document.createElement('div');
       freeAgentCard.className = 'panel mb-md';
@@ -1744,7 +2803,10 @@ export class ActionPanel {
     const browseCard = this.createActionCard(
       '🏢 Browse Promotions',
       contract?.promotionId ? 'View other promotions and contract offers' : 'Find a promotion to sign with',
-      () => this.renderPromotionBrowser(player)
+      () => {
+        this.careerView = 'browser';
+        this.renderPromotionBrowser(player);
+      }
     );
     this.container.appendChild(browseCard);
 
@@ -1807,7 +2869,10 @@ export class ActionPanel {
     const backBtn = document.createElement('button');
     backBtn.className = 'btn mb-md';
     backBtn.textContent = '← Back';
-    backBtn.addEventListener('click', () => this.render(gameStateManager.getStateRef(), 'career'));
+    backBtn.addEventListener('click', () => {
+      this.careerView = 'main';
+      this.render(gameStateManager.getStateRef(), 'career');
+    });
     this.container.appendChild(backBtn);
 
     const title = document.createElement('h4');
@@ -1859,7 +2924,14 @@ export class ActionPanel {
         applyBtn.className = 'btn btn-primary mt-sm';
         applyBtn.style.marginTop = '0.5rem';
         applyBtn.textContent = '📝 Apply for Contract';
-        applyBtn.addEventListener('click', () => this.renderContractOffer(player, promo));
+        applyBtn.addEventListener('click', (e) => {
+          // Prevent click-through side effects when re-rendering immediately
+          e.preventDefault();
+          e.stopPropagation();
+          this.careerView = 'offer';
+          this.currentPromotionId = promo.id;
+          setTimeout(() => this.renderContractOffer(player, promo), 0);
+        });
         card.appendChild(applyBtn);
       }
 
@@ -1881,15 +2953,37 @@ export class ActionPanel {
       // Clear the stored offer when going back
       this.currentOffer = null;
       this.currentPromotion = null;
+      this.currentPromotionId = null;
+      this.careerView = 'browser';
       this.renderPromotionBrowser(player);
     });
     this.container.appendChild(backBtn);
 
-    const offer = existingOffer || ContractEngine.generateOffer(promotion, player);
+    const baseOffer = existingOffer || ContractEngine.generateOffer(promotion, player);
+    const offer = {
+      ...baseOffer,
+      weeklySalary: baseOffer?.weeklySalary ?? 0,
+      lengthWeeks: Math.max(1, baseOffer?.lengthWeeks ?? 8),
+      remainingWeeks: Math.max(1, baseOffer?.remainingWeeks ?? (baseOffer?.lengthWeeks ?? 8)),
+      position: baseOffer?.position || 'mid_card',
+      tvAppearanceBonus: baseOffer?.tvAppearanceBonus ?? 0,
+      hasCreativeControl: baseOffer?.hasCreativeControl === true,
+      hasMerchCut: baseOffer?.hasMerchCut ?? 0,
+      injuryCoveragePct: baseOffer?.injuryCoveragePct ?? 0,
+      datesPerMonth: baseOffer?.datesPerMonth ?? 4,
+      titleOpportunityGuaranteed: baseOffer?.titleOpportunityGuaranteed === true,
+      championshipOpportunityWeeks: baseOffer?.championshipOpportunityWeeks ?? 0,
+      noCompeteWeeks: baseOffer?.noCompeteWeeks ?? 0,
+      benefits: Array.isArray(baseOffer?.benefits) ? baseOffer.benefits : []
+    };
 
     // Store the current offer and promotion for persistence
     this.currentOffer = offer;
     this.currentPromotion = promotion;
+    this.currentPromotionId = promotion?.id || null;
+    this.careerView = 'offer';
+    const positionInfo = CardPositionSystem.getPositionInfo(this.currentOffer.position || 'mid_card');
+    const positionName = positionInfo?.name || 'Mid Card';
 
     const title = document.createElement('h4');
     title.textContent = `📝 Contract Offer: ${promotion.name}`;
@@ -1902,10 +2996,13 @@ export class ActionPanel {
       <h5>Terms</h5>
       <p><strong>Weekly Salary:</strong> $${this.currentOffer.weeklySalary}</p>
       <p><strong>Length:</strong> ${this.currentOffer.lengthWeeks} weeks</p>
-      <p><strong>Position:</strong> ${CardPositionSystem.getPositionInfo(this.currentOffer.position).name}</p>
+      <p><strong>Position:</strong> ${positionName}</p>
       <p><strong>TV Appearance Bonus:</strong> $${this.currentOffer.tvAppearanceBonus}</p>
       <p><strong>Creative Control:</strong> ${this.currentOffer.hasCreativeControl ? 'Yes' : 'No'}</p>
       <p><strong>Merch Cut:</strong> ${this.currentOffer.hasMerchCut}%</p>
+      <p><strong>Injury Coverage:</strong> ${this.currentOffer.injuryCoveragePct || 0}%</p>
+      <p><strong>Dates / Month:</strong> ${this.currentOffer.datesPerMonth || 4}</p>
+      <p><strong>Title Opportunity Clause:</strong> ${this.currentOffer.titleOpportunityGuaranteed ? `Yes (within ${this.currentOffer.championshipOpportunityWeeks || 12} weeks)` : 'No'}</p>
       <p><strong>No-Compete:</strong> ${this.currentOffer.noCompeteWeeks} weeks</p>
       ${this.currentOffer.benefits.length > 0 ? `<p><strong>Benefits:</strong> ${this.currentOffer.benefits.join(', ')}</p>` : ''}
     `;
@@ -1928,6 +3025,8 @@ export class ActionPanel {
           // Clear the stored offer after signing
           this.currentOffer = null;
           this.currentPromotion = null;
+          this.currentPromotionId = null;
+          this.careerView = 'main';
         }
         this.render(gameStateManager.getStateRef(), 'career');
       }
@@ -1951,6 +3050,102 @@ export class ActionPanel {
     );
     this.container.appendChild(negotiateCard);
 
+    const negotiateLengthCard = this.createActionCard(
+      '📅 Negotiate Length',
+      'Request a 16-week max player-friendly term',
+      () => {
+        const result = ContractEngine.negotiateClause(player, 'lengthWeeks', this.currentOffer, 16);
+        this.currentOffer.lengthWeeks = result.resultValue;
+        this.currentOffer.remainingWeeks = this.currentOffer.lengthWeeks;
+        gameStateManager.dispatch('ADD_LOG_ENTRY', {
+          entry: { category: 'personal', text: `📅 ${result.narrative} Length: ${result.resultValue} weeks`, type: 'negotiation' }
+        });
+        this.renderContractOffer(player, promotion, this.currentOffer);
+      }
+    );
+    this.container.appendChild(negotiateLengthCard);
+
+    const negotiateMerchCard = this.createActionCard(
+      '🛍️ Negotiate Merch Cut',
+      'Push for better merchandise percentage',
+      () => {
+        const target = Math.min(25, (this.currentOffer.hasMerchCut || 0) + 3);
+        const result = ContractEngine.negotiateClause(player, 'hasMerchCut', this.currentOffer, target);
+        this.currentOffer.hasMerchCut = result.resultValue;
+        gameStateManager.dispatch('ADD_LOG_ENTRY', {
+          entry: { category: 'personal', text: `🛍️ ${result.narrative} Merch Cut: ${result.resultValue}%`, type: 'negotiation' }
+        });
+        this.renderContractOffer(player, promotion, this.currentOffer);
+      }
+    );
+    this.container.appendChild(negotiateMerchCard);
+
+    const negotiateCreativeCard = this.createActionCard(
+      '🎭 Negotiate Creative Control',
+      'Try to add creative control to the deal',
+      () => {
+        const result = ContractEngine.negotiateClause(player, 'hasCreativeControl', this.currentOffer, true);
+        this.currentOffer.hasCreativeControl = result.resultValue;
+        gameStateManager.dispatch('ADD_LOG_ENTRY', {
+          entry: { category: 'personal', text: `🎭 ${result.narrative} Creative Control: ${this.currentOffer.hasCreativeControl ? 'Yes' : 'No'}`, type: 'negotiation' }
+        });
+        this.renderContractOffer(player, promotion, this.currentOffer);
+      }
+    );
+    this.container.appendChild(negotiateCreativeCard);
+
+    const negotiateInjuryCard = this.createActionCard(
+      '🩺 Negotiate Injury Protection',
+      'Request stronger medical/injury coverage',
+      () => {
+        const target = Math.min(100, (this.currentOffer.injuryCoveragePct || 0) + 20);
+        const result = ContractEngine.negotiateClause(player, 'injuryCoveragePct', this.currentOffer, target);
+        this.currentOffer.injuryCoveragePct = result.resultValue;
+        gameStateManager.dispatch('ADD_LOG_ENTRY', {
+          entry: { category: 'personal', text: `🩺 ${result.narrative} Injury Coverage: ${result.resultValue}%`, type: 'negotiation' }
+        });
+        this.renderContractOffer(player, promotion, this.currentOffer);
+      }
+    );
+    this.container.appendChild(negotiateInjuryCard);
+
+    const negotiateDatesCard = this.createActionCard(
+      '🗓️ Negotiate Fewer Dates',
+      'Request fewer required appearances per month',
+      () => {
+        const target = Math.max(1, (this.currentOffer.datesPerMonth || 4) - 2);
+        const result = ContractEngine.negotiateClause(player, 'datesPerMonth', this.currentOffer, target);
+        this.currentOffer.datesPerMonth = result.resultValue;
+        gameStateManager.dispatch('ADD_LOG_ENTRY', {
+          entry: { category: 'personal', text: `🗓️ ${result.narrative} Dates/Month: ${result.resultValue}`, type: 'negotiation' }
+        });
+        this.renderContractOffer(player, promotion, this.currentOffer);
+      }
+    );
+    this.container.appendChild(negotiateDatesCard);
+
+    const negotiateTitleRunCard = this.createActionCard(
+      '🏆 Negotiate Title Opportunity',
+      'Try to add a guaranteed championship opportunity clause',
+      () => {
+        const clauseResult = ContractEngine.negotiateClause(player, 'titleOpportunityGuaranteed', this.currentOffer, true);
+        this.currentOffer.titleOpportunityGuaranteed = clauseResult.resultValue;
+        if (this.currentOffer.titleOpportunityGuaranteed) {
+          const weeksResult = ContractEngine.negotiateClause(player, 'championshipOpportunityWeeks', this.currentOffer, 12);
+          this.currentOffer.championshipOpportunityWeeks = weeksResult.resultValue;
+          gameStateManager.dispatch('ADD_LOG_ENTRY', {
+            entry: { category: 'personal', text: `🏆 ${weeksResult.narrative} Title opportunity within ${weeksResult.resultValue} weeks.`, type: 'negotiation' }
+          });
+        } else {
+          gameStateManager.dispatch('ADD_LOG_ENTRY', {
+            entry: { category: 'personal', text: `🏆 ${clauseResult.narrative}`, type: 'negotiation' }
+          });
+        }
+        this.renderContractOffer(player, promotion, this.currentOffer);
+      }
+    );
+    this.container.appendChild(negotiateTitleRunCard);
+
     // Decline
     const declineCard = this.createActionCard(
       '❌ Decline Offer',
@@ -1962,6 +3157,8 @@ export class ActionPanel {
         // Clear the stored offer when declining
         this.currentOffer = null;
         this.currentPromotion = null;
+        this.currentPromotionId = null;
+        this.careerView = 'browser';
         this.renderPromotionBrowser(player);
       }
     );

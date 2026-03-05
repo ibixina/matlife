@@ -11,15 +11,28 @@ export class EventLogPanel {
   constructor() {
     this.container = document.getElementById('log-container');
     this.maxEntries = 100;
+    this.lastRenderedCount = 0;
+    this.lastRenderedId = null;
   }
 
   /**
    * Renders the event log
    * @param {object} state - Current game state
    */
-  render(state) {
+  render(state, actionType = null, payload = null) {
     if (!state || !state.history) {
       return;
+    }
+
+    // Fast path: single log entry appended
+    if (actionType === 'ADD_LOG_ENTRY' && this.container) {
+      const latest = state.history[state.history.length - 1];
+      if (latest) {
+        this.addEntry(latest);
+        this.lastRenderedCount = Math.min(this.maxEntries, this.lastRenderedCount + 1);
+        this.lastRenderedId = latest.id ?? null;
+        return;
+      }
     }
 
     // Get last 100 entries
@@ -37,6 +50,9 @@ export class EventLogPanel {
       // Scroll to bottom
       this.scrollToBottom();
     }
+
+    this.lastRenderedCount = entries.length;
+    this.lastRenderedId = entries.length ? entries[entries.length - 1].id : null;
   }
 
   /**

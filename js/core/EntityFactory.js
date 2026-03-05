@@ -128,19 +128,69 @@ export class EntityFactory {
     entity.addComponent('identity', new IdentityComponent({
       name: jsonEntry.name,
       age: jsonEntry.age,
-      hometown: jsonEntry.hometown,
-      gender: jsonEntry.gender,
-      gimmick: jsonEntry.gimmick,
-      alignment: jsonEntry.alignment,
-      catchphrase: jsonEntry.catchphrase,
-      entranceStyle: jsonEntry.entranceStyle
+      hometown: jsonEntry.hometown || 'Unknown',
+      gender: jsonEntry.gender || 'Male',
+      gimmick: jsonEntry.gimmick || jsonEntry.archetype || 'Wrestler',
+      alignment: jsonEntry.alignment || 'Face',
+      catchphrase: jsonEntry.catchphrase || '',
+      entranceStyle: jsonEntry.entranceStyle || 'Simple'
     }));
 
-    if (jsonEntry.stats) {
-      entity.addComponent('physicalStats', new PhysicalStatsComponent(jsonEntry.stats.physical));
-      entity.addComponent('inRingStats', new InRingStatsComponent(jsonEntry.stats.inRing));
-      entity.addComponent('entertainmentStats', new EntertainmentStatsComponent(jsonEntry.stats.entertainment));
-    }
+    // Archetype-based stats if not provided
+    const archetypeStats = {
+      'Technical': {
+        physical: { stamina: 70, strength: 60, resilience: 65, speed: 60 },
+        inRing: { brawling: 60, technical: 85, aerial: 50, selling: 80, psychology: 80 },
+        entertainment: { charisma: 70, micSkills: 75, acting: 70 }
+      },
+      'High-Flyer': {
+        physical: { stamina: 75, strength: 50, resilience: 60, speed: 90 },
+        inRing: { brawling: 50, technical: 60, aerial: 90, selling: 75, psychology: 70 },
+        entertainment: { charisma: 75, micSkills: 65, acting: 70 }
+      },
+      'Brawler': {
+        physical: { stamina: 70, strength: 75, resilience: 75, speed: 55 },
+        inRing: { brawling: 90, technical: 55, aerial: 45, selling: 75, psychology: 70 },
+        entertainment: { charisma: 80, micSkills: 70, acting: 65 }
+      },
+      'Powerhouse': {
+        physical: { stamina: 65, strength: 90, resilience: 85, speed: 50 },
+        inRing: { brawling: 80, technical: 60, aerial: 40, selling: 70, psychology: 70 },
+        entertainment: { charisma: 75, micSkills: 60, acting: 70 }
+      },
+      'Strong Style': {
+        physical: { stamina: 75, strength: 75, resilience: 80, speed: 65 },
+        inRing: { brawling: 85, technical: 75, aerial: 50, selling: 80, psychology: 80 },
+        entertainment: { charisma: 65, micSkills: 65, acting: 65 }
+      },
+      'Lucha Libre': {
+        physical: { stamina: 75, strength: 60, resilience: 60, speed: 90 },
+        inRing: { brawling: 60, technical: 70, aerial: 90, selling: 70, psychology: 75 },
+        entertainment: { charisma: 85, micSkills: 60, acting: 80 }
+      }
+    };
+
+    const baseStats = archetypeStats[jsonEntry.archetype] || archetypeStats['Technical'];
+
+    const physical = jsonEntry.stats?.physical || baseStats.physical;
+    const inRing = jsonEntry.stats?.inRing || baseStats.inRing;
+    const entertainment = jsonEntry.stats?.entertainment || baseStats.entertainment;
+
+    // Scale stats by overness (crude approximation)
+    const multiplier = 0.5 + (jsonEntry.overness || 50) / 100;
+
+    const scaledPhysical = {};
+    Object.entries(physical).forEach(([k, v]) => scaledPhysical[k] = Math.min(100, Math.round(v * multiplier)));
+
+    const scaledInRing = {};
+    Object.entries(inRing).forEach(([k, v]) => scaledInRing[k] = Math.min(100, Math.round(v * multiplier)));
+
+    const scaledEntertainment = {};
+    Object.entries(entertainment).forEach(([k, v]) => scaledEntertainment[k] = Math.min(100, Math.round(v * multiplier)));
+
+    entity.addComponent('physicalStats', new PhysicalStatsComponent(scaledPhysical));
+    entity.addComponent('inRingStats', new InRingStatsComponent(scaledInRing));
+    entity.addComponent('entertainmentStats', new EntertainmentStatsComponent(scaledEntertainment));
 
     entity.addComponent('condition', new ConditionComponent());
     entity.addComponent('moveset', new MovesetComponent());
@@ -148,7 +198,10 @@ export class EntityFactory {
     entity.addComponent('promotionRecord', new PromotionRecordComponent());
     entity.addComponent('contract', new ContractComponent());
     entity.addComponent('financial', new FinancialComponent());
-    entity.addComponent('popularity', new PopularityComponent({ overness: jsonEntry.overness || 5 }));
+    entity.addComponent('popularity', new PopularityComponent({
+      overness: jsonEntry.overness || 5,
+      momentum: 50
+    }));
     entity.addComponent('socialMedia', new SocialMediaComponent());
     entity.addComponent('lifestyle', new LifestyleComponent());
     entity.addComponent('wellness', new WellnessComponent());

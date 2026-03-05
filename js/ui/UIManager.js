@@ -19,6 +19,10 @@ export class UIManager {
   constructor() {
     this.currentTab = 'match';
     this.unsubscribe = null;
+    this.renderScheduled = false;
+    this.lastRenderState = null;
+    this.lastRenderAction = null;
+    this.lastRenderPayload = null;
     this.panels = {
       playerInfo: new PlayerInfoPanel(),
       eventLog: new EventLogPanel(),
@@ -33,7 +37,17 @@ export class UIManager {
   init() {
     // Subscribe to state changes
     this.unsubscribe = gameStateManager.subscribe((actionType, payload, state) => {
-      this.render(state);
+      this.lastRenderState = state;
+      this.lastRenderAction = actionType;
+      this.lastRenderPayload = payload;
+
+      if (!this.renderScheduled) {
+        this.renderScheduled = true;
+        requestAnimationFrame(() => {
+          this.renderScheduled = false;
+          this.render(this.lastRenderState, this.lastRenderAction, this.lastRenderPayload);
+        });
+      }
     });
 
     // Initialize panels
@@ -80,31 +94,54 @@ export class UIManager {
       });
     }
 
-    // Load button
-    const loadBtn = document.getElementById('load-game-btn');
-    if (loadBtn) {
-      loadBtn.addEventListener('click', async () => {
-        const success = await saveLoadManager.load();
-        if (success) {
-          this.showSaveStatus('Game loaded successfully!', true);
-          this.showScreen('game-screen');
-          this.render(gameStateManager.getStateRef());
-        } else {
-          this.showSaveStatus('No save found or failed to load.', false);
-        }
-      });
-    }
+     // Load button
+     const loadBtn = document.getElementById('load-game-btn');
+     if (loadBtn) {
+       loadBtn.addEventListener('click', async () => {
+         const success = await saveLoadManager.load();
+         if (success) {
+           this.showSaveStatus('Game loaded successfully!', true);
+           this.showScreen('game-screen');
+           this.render(gameStateManager.getStateRef());
+           // Update NSFW toggle based on loaded settings
+           const nsfwToggle = document.getElementById('nsfw-toggle');
+           if (nsfwToggle) {
+             nsfwToggle.checked = gameStateManager.getStateRef()?.settings?.nsfwContent ?? true;
+           }
+         } else {
+           this.showSaveStatus('No save found or failed to load.', false);
+         }
+       });
+     }
 
-    // Delete button
-    const deleteBtn = document.getElementById('delete-save-btn');
-    if (deleteBtn) {
-      deleteBtn.addEventListener('click', async () => {
-        if (confirm('Are you sure you want to delete your save? This cannot be undone.')) {
-          const success = await saveLoadManager.deleteSave();
-          this.showSaveStatus(success ? 'Save deleted.' : 'Failed to delete save.', success);
-        }
-      });
-    }
+     // Delete button
+     const deleteBtn = document.getElementById('delete-save-btn');
+     if (deleteBtn) {
+       deleteBtn.addEventListener('click', async () => {
+         if (confirm('Are you sure you want to delete your save? This cannot be undone.')) {
+           const success = await saveLoadManager.deleteSave();
+           this.showSaveStatus(success ? 'Save deleted.' : 'Failed to delete save.', success);
+         }
+       });
+     }
+
+     // NSFW toggle
+     const nsfwToggle = document.getElementById('nsfw-toggle');
+     if (nsfwToggle) {
+       // Set initial state based on game settings
+       const currentSettings = gameStateManager.getStateRef()?.settings;
+       nsfwToggle.checked = currentSettings?.nsfwContent ?? true;
+
+       nsfwToggle.addEventListener('change', (e) => {
+         const isEnabled = e.target.checked;
+         const state = gameStateManager.getStateRef();
+         if (state) {
+           state.settings.nsfwContent = isEnabled;
+           // Re-render to update the action panel
+           this.render(state);
+         }
+       });
+     }
   }
 
   /**
@@ -148,13 +185,13 @@ export class UIManager {
    * Renders the UI
    * @param {object} state - Current game state
    */
-  render(state) {
+  render(state, actionType = null, payload = null) {
     if (!state) return;
     // Render player info panel
     this.panels.playerInfo.render(state);
 
     // Render event log panel
-    this.panels.eventLog.render(state);
+    this.panels.eventLog.render(state, actionType, payload);
 
     // Render action panel with current tab
     this.panels.actionPanel.render(state, this.currentTab);

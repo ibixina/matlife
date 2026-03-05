@@ -16,8 +16,8 @@ const TRAINING_CATEGORIES = {
     name: 'Gym Training',
     description: 'Strength and conditioning work',
     stats: [
-      { component: 'physicalStats', stat: 'strength', baseGain: 0.5 },
-      { component: 'physicalStats', stat: 'resilience', baseGain: 0.5 }
+      { component: 'physicalStats', stat: 'strength', baseGain: 10.0 },
+      { component: 'physicalStats', stat: 'resilience', baseGain: 10.0 }
     ],
     injuryRisk: 0.02,
     burnoutCost: 3,
@@ -27,8 +27,8 @@ const TRAINING_CATEGORIES = {
     name: 'Ring Practice',
     description: 'Technical in-ring work',
     stats: [
-      { component: 'inRingStats', stat: 'technical', baseGain: 0.5 },
-      { component: 'inRingStats', stat: 'selling', baseGain: 0.3 }
+      { component: 'inRingStats', stat: 'technical', baseGain: 10.0 },
+      { component: 'inRingStats', stat: 'selling', baseGain: 6.0 }
     ],
     injuryRisk: 0.04,
     burnoutCost: 4,
@@ -38,8 +38,8 @@ const TRAINING_CATEGORIES = {
     name: 'Promo Practice',
     description: 'Microphone and character work',
     stats: [
-      { component: 'entertainmentStats', stat: 'charisma', baseGain: 0.5 },
-      { component: 'entertainmentStats', stat: 'micSkills', baseGain: 0.5 }
+      { component: 'entertainmentStats', stat: 'charisma', baseGain: 10.0 },
+      { component: 'entertainmentStats', stat: 'micSkills', baseGain: 10.0 }
     ],
     injuryRisk: 0,
     burnoutCost: 2,
@@ -49,8 +49,8 @@ const TRAINING_CATEGORIES = {
     name: 'Sparring Session',
     description: 'Brawling and psychology practice',
     stats: [
-      { component: 'inRingStats', stat: 'brawling', baseGain: 0.5 },
-      { component: 'inRingStats', stat: 'psychology', baseGain: 0.4 }
+      { component: 'inRingStats', stat: 'brawling', baseGain: 10.0 },
+      { component: 'inRingStats', stat: 'psychology', baseGain: 8.0 }
     ],
     injuryRisk: 0.06,
     burnoutCost: 5,
@@ -60,8 +60,8 @@ const TRAINING_CATEGORIES = {
     name: 'Aerial Drills',
     description: 'High-flying technique practice',
     stats: [
-      { component: 'inRingStats', stat: 'aerial', baseGain: 0.6 },
-      { component: 'physicalStats', stat: 'speed', baseGain: 0.3 }
+      { component: 'inRingStats', stat: 'aerial', baseGain: 12 },
+      { component: 'physicalStats', stat: 'speed', baseGain: 6 }
     ],
     injuryRisk: 0.05,
     burnoutCost: 4,
@@ -72,7 +72,7 @@ const TRAINING_CATEGORIES = {
 /**
  * Maximum training sessions per week before penalties
  */
-const MAX_WEEKLY_SESSIONS = 3;
+const MAX_WEEKLY_SESSIONS = 5;
 
 /**
  * Penalty for exceeding weekly training cap
@@ -80,7 +80,7 @@ const MAX_WEEKLY_SESSIONS = 3;
 const OVERTRAINING_PENALTY = {
   burnoutIncrease: 10,
   injuryRiskMultiplier: 2.0,
-  statGainReduction: 0.5
+  statGainReduction: 0.75
 };
 
 /**
@@ -104,7 +104,7 @@ export class TrainingSystem {
     const condition = entity.getComponent('condition');
     const physicalStats = entity.getComponent('physicalStats');
     const lifestyle = entity.getComponent('lifestyle');
-    
+
     if (!condition || !physicalStats) {
       return { error: 'Entity missing required components' };
     }
@@ -113,7 +113,7 @@ export class TrainingSystem {
     if (condition.injuries && condition.injuries.length > 0) {
       const seriousInjuries = condition.injuries.filter(i => i.severity >= 3);
       if (seriousInjuries.length > 0) {
-        return { 
+        return {
           error: `Cannot train with serious injuries: ${seriousInjuries.map(i => i.bodyPart).join(', ')}`,
           blocked: true
         };
@@ -123,7 +123,7 @@ export class TrainingSystem {
     // Check stamina
     const staminaCost = highIntensity ? config.staminaCost * 1.5 : config.staminaCost;
     if (physicalStats.stamina < staminaCost) {
-      return { 
+      return {
         error: `Not enough stamina. Need ${staminaCost}, have ${physicalStats.stamina}`,
         blocked: true
       };
@@ -136,7 +136,7 @@ export class TrainingSystem {
 
     // Check for trainer bonus
     const hasTrainer = entity.hasTag('[Has_Trainer]');
-    const trainerBonus = hasTrainer ? 0.5 : 0;
+    const trainerBonus = hasTrainer ? 1.0 : 0;
 
     // Calculate stat gains
     const gains = [];
@@ -145,38 +145,40 @@ export class TrainingSystem {
       if (!component) continue;
 
       const currentValue = component[statConfig.stat] || 10;
-      
-      // Diminishing returns formula: harder to gain at higher values
-      const diminishingFactor = (20 - currentValue) / 20;
-      
+
+      // Diminishing returns formula: harder to gain at higher values (cap at 100)
+      const diminishingFactor = Math.max(0.1, (100 - currentValue) / 100);
+
       // Base gain with randomization
-      let baseGain = statConfig.baseGain + (Math.random() * 0.5);
-      
+      let baseGain = statConfig.baseGain + (Math.random() * 1.0);
+
       // Apply diminishing returns
       let actualGain = baseGain * diminishingFactor;
-      
+
       // Apply trainer bonus
       actualGain += trainerBonus * diminishingFactor;
-      
+
       // Apply overtraining penalty
       if (isOvertraining) {
         actualGain *= OVERTRAINING_PENALTY.statGainReduction;
       }
-      
-      // High intensity gives 50% more gain but costs more
+
+      // High intensity gives 100% more gain but costs more
       if (highIntensity) {
-        actualGain *= 1.5;
+        actualGain *= 2.0;
       }
 
       // Round to nearest 0.1
       actualGain = Math.round(actualGain * 10) / 10;
 
       if (actualGain > 0) {
-        component[statConfig.stat] = Math.min(20, currentValue + actualGain);
+        const newValue = Math.min(100, currentValue + actualGain);
+        const realGain = Math.round((newValue - currentValue) * 10) / 10;
+        component[statConfig.stat] = newValue;
         gains.push({
           stat: statConfig.stat,
-          gain: actualGain,
-          newValue: component[statConfig.stat]
+          gain: realGain,
+          newValue: newValue
         });
       }
     }
@@ -189,7 +191,7 @@ export class TrainingSystem {
     if (isOvertraining) {
       burnoutCost += OVERTRAINING_PENALTY.burnoutIncrease;
     }
-    
+
     if (lifestyle) {
       lifestyle.burnout = Math.min(100, (lifestyle.burnout || 0) + burnoutCost);
     }
@@ -200,18 +202,18 @@ export class TrainingSystem {
     if (isOvertraining) {
       injuryRisk *= OVERTRAINING_PENALTY.injuryRiskMultiplier;
     }
-    
+
     if (Math.random() < injuryRisk) {
       const severity = randomInt(1, 3);
       const bodyParts = ['head', 'neck', 'shoulder', 'arm', 'back', 'knee', 'leg'];
       const bodyPart = bodyParts[randomInt(0, bodyParts.length - 1)];
-      
+
       injury = {
         bodyPart,
         severity,
         daysRemaining: severity * 7
       };
-      
+
       InjuryEngine.addInjury(entity, bodyPart, severity, `Training injury during ${config.name}`);
     }
 
@@ -227,8 +229,8 @@ export class TrainingSystem {
       entry: {
         category: 'personal',
         text: `${identity?.name || 'Wrestler'} completed ${config.name}${highIntensity ? ' (High Intensity)' : ''}. ` +
-              `${gains.map(g => `${g.stat} +${g.gain.toFixed(1)}`).join(', ')}. ` +
-              `Burnout +${burnoutCost}${isOvertraining ? ' (Overtraining!)' : ''}${injury ? ` INJURY: ${injury.bodyPart}!` : ''}`,
+          `${gains.map(g => `${g.stat} +${g.gain.toFixed(1)}`).join(', ')}. ` +
+          `Burnout +${burnoutCost}${isOvertraining ? ' (Overtraining!)' : ''}${injury ? ` INJURY: ${injury.bodyPart}!` : ''}`,
         type: 'training',
         gains,
         burnoutCost,
@@ -275,10 +277,10 @@ export class TrainingSystem {
     const lifestyle = entity.getComponent('lifestyle');
     const condition = entity.getComponent('condition');
     const physicalStats = entity.getComponent('physicalStats');
-    
+
     const sessionsThisWeek = weeklyStats.trainingSessions || 0;
     const remainingSessions = Math.max(0, MAX_WEEKLY_SESSIONS - sessionsThisWeek);
-    
+
     return {
       sessionsThisWeek,
       maxSessions: MAX_WEEKLY_SESSIONS,

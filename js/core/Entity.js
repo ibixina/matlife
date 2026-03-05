@@ -18,6 +18,7 @@ export class Entity {
    */
   constructor(id = generateUUID()) {
     this.id = id;
+    this.isPlayer = false;
     this.tags = new Set();
     this.components = new Map();
   }
@@ -94,6 +95,7 @@ export class Entity {
 
     return {
       id: this.id,
+      isPlayer: this.isPlayer === true,
       tags: Array.from(this.tags),
       components: serializedComponents
     };
@@ -106,6 +108,7 @@ export class Entity {
    */
   static deserialize(data) {
     const entity = new Entity(data.id);
+    entity.isPlayer = data.isPlayer === true;
     
     // Restore tags
     for (const tag of data.tags) {

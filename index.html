@@ -232,16 +232,48 @@
         <div class="player-info-right">
           <div class="key-stats">
             <div class="stat-pill">
-              <span class="stat-label">STR</span>
+              <span class="stat-label" title="Strength">STR</span>
               <span id="stat-strength" class="stat-value">10</span>
             </div>
             <div class="stat-pill">
-              <span class="stat-label">AER</span>
+              <span class="stat-label" title="Stamina">STA</span>
+              <span id="stat-stamina" class="stat-value">10</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-label" title="Speed">SPD</span>
+              <span id="stat-speed" class="stat-value">10</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-label" title="Resilience">RES</span>
+              <span id="stat-resilience" class="stat-value">10</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-label" title="Brawling">BRL</span>
+              <span id="stat-brawling" class="stat-value">10</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-label" title="Technical">TEC</span>
+              <span id="stat-technical" class="stat-value">10</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-label" title="Aerial">AER</span>
               <span id="stat-aerial" class="stat-value">10</span>
             </div>
             <div class="stat-pill">
-              <span class="stat-label">MIC</span>
+              <span class="stat-label" title="Selling">SEL</span>
+              <span id="stat-selling" class="stat-value">10</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-label" title="Psychology">PSY</span>
+              <span id="stat-psychology" class="stat-value">10</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-label" title="Mic Skills">MIC</span>
               <span id="stat-mic" class="stat-value">10</span>
+            </div>
+            <div class="stat-pill">
+              <span class="stat-label" title="Charisma">CHA</span>
+              <span id="stat-charisma" class="stat-value">10</span>
             </div>
           </div>
           <div class="player-bars">
@@ -345,11 +377,23 @@
               <button id="load-game-btn" class="btn btn-secondary btn-large mb-md">Load Game</button>
               <button id="delete-save-btn" class="btn btn-danger btn-large">Delete Save</button>
             </div>
+            <div class="mt-md">
+              <label class="checkbox-label">
+                <input type="checkbox" id="nsfw-toggle">
+                <span>Enable NSFW Content</span>
+              </label>
+              <p class="nsfw-warning" style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                ⚠️ Enables explicit adult content. Must be 18+ to use.
+              </p>
+            </div>
             <div id="save-status" class="mt-md" style="text-align: center; color: var(--text-secondary);"></div>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Dev Screen -->
+    <div id="dev-screen" class="screen"></div>
   </div>
 
   <!-- Main JavaScript -->

@@ -41,6 +41,7 @@ export class EventManager {
 
     const playerTags = playerEntity.getTags ? playerEntity.getTags() : [];
     const currentWeek = state.calendar.absoluteWeek;
+    const scoutMode = this._getScoutNoticeMode(playerEntity, state, playerTags);
 
     // Filter templates
     const eligibleTemplates = this.eventTemplates.filter(template => {
@@ -49,7 +50,12 @@ export class EventManager {
         const hasAllRequired = template.requiredTags.every(tag =>
           playerTags.includes(tag)
         );
-        if (!hasAllRequired) return false;
+        if (!hasAllRequired) {
+          // Scout notice can also fire in buyout mode for established stars
+          if (!(template.id === 'scout_notice' && scoutMode)) {
+            return false;
+          }
+        }
       }
 
       // Check excluded tags
@@ -75,6 +81,16 @@ export class EventManager {
         }
       }
 
+      // Check declarative requirements (context-aware gating)
+      if (template.requirements && !this._passesRequirements(template.requirements, playerEntity, state)) {
+        return false;
+      }
+
+      // Scout Notice should only appear for free agents or indie-tier contracts
+      if (template.id === 'scout_notice') {
+        if (!scoutMode) return false;
+      }
+
       return true;
     });
 
@@ -83,10 +99,15 @@ export class EventManager {
     }
 
     // Weighted random selection
-    const weightedItems = eligibleTemplates.map(template => ({
-      value: template,
-      weight: template.weight || 1
-    }));
+    const weightedItems = eligibleTemplates.map(template => {
+      let weight = template.weight || 1;
+      if (template.id === 'scout_notice' && scoutMode === 'buyout') {
+        const overness = playerEntity.getComponent('popularity')?.overness || 0;
+        const bonus = Math.min(4, Math.floor((overness - 70) / 10) + 1);
+        weight += Math.max(1, bonus);
+      }
+      return { value: template, weight };
+    });
 
     const selectedEvent = weightedRandom(weightedItems);
 
@@ -95,12 +116,53 @@ export class EventManager {
     eventInstance.context = {};
 
     if (eventInstance.id === 'scout_notice') {
-      let promotions = Array.from(state.promotions.values()).filter(p => p.prestige >= 50);
+      const contract = playerEntity.getComponent('contract');
+      const currentPromotion = contract?.promotionId ? state.promotions.get(contract.promotionId) : null;
+      const currentPrestige = currentPromotion?.prestige || 0;
+
+      let promotions = Array.from(state.promotions.values());
+      if (scoutMode === 'buyout') {
+        promotions = promotions.filter(p =>
+          p.id !== currentPromotion?.id &&
+          p.prestige >= Math.max(30, currentPrestige - 5)
+        );
+      } else {
+        promotions = promotions.filter(p => p.prestige >= 50);
+      }
       if (promotions.length === 0) {
         promotions = Array.from(state.promotions.values()); // Fallback to any
       }
       if (promotions.length > 0) {
         eventInstance.context.promotionId = promotions[Math.floor(Math.random() * promotions.length)].id;
+      }
+      eventInstance.context.scoutMode = scoutMode;
+      eventInstance.context.useGeneratedOffer = true;
+      eventInstance.context.presentOfferOnly = true;
+
+      if (scoutMode === 'buyout') {
+        eventInstance.title = 'Buyout Offer';
+        eventInstance.description = `${'{promotion.name}'} is willing to buy out your current deal to sign you.`;
+        if (eventInstance.choices?.[0]) {
+          eventInstance.choices[0].text = 'Accept the buyout and sign';
+        }
+        if (eventInstance.choices?.[1]) {
+          eventInstance.choices[1].text = 'Negotiate for a stronger deal';
+        }
+        if (eventInstance.choices?.[2]) {
+          eventInstance.choices[2].text = 'Stay loyal to your current promotion';
+        }
+      } else if (contract?.promotionId) {
+        eventInstance.title = 'Contract Interest';
+        eventInstance.description = `${'{promotion.name}'} wants to sign you away from your current promotion.`;
+        if (eventInstance.choices?.[0]) {
+          eventInstance.choices[0].text = 'Hear their offer';
+        }
+        if (eventInstance.choices?.[1]) {
+          eventInstance.choices[1].text = 'Negotiate for better terms';
+        }
+        if (eventInstance.choices?.[2]) {
+          eventInstance.choices[2].text = 'Decline and stay with your current promotion';
+        }
       }
     }
 
@@ -117,6 +179,139 @@ export class EventManager {
     this.cooldowns.set(eventInstance.id, currentWeek);
 
     return eventInstance;
+  }
+
+  /**
+   * Evaluates declarative requirements for an event template.
+   * @private
+   * @param {object} requirements
+   * @param {Entity} playerEntity
+   * @param {object} state
+   * @returns {boolean}
+   */
+  _passesRequirements(requirements, playerEntity, state) {
+    if (!requirements) return true;
+
+    const identity = playerEntity.getComponent('identity');
+    const popularity = playerEntity.getComponent('popularity');
+    const contract = playerEntity.getComponent('contract');
+    const financial = playerEntity.getComponent('financial');
+    const lifestyle = playerEntity.getComponent('lifestyle');
+    const condition = playerEntity.getComponent('condition');
+    const inRing = playerEntity.getComponent('inRingStats');
+    const entertainment = playerEntity.getComponent('entertainmentStats');
+    const promotion = contract?.promotionId ? state.promotions.get(contract.promotionId) : null;
+    const flags = state.eventFlags || {};
+
+    const overness = popularity?.overness || 0;
+    const momentum = popularity?.momentum || 0;
+    const burnout = lifestyle?.burnout || 0;
+    const bankBalance = financial?.bankBalance || 0;
+    const charisma = entertainment?.charisma || 0;
+    const micSkills = entertainment?.micSkills || 0;
+    const brawling = inRing?.brawling || 0;
+    const technical = inRing?.technical || 0;
+    const aerial = inRing?.aerial || 0;
+    const ringAvg = (brawling + technical + aerial) / 3;
+    const hasInjury = !!(condition?.injuries || []).some(i => (i.daysRemaining || 0) > 0);
+
+    const isChampion = Array.from(state.championships.values()).some(c => c.currentChampion === playerEntity.id);
+    const activeFeud = Array.from(state.feuds.values()).some(f =>
+      !f.resolved && (f.entityA === playerEntity.id || f.entityB === playerEntity.id)
+    );
+
+    if (requirements.requiresContract === true && !contract?.promotionId) return false;
+    if (requirements.requiresContract === false && !!contract?.promotionId) return false;
+    if (requirements.isChampion === true && !isChampion) return false;
+    if (requirements.isChampion === false && isChampion) return false;
+    if (requirements.activeFeud === true && !activeFeud) return false;
+    if (requirements.activeFeud === false && activeFeud) return false;
+    if (requirements.hasInjury === true && !hasInjury) return false;
+    if (requirements.hasInjury === false && hasInjury) return false;
+
+    if (requirements.minOverness != null && overness < requirements.minOverness) return false;
+    if (requirements.maxOverness != null && overness > requirements.maxOverness) return false;
+    if (requirements.minMomentum != null && momentum < requirements.minMomentum) return false;
+    if (requirements.maxMomentum != null && momentum > requirements.maxMomentum) return false;
+    if (requirements.minBurnout != null && burnout < requirements.minBurnout) return false;
+    if (requirements.maxBurnout != null && burnout > requirements.maxBurnout) return false;
+    if (requirements.minBankBalance != null && bankBalance < requirements.minBankBalance) return false;
+    if (requirements.maxBankBalance != null && bankBalance > requirements.maxBankBalance) return false;
+
+    if (requirements.minCharisma != null && charisma < requirements.minCharisma) return false;
+    if (requirements.minMicSkills != null && micSkills < requirements.minMicSkills) return false;
+    if (requirements.minBrawling != null && brawling < requirements.minBrawling) return false;
+    if (requirements.minTechnical != null && technical < requirements.minTechnical) return false;
+    if (requirements.minAerial != null && aerial < requirements.minAerial) return false;
+    if (requirements.minRingAvg != null && ringAvg < requirements.minRingAvg) return false;
+
+    if (requirements.minPromotionPrestige != null && (promotion?.prestige || 0) < requirements.minPromotionPrestige) return false;
+    if (requirements.maxPromotionPrestige != null && (promotion?.prestige || 0) > requirements.maxPromotionPrestige) return false;
+
+    if (Array.isArray(requirements.alignmentIn) && requirements.alignmentIn.length > 0) {
+      if (!requirements.alignmentIn.includes(identity?.alignment)) return false;
+    }
+    if (Array.isArray(requirements.promotionStyleIn) && requirements.promotionStyleIn.length > 0) {
+      if (!requirements.promotionStyleIn.includes(promotion?.stylePreference)) return false;
+    }
+
+    if (Array.isArray(requirements.requiresFlags) && requirements.requiresFlags.length > 0) {
+      const hasAllFlags = requirements.requiresFlags.every(flag => !!flags[flag]);
+      if (!hasAllFlags) return false;
+    }
+    if (Array.isArray(requirements.excludesFlags) && requirements.excludesFlags.length > 0) {
+      const hasBlocked = requirements.excludesFlags.some(flag => !!flags[flag]);
+      if (hasBlocked) return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Determines if scout notice is allowed this roll and which mode to use.
+   * Returns null if event should not be eligible.
+   * @private
+   * @param {Entity} playerEntity
+   * @param {object} state
+   * @param {string[]} playerTags
+   * @returns {'developmental'|'buyout'|null}
+   */
+  _getScoutNoticeMode(playerEntity, state, playerTags) {
+    const contract = playerEntity.getComponent('contract');
+    const popularity = playerEntity.getComponent('popularity');
+    const inRingStats = playerEntity.getComponent('inRingStats');
+    const entertainmentStats = playerEntity.getComponent('entertainmentStats');
+    const overness = popularity?.overness || 0;
+    const momentum = popularity?.momentum || 0;
+    const ringAvg = inRingStats
+      ? ((inRingStats.brawling || 0) + (inRingStats.technical || 0) + (inRingStats.aerial || 0)) / 3
+      : 0;
+    const promoSkill = entertainmentStats?.charisma || 0;
+
+    // Existing path: free agents can get developmental scouts
+    if (!contract?.promotionId) {
+      return 'developmental';
+    }
+
+    const currentPromotion = state.promotions.get(contract.promotionId);
+    if (!currentPromotion) return null;
+    if (currentPromotion.prestige <= 15) {
+      return 'developmental';
+    }
+
+    // New path: rare buyout interest for highly over or highly skilled talent
+    const hasHighProfile = overness >= 70;
+    const hasEliteSkill = ringAvg >= 82 || (ringAvg >= 75 && promoSkill >= 80);
+    if (!hasHighProfile && !hasEliteSkill) return null;
+
+    const baseChance = 0.03;
+    const overnessBonus = Math.min(0.06, (overness - 70) * 0.0015);
+    const momentumBonus = Math.max(0, Math.min(0.02, momentum * 0.0004));
+    const statsBonus = Math.max(0, Math.min(0.025, (ringAvg - 75) * 0.001));
+    const promoBonus = Math.max(0, Math.min(0.01, (promoSkill - 78) * 0.0005));
+    const poachChance = Math.min(0.12, baseChance + overnessBonus + momentumBonus + statsBonus + promoBonus);
+
+    return Math.random() < poachChance ? 'buyout' : null;
   }
 
   /**
@@ -194,7 +389,9 @@ export class EventManager {
       narrative,
       outcome,
       resolutionResult,
-      effects: outcomeData.effects || []
+      effects: outcomeData.effects || [],
+      generatedOffer: event.context?.generatedOffer || null,
+      generatedPromotionId: event.context?.generatedPromotionId || null
     };
   }
 
@@ -248,6 +445,52 @@ export class EventManager {
       case 'sign_contract':
         const promotionId = effect.promotionId || eventContext.promotionId;
         if (promotionId) {
+          if (eventContext.presentOfferOnly) {
+            const promotion = state.promotions.get(promotionId);
+            if (promotion) {
+              const generatedOffer = ContractEngine.generateOffer(promotion, entity);
+              if (eventContext.scoutMode === 'buyout') {
+                generatedOffer.weeklySalary = Math.floor(generatedOffer.weeklySalary * 1.35);
+                generatedOffer.hasMerchCut = Math.max(generatedOffer.hasMerchCut || 0, 8);
+                generatedOffer.hasCreativeControl = generatedOffer.hasCreativeControl || Math.random() < 0.35;
+              }
+
+              if (effect.weeklySalary != null) {
+                generatedOffer.weeklySalary = Math.max(generatedOffer.weeklySalary, effect.weeklySalary);
+              }
+              if (effect.lengthWeeks != null) {
+                generatedOffer.lengthWeeks = effect.lengthWeeks;
+                generatedOffer.remainingWeeks = effect.lengthWeeks;
+              }
+
+              eventContext.generatedOffer = generatedOffer;
+              eventContext.generatedPromotionId = promotion.id;
+            }
+            break;
+          }
+
+          if (eventContext.useGeneratedOffer) {
+            const promotion = state.promotions.get(promotionId);
+            if (promotion) {
+              const generatedOffer = ContractEngine.generateOffer(promotion, entity);
+              if (eventContext.scoutMode === 'buyout') {
+                generatedOffer.weeklySalary = Math.floor(generatedOffer.weeklySalary * 1.35);
+                generatedOffer.hasMerchCut = Math.max(generatedOffer.hasMerchCut || 0, 8);
+              }
+
+              if (effect.weeklySalary != null) {
+                generatedOffer.weeklySalary = Math.max(generatedOffer.weeklySalary, effect.weeklySalary);
+              }
+              if (effect.lengthWeeks != null) {
+                generatedOffer.lengthWeeks = effect.lengthWeeks;
+                generatedOffer.remainingWeeks = effect.lengthWeeks;
+              }
+
+              ContractEngine.signContract(entity, generatedOffer);
+              break;
+            }
+          }
+
           ContractEngine.signContract(entity, { promotionId }, 'opener', effect.lengthWeeks, effect.weeklySalary);
         }
         break;
@@ -316,6 +559,22 @@ export class EventManager {
           updates: { [effect.field]: effect.value }
         });
         break;
+
+      case 'event_flag': {
+        if (!state.eventFlags) state.eventFlags = {};
+        const action = effect.action || 'set';
+        const key = effect.flag;
+        if (!key) break;
+
+        if (action === 'clear' || action === 'remove') {
+          delete state.eventFlags[key];
+        } else if (action === 'toggle') {
+          state.eventFlags[key] = !state.eventFlags[key];
+        } else {
+          state.eventFlags[key] = (effect.value !== undefined) ? effect.value : true;
+        }
+        break;
+      }
 
       default:
         console.warn(`Unknown effect type: ${effect.type}`);

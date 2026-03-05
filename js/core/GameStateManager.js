@@ -15,6 +15,8 @@ class GameStateManager {
     this.state = null;
     this.listeners = new Set();
     this.actionHandlers = new Map();
+    this.batchDepth = 0;
+    this.pendingActions = [];
 
     // Initialize action handlers
     this._initializeActionHandlers();
@@ -100,7 +102,47 @@ class GameStateManager {
     handler(payload);
 
     // Notify all listeners
+    if (this.batchDepth > 0) {
+      this.pendingActions.push({ actionType, payload });
+      return;
+    }
+
     this._notifyListeners(actionType, payload);
+  }
+
+  /**
+   * Begins a batched update (defers notifications until endBatch)
+   */
+  beginBatch() {
+    this.batchDepth++;
+  }
+
+  /**
+   * Ends a batched update and emits a single notification
+   */
+  endBatch() {
+    if (this.batchDepth === 0) return;
+    this.batchDepth--;
+    if (this.batchDepth > 0) return;
+
+    if (this.pendingActions.length > 0) {
+      const actions = this.pendingActions;
+      this.pendingActions = [];
+      this._notifyListeners('BATCH', { actions });
+    }
+  }
+
+  /**
+   * Runs a function inside a batched update
+   * @param {Function} fn
+   */
+  batch(fn) {
+    this.beginBatch();
+    try {
+      fn();
+    } finally {
+      this.endBatch();
+    }
   }
 
   /**
@@ -153,11 +195,13 @@ class GameStateManager {
       feuds: new Map(),
       contracts: new Map(),
       storylines: new Map(),
+      eventFlags: {},
       history: [],
       dirtSheets: [],
       settings: {
         difficulty: config.difficulty ?? 'NORMAL',
-        autoAdvance: config.autoAdvance ?? false
+        autoAdvance: config.autoAdvance ?? false,
+        nsfwContent: config.nsfwContent ?? true
       }
     };
 

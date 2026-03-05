@@ -8,6 +8,7 @@ import { gameStateManager } from '../core/GameStateManager.js';
 import MatchSimulator from './MatchSimulator.js';
 import RelationshipManager from './RelationshipManager.js';
 import { randomInt } from '../core/Utils.js';
+import { dataManager } from '../core/DataManager.js';
 
 /**
  * Promotion size tiers and their characteristics
@@ -293,7 +294,8 @@ export class AIPromotionSystem {
       if (contract) {
         contract.promotionId = promotion.id;
         contract.weeklySalary = tier.salaryRange[0] + Math.floor(Math.random() * (tier.salaryRange[1] - tier.salaryRange[0]));
-        contract.remainingWeeks = 1;
+        contract.lengthWeeks = 52;
+        contract.remainingWeeks = 52;
         promotion.roster.push(candidate.entity.id);
 
         // Log signing
@@ -420,6 +422,30 @@ export class AIPromotionSystem {
    * @param {number} count - Number of promotions to generate
    */
   static generateInitialPromotions(state, count = 6) {
+    // Check for real-life data
+    const realLife = dataManager.getRealLife();
+
+    if (realLife && realLife.promotions) {
+      realLife.promotions.forEach((pData, i) => {
+        const tierKey = pData.tier || 'regional';
+        const promotion = {
+          id: pData.id || `promo_${i}`,
+          name: pData.name,
+          shortName: pData.shortName,
+          region: pData.region || 'USA',
+          prestige: pData.prestige || 50,
+          roster: [], // Will be populated in generateNPCRosters
+          shows: this.generateShowSchedule(tierKey),
+          stylePreference: pData.stylePreference || 'Mixed',
+          momentum: 50,
+          isPlayerPromotion: false,
+          realData: pData // Keep reference for roster generation
+        };
+        state.promotions.set(promotion.id, promotion);
+      });
+      return;
+    }
+
     const tiers = ['indie', 'regional', 'national', 'global', 'regional', 'indie'];
     const names = [
       'Extreme Wrestling Alliance',
@@ -437,7 +463,6 @@ export class AIPromotionSystem {
       const tier = PROMOTION_TIERS[tierKey];
 
       const prestige = randomInt(tier.prestigeRange[0], tier.prestigeRange[1]);
-      const rosterSize = randomInt(tier.rosterSize[0], tier.rosterSize[1]);
 
       const promotion = {
         id: `promo_${i}`,

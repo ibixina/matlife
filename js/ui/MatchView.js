@@ -56,49 +56,29 @@ export class MatchView {
       gap: 1rem;
     `;
 
-    // Wrestler bars (top)
-    const wrestlerBars = document.createElement('div');
-    wrestlerBars.className = 'wrestler-bars';
-    wrestlerBars.style.cssText = `
+    // Wrestler summaries (top)
+    const wrestlerSummary = document.createElement('div');
+    wrestlerSummary.className = 'wrestler-summary';
+    wrestlerSummary.style.cssText = `
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 1rem;
     `;
 
-    wrestlerBars.innerHTML = `
-      <div class="wrestler-status" id="wrestler1-status">
+    wrestlerSummary.innerHTML = `
+      <div class="panel" id="wrestler1-status">
         <h4 id="w1-name">Wrestler 1</h4>
-        <div class="match-bar">
-          <div class="match-bar-fill" id="w1-stamina" style="width: 100%; background: #ffc857;"></div>
-          <span>Stamina</span>
-        </div>
-        <div class="match-bar">
-          <div class="match-bar-fill" id="w1-health" style="width: 100%; background: #4caf50;"></div>
-          <span>Health</span>
-        </div>
-        <div class="match-bar">
-          <div class="match-bar-fill" id="w1-momentum" style="width: 0%; background: #e94560;"></div>
-          <span>Momentum</span>
-        </div>
+        <p style="margin: 0.25rem 0; color: var(--text-secondary);">Avg In-Ring</p>
+        <div style="font-size: 1.5rem; font-weight: 700;" id="w1-avg">0</div>
       </div>
-      <div class="wrestler-status" id="wrestler2-status">
+      <div class="panel" id="wrestler2-status">
         <h4 id="w2-name">Wrestler 2</h4>
-        <div class="match-bar">
-          <div class="match-bar-fill" id="w2-stamina" style="width: 100%; background: #ffc857;"></div>
-          <span>Stamina</span>
-        </div>
-        <div class="match-bar">
-          <div class="match-bar-fill" id="w2-health" style="width: 100%; background: #4caf50;"></div>
-          <span>Health</span>
-        </div>
-        <div class="match-bar">
-          <div class="match-bar-fill" id="w2-momentum" style="width: 0%; background: #e94560;"></div>
-          <span>Momentum</span>
-        </div>
+        <p style="margin: 0.25rem 0; color: var(--text-secondary);">Avg In-Ring</p>
+        <div style="font-size: 1.5rem; font-weight: 700;" id="w2-avg">0</div>
       </div>
     `;
 
-    matchContainer.appendChild(wrestlerBars);
+    matchContainer.appendChild(wrestlerSummary);
 
     // Title indicator (if applicable)
     if (this.config?.isTitleMatch && this.config?.titleId) {
@@ -121,19 +101,21 @@ export class MatchView {
       }
     }
 
-    // Phase indicator
-    const phaseIndicator = document.createElement('div');
-    phaseIndicator.id = 'match-phase';
-    phaseIndicator.className = 'match-phase';
-    phaseIndicator.style.cssText = `
+    // Match info
+    const matchInfo = document.createElement('div');
+    matchInfo.id = 'match-info';
+    matchInfo.style.cssText = `
       text-align: center;
       padding: 0.5rem;
       background: var(--bg-tertiary);
       border-radius: var(--radius-md);
       font-weight: 600;
     `;
-    phaseIndicator.textContent = 'Feeling Out Phase';
-    matchContainer.appendChild(phaseIndicator);
+    matchInfo.innerHTML = `
+      <div id="match-type">Match Type</div>
+      <div id="match-synergy" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;"></div>
+    `;
+    matchContainer.appendChild(matchInfo);
 
     // Play-by-play log
     const playByPlay = document.createElement('div');
@@ -151,11 +133,12 @@ export class MatchView {
     `;
     matchContainer.appendChild(playByPlay);
 
-    // Move selection
-    const moveSelection = document.createElement('div');
-    moveSelection.id = 'move-selection';
-    moveSelection.className = 'move-selection';
-    matchContainer.appendChild(moveSelection);
+    // Results panel
+    const results = document.createElement('div');
+    results.id = 'match-results';
+    results.className = 'panel';
+    results.style.display = 'none';
+    matchContainer.appendChild(results);
 
     // Control buttons
     const controls = document.createElement('div');
@@ -166,12 +149,21 @@ export class MatchView {
       flex-wrap: wrap;
     `;
 
-    // Pin attempt button
-    const pinBtn = document.createElement('button');
-    pinBtn.className = 'btn btn-primary';
-    pinBtn.textContent = 'Attempt Pin';
-    pinBtn.addEventListener('click', () => this.attemptPin());
-    controls.appendChild(pinBtn);
+    // Win button
+    const winBtn = document.createElement('button');
+    winBtn.id = 'match-win-btn';
+    winBtn.className = 'btn btn-primary';
+    winBtn.textContent = 'Win Match';
+    winBtn.addEventListener('click', () => this.resolveOutcome(true));
+    controls.appendChild(winBtn);
+
+    // Lose button
+    const loseBtn = document.createElement('button');
+    loseBtn.id = 'match-lose-btn';
+    loseBtn.className = 'btn';
+    loseBtn.textContent = 'Lose Match';
+    loseBtn.addEventListener('click', () => this.resolveOutcome(false));
+    controls.appendChild(loseBtn);
 
     // Continue button (for after match)
     const continueBtn = document.createElement('button');
@@ -197,26 +189,39 @@ export class MatchView {
     document.getElementById('w1-name').textContent = state.wrestler1.name;
     document.getElementById('w2-name').textContent = state.wrestler2.name;
 
-    // Update bars
-    document.getElementById('w1-stamina').style.width = `${state.wrestler1.stamina}%`;
-    document.getElementById('w1-health').style.width = `${state.wrestler1.health}%`;
-    document.getElementById('w1-momentum').style.width = `${state.wrestler1.momentum}%`;
+    // Update stat summaries
+    document.getElementById('w1-avg').textContent = state.wrestler1.avgInRing;
+    document.getElementById('w2-avg').textContent = state.wrestler2.avgInRing;
 
-    document.getElementById('w2-stamina').style.width = `${state.wrestler2.stamina}%`;
-    document.getElementById('w2-health').style.width = `${state.wrestler2.health}%`;
-    document.getElementById('w2-momentum').style.width = `${state.wrestler2.momentum}%`;
-
-    // Update phase
-    document.getElementById('match-phase').textContent = `${state.phase} - Turn ${state.turn}`;
+    // Update match info
+    const matchTypeEl = document.getElementById('match-type');
+    if (matchTypeEl) {
+      matchTypeEl.textContent = this.config?.matchType || 'Standard Singles';
+    }
+    const synergyEl = document.getElementById('match-synergy');
+    if (synergyEl) {
+      const bonus = state.synergy?.bonus || 0;
+      const styleBonus = state.synergy?.styleBonus || 0;
+      const alignmentBonus = state.synergy?.alignmentBonus || 0;
+      const styleLabel = state.synergy?.style1 && state.synergy?.style2
+        ? `${state.synergy.style1} vs ${state.synergy.style2}`
+        : 'Unknown styles';
+      const alignmentLabel = state.synergy?.alignment1 && state.synergy?.alignment2
+        ? `${state.synergy.alignment1} vs ${state.synergy.alignment2}`
+        : 'Unknown alignments';
+      const totalLabel = bonus >= 0 ? `+${bonus.toFixed(2)}` : bonus.toFixed(2);
+      const styleBonusLabel = styleBonus >= 0 ? `+${styleBonus.toFixed(2)}` : styleBonus.toFixed(2);
+      const alignmentBonusLabel = alignmentBonus >= 0 ? `+${alignmentBonus.toFixed(2)}` : alignmentBonus.toFixed(2);
+      synergyEl.textContent = `${styleLabel} (${styleBonusLabel}), ${alignmentLabel} (${alignmentBonusLabel}) → total ${totalLabel}`;
+    }
 
     // Update play-by-play
     this.updatePlayByPlay(state.log);
 
-    // Update move selection
-    if (!state.finished) {
-      this.updateMoveSelection();
-    } else {
+    if (state.finished) {
       this.showMatchEnd(state);
+    } else {
+      this.showMatchChoice();
     }
   }
 
@@ -236,142 +241,31 @@ export class MatchView {
     container.scrollTop = container.scrollHeight;
   }
 
-  /**
-   * Updates move selection buttons
-   * @private
-   */
-  updateMoveSelection() {
-    const container = document.getElementById('move-selection');
-    if (!container) return;
-
-    container.innerHTML = '';
-
-    // Get available moves for player
-    const playerWrestler = this.playerSide === 'wrestler1' ?
-      this.simulator.matchState.wrestler1 :
-      this.simulator.matchState.wrestler2;
-
-    const moves = this.simulator.getAvailableMoves(playerWrestler.entity);
-
-    if (moves.length === 0) {
-      // Load default moves if wrestler has none
-      const defaultMoves = this.getDefaultMoves();
-      moves.push(...defaultMoves);
+  showMatchChoice() {
+    const results = document.getElementById('match-results');
+    if (results) {
+      results.style.display = 'none';
+      results.innerHTML = '';
     }
 
-    const movesGrid = document.createElement('div');
-    movesGrid.style.cssText = `
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.5rem;
-    `;
-
-    moves.forEach(move => {
-      const btn = document.createElement('button');
-      btn.className = 'btn';
-      btn.style.cssText = `
-        text-align: left;
-        font-size: 0.85rem;
-        padding: 0.5rem;
-      `;
-      btn.innerHTML = `
-        <div style="font-weight: 600;">${move.name}</div>
-        <div style="font-size: 0.75rem; color: var(--text-secondary);">
-          ${move.type} | Cost: ${move.staminaCost} | DC: ${move.baseDC}
-        </div>
-      `;
-      btn.addEventListener('click', () => this.executeMove(move));
-      movesGrid.appendChild(btn);
-    });
-
-    container.appendChild(movesGrid);
+    const winBtn = document.getElementById('match-win-btn');
+    const loseBtn = document.getElementById('match-lose-btn');
+    if (winBtn) winBtn.classList.remove('hidden');
+    if (loseBtn) loseBtn.classList.remove('hidden');
   }
 
-  /**
-   * Gets default moves for wrestlers without movesets
-   * @private
-   */
-  getDefaultMoves() {
-    return [
-      { id: 'punch', name: 'Punch', type: 'strike', staminaCost: 2, baseDC: 5, damageBase: 3, spectacle: 1 },
-      { id: 'bodyslam', name: 'Bodyslam', type: 'grapple', staminaCost: 4, baseDC: 6, damageBase: 5, spectacle: 2 },
-      { id: 'dropkick', name: 'Dropkick', type: 'aerial', staminaCost: 3, baseDC: 7, damageBase: 5, spectacle: 2 },
-      { id: 'suplex', name: 'Suplex', type: 'grapple', staminaCost: 5, baseDC: 8, damageBase: 7, spectacle: 3 }
-    ];
-  }
+  resolveOutcome(playerWins) {
+    const winnerSide = playerWins
+      ? this.playerSide
+      : (this.playerSide === 'wrestler1' ? 'wrestler2' : 'wrestler1');
 
-  /**
-   * Executes a move
-   * @private
-   */
-  executeMove(move) {
-    // Player's turn
-    const result = this.simulator.simulateTurn(this.playerSide, move);
-
-    if (result.error) {
+    const result = this.simulator.resolveMatch(winnerSide);
+    if (result?.error) {
       console.error(result.error);
       return;
     }
 
     this.updateDisplay();
-
-    // AI opponent's turn (if match not finished)
-    if (!this.simulator.matchState.finished) {
-      setTimeout(() => this.executeAIMove(), 1000);
-    }
-  }
-
-  /**
-   * Executes AI move
-   * @private
-   */
-  executeAIMove() {
-    const aiSide = this.playerSide === 'wrestler1' ? 'wrestler2' : 'wrestler1';
-    const aiWrestler = this.simulator.matchState[aiSide];
-
-    const moves = this.simulator.getAvailableMoves(aiWrestler.entity);
-    if (moves.length === 0) {
-      moves.push(...this.getDefaultMoves());
-    }
-
-    // Simple AI: pick random move
-    const move = moves[Math.floor(Math.random() * moves.length)];
-
-    this.simulator.simulateTurn(aiSide, move);
-    this.updateDisplay();
-
-    // Check if AI should attempt pin
-    const opponent = this.simulator.matchState[this.playerSide];
-    if (opponent.stamina < 30 && Math.random() < 0.5) {
-      setTimeout(() => {
-        this.simulator.attemptPin(aiSide);
-        this.updateDisplay();
-      }, 500);
-    }
-  }
-
-  /**
-   * Attempts a pin
-   * @private
-   */
-  attemptPin() {
-    const result = this.simulator.attemptPin(this.playerSide);
-
-    if (result.error) {
-      // Show error in log
-      const log = document.getElementById('play-by-play');
-      if (log) {
-        log.innerHTML += `<div style="color: var(--accent-warning);">${result.error}</div>`;
-      }
-      return;
-    }
-
-    this.updateDisplay();
-
-    // If pin failed, AI gets a turn
-    if (!result.matchEnded && !this.simulator.matchState.finished) {
-      setTimeout(() => this.executeAIMove(), 1000);
-    }
   }
 
   /**
@@ -379,8 +273,9 @@ export class MatchView {
    * @private
    */
   showMatchEnd(state) {
-    const container = document.getElementById('move-selection');
+    const container = document.getElementById('match-results');
     if (container) {
+      container.style.display = 'block';
       container.innerHTML = `
         <div style="text-align: center; padding: 1rem; background: var(--bg-tertiary); border-radius: var(--radius-lg);">
           <h3 style="color: var(--accent-secondary); margin-bottom: 0.5rem;">Match Over!</h3>
@@ -396,11 +291,11 @@ export class MatchView {
       continueBtn.classList.remove('hidden');
     }
 
-    // Hide pin button
-    const pinBtn = document.querySelector('.match-controls .btn-primary:not(#match-continue-btn)');
-    if (pinBtn) {
-      pinBtn.classList.add('hidden');
-    }
+    // Hide outcome buttons
+    const winBtn = document.getElementById('match-win-btn');
+    const loseBtn = document.getElementById('match-lose-btn');
+    if (winBtn) winBtn.classList.add('hidden');
+    if (loseBtn) loseBtn.classList.add('hidden');
   }
 
   /**

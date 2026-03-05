@@ -30,6 +30,7 @@ export class SaveLoadManager {
     for (const [id, entity] of state.entities) {
       serializedEntities.push({
         id: entity.id,
+        isPlayer: entity.isPlayer === true,
         components: this._serializeComponents(entity.components),
         tags: Array.from(entity.tags)
       });
@@ -78,6 +79,7 @@ export class SaveLoadManager {
       feuds: serializedFeuds,
       contracts: serializedContracts,
       storylines: serializedStorylines,
+      eventFlags: state.eventFlags || {},
       history: state.history.slice(-100), // Keep last 100 log entries
       dirtSheets: state.dirtSheets || [],
       settings: state.settings,
@@ -131,6 +133,7 @@ export class SaveLoadManager {
       // Restore entities
       for (const entityData of data.entities) {
         const entity = new Entity(entityData.id);
+        entity.isPlayer = entityData.isPlayer === true || entityData.id === data.player?.entityId;
 
         // Restore components
         for (const [compName, compData] of Object.entries(entityData.components)) {
@@ -189,6 +192,9 @@ export class SaveLoadManager {
         }
       }
 
+      // Restore event flags
+      state.eventFlags = data.eventFlags || {};
+
       // Restore history
       state.history = data.history || [];
 
@@ -228,6 +234,50 @@ export class SaveLoadManager {
       return true;
     } catch (error) {
       console.error('Error saving game:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Saves the game to a custom key (dev snapshots)
+   * @param {string} customKey - Storage key
+   * @returns {Promise<boolean>} True if successful
+   */
+  async saveAs(customKey) {
+    try {
+      if (typeof localforage === 'undefined') {
+        console.warn('localforage not available; skipping save');
+        return false;
+      }
+      const saveData = this.serializeState();
+      if (!saveData) {
+        console.warn('No state to save');
+        return false;
+      }
+      await localforage.setItem(customKey, saveData);
+      return true;
+    } catch (error) {
+      console.error('Error saving snapshot:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Loads the game from a custom key (dev snapshots)
+   * @param {string} customKey - Storage key
+   * @returns {Promise<boolean>} True if successful
+   */
+  async loadAs(customKey) {
+    try {
+      if (typeof localforage === 'undefined') {
+        console.warn('localforage not available; skipping load');
+        return false;
+      }
+      const saveData = await localforage.getItem(customKey);
+      if (!saveData) return false;
+      return this.deserializeState(saveData);
+    } catch (error) {
+      console.error('Error loading snapshot:', error);
       return false;
     }
   }

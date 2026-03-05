@@ -94,5 +94,47 @@
     "What a contest! {winner} stands tall!",
     "An incredible performance by both athletes, but {winner} takes the victory!",
     "The winner of the match... {winner}!"
+  ],
+  "nsfw_intimate_success": [
+    "{actor} and {target} share an incredibly passionate and intimate moment. The chemistry between them is undeniable!",
+    "The night becomes incredibly steamy as {actor} and {target} explore each other's desires. Both seem completely lost in the moment.",
+    "{actor} and {target} connect on a profound physical level. Their intimacy is intense and deeply satisfying for both.",
+    "The private encounter turns into a night of passionate exploration. {actor} and {target} push all boundaries and discover new depths of desire.",
+    "In the heat of the moment, {actor} and {target} share an incredibly erotic experience that leaves both breathless and craving more."
+  ],
+  "nsfw_intimate_critical_success": [
+    "{actor} and {target} experience a night of absolute ecstasy! Their passion is explosive and unforgettable!",
+    "The chemistry between {actor} and {target} is volcanic! They share an incredibly intense and satisfying intimate encounter.",
+    "This private rendezvous becomes an unforgettable experience for both {actor} and {target}. The erotic energy between them is off the charts!",
+    "{actor} and {target} reach new heights of pleasure together. Their intimate connection is profound and deeply satisfying.",
+    "The night is filled with pure passion and unbridled desire! {actor} and {target} share an experience that will be remembered forever."
+  ],
+  "nsfw_intimate_failure": [
+    "{actor} misreads the situation and their advances are politely but firmly rejected. The atmosphere becomes awkward.",
+    "The moment feels forced and uncomfortable. {actor} and {target} both decide it's best to take things slow.",
+    "{actor}'s approach is too aggressive and {target} pulls away. The situation becomes tense but eventually diffuses.",
+    "{actor} tries to escalate things but {target} isn't ready. They agree to respect each other's boundaries.",
+    "The attempt at intimacy falls flat. {actor} and {target} seem to be on completely different wavelengths tonight."
+  ],
+  "nsfw_intimate_critical_failure": [
+    "{actor}'s advances are met with absolute rejection! {target} is clearly uncomfortable and quickly leaves.",
+    "The situation becomes extremely awkward and tense. {actor} crosses boundaries and {target} reacts negatively.",
+    "{actor} makes a complete fool of themselves. The attempt at intimacy is humiliating and embarrassing for both.",
+    "This goes horribly wrong! {target} is furious with {actor}'s inappropriate behavior.",
+    "The night ends in disaster. {actor}'s actions damage their relationship with {target} significantly."
+  ],
+  "nsfw_affair_success": [
+    "{actor} and {target} share a passionate but risky intimate encounter. The thrill of secrecy makes it even more intense!",
+    "The affair continues with a steamy night of passion. {actor} and {target} are drawn deeper into their secret relationship.",
+    "Their forbidden romance becomes more intense as {actor} and {target} explore each other's desires in secret.",
+    "The risk of being caught only adds to the excitement. {actor} and {target} share a passionate and unforgettable night.",
+    "The secret affair heats up as {actor} and {target} push boundaries and explore their physical connection."
+  ],
+  "nsfw_explicit_encounter": [
+    "{actor} and {target} engage in an explicit and passionate sexual encounter. The chemistry between them is explosive!",
+    "The night becomes incredibly erotic as {actor} and {target} explore each other's bodies with complete abandon.",
+    "Their physical connection is intense and explicit. {actor} and {target} share a night of pure sexual pleasure.",
+    "In the privacy of their intimate space, {actor} and {target} engage in explicit sexual activity that satisfies both their desires.",
+    "The encounter is raw, passionate, and explicit. {actor} and {target} give themselves completely to each other."
   ]
 }

@@ -40,6 +40,37 @@ const EVALUATION_PERIOD = 4;
  */
 export class CardPositionSystem {
   /**
+   * Ensures champions are not kept in low card positions.
+   * World champions are at least Main Event; other champions at least Upper Mid-Card.
+   * @param {object} state - Game state
+   * @param {string|null} [promotionId] - Optional promotion filter
+   */
+  static syncChampionPositions(state, promotionId = null) {
+    if (!state?.championships) return;
+
+    const ensureAtLeast = (entity, minPositionKey) => {
+      const contract = entity?.getComponent('contract');
+      if (!contract?.promotionId) return;
+      const currentKey = contract.position || 'dark_match';
+      const currentIdx = CARD_POSITIONS.findIndex(p => p.key === currentKey);
+      const minIdx = CARD_POSITIONS.findIndex(p => p.key === minPositionKey);
+      if (minIdx === -1 || currentIdx >= minIdx) return;
+      contract.position = minPositionKey;
+    };
+
+    for (const championship of state.championships.values()) {
+      if (!championship?.currentChampion) continue;
+      if (promotionId && championship.promotionId !== promotionId) continue;
+
+      const champion = state.entities.get(championship.currentChampion);
+      if (!champion) continue;
+
+      const minPosition = championship.type === 'world' ? 'main_event' : 'upper_mid';
+      ensureAtLeast(champion, minPosition);
+    }
+  }
+
+  /**
    * Evaluates a wrestler's performance and potentially changes position
    * @param {Entity} wrestler - Wrestler entity
    * @param {object} promotion - Promotion object
@@ -255,6 +286,9 @@ export class CardPositionSystem {
    * @param {object} state - Game state
    */
   static evaluateAllRosters(state) {
+    // Keep champions near the top of the card before normal evaluations.
+    this.syncChampionPositions(state);
+
     for (const promotion of state.promotions.values()) {
       if (!promotion.roster) continue;
 

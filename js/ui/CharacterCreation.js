@@ -9,6 +9,7 @@ import EntityFactory from '../core/EntityFactory.js';
 import { capitalize } from '../core/Utils.js';
 import AIPromotionSystem from '../engine/AIPromotionSystem.js';
 import ChampionshipSystem from '../engine/ChampionshipSystem.js';
+import ContractEngine from '../engine/ContractEngine.js';
 
 /**
  * CharacterCreation - Handles the character creation flow
@@ -473,24 +474,29 @@ export class CharacterCreation {
     // Generate 6 promotions across different tiers
     AIPromotionSystem.generateInitialPromotions(state, 6);
 
-    // Assign player to an indie promotion
-    const indiePromo = Array.from(state.promotions.values())
-      .find(p => p.prestige <= 20);
+    // Generate NPC roster for all promotions
+    this.generateNPCRosters(state);
+
+    // Assign player to an indie (or lowest-prestige) promotion
+    const promotions = Array.from(state.promotions.values());
+    const indiePromo = promotions.find(p => p.prestige <= 20)
+      || promotions.sort((a, b) => a.prestige - b.prestige)[0];
 
     if (indiePromo) {
-      indiePromo.roster.push(player.id);
+      if (!indiePromo.roster) indiePromo.roster = [];
+      if (!indiePromo.roster.includes(player.id)) {
+        indiePromo.roster.push(player.id);
+      }
 
-      // Give player a basic contract
+      // Give player a basic contract (capped at 16 weeks max)
       const contract = player.getComponent('contract');
       if (contract) {
         contract.promotionId = indiePromo.id;
         contract.weeklySalary = 100;
-        contract.remainingWeeks = 1;
+        contract.lengthWeeks = 16;
+        contract.remainingWeeks = 16;
         contract.position = 'opener';
       }
-
-      // Generate NPC roster for all promotions
-      this.generateNPCRosters(state);
     }
 
     // Initialize championships for all promotions
@@ -505,7 +511,28 @@ export class CharacterCreation {
    */
   generateNPCRosters(state) {
     for (const promotion of state.promotions.values()) {
-      // Calculate how many wrestlers needed
+      // 1. Add real-life roster if available
+      if (promotion.realData && promotion.realData.roster) {
+        promotion.realData.roster.forEach(wData => {
+          const npc = EntityFactory.createNPCFromJSON({
+            ...wData,
+            hometown: promotion.region
+          });
+          gameStateManager.dispatch('ADD_ENTITY', { entity: npc });
+
+          const contract = npc.getComponent('contract');
+          if (contract) {
+            contract.promotionId = promotion.id;
+            contract.weeklySalary = 500 + (wData.overness * 10);
+            contract.lengthWeeks = 16;
+            contract.remainingWeeks = 16;
+          }
+
+          promotion.roster.push(npc.id);
+        });
+      }
+
+      // 2. Supplement with random NPCs if needed
       const targetSize = promotion.prestige <= 15 ? 6 :
         promotion.prestige <= 40 ? 15 :
           promotion.prestige <= 70 ? 30 : 50;
@@ -521,7 +548,8 @@ export class CharacterCreation {
         if (contract) {
           contract.promotionId = promotion.id;
           contract.weeklySalary = 50 + Math.floor(Math.random() * 150);
-          contract.remainingWeeks = 1;
+          contract.lengthWeeks = 16;
+          contract.remainingWeeks = 16;
         }
 
         promotion.roster.push(npc.id);

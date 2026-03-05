@@ -79,9 +79,10 @@ export class FinancialEngine {
       expenseBreakdown.livingExpenses = financial.weeklyExpenses;
     }
 
-    // 6b. Weekly road costs for contracted talent
+    // 6b. Weekly road costs for contracted talent (scaled by required dates)
     if (contract?.promotionId) {
-      const roadCosts = 25;
+      const datesPerMonth = contract.datesPerMonth || 4;
+      const roadCosts = Math.max(10, Math.round(datesPerMonth * 6));
       totalExpenses += roadCosts;
       expenseBreakdown.roadCosts = roadCosts;
     }

@@ -7,16 +7,28 @@
 import ResolutionEngine from './ResolutionEngine.js';
 import { gameStateManager } from '../core/GameStateManager.js';
 import { clamp } from '../core/Utils.js';
+import ChampionshipSystem from './ChampionshipSystem.js';
 
 /**
- * Maximum contract length in weeks
+ * Maximum player contract length in weeks
  */
-const MAX_CONTRACT_LENGTH = 1;
+const MAX_PLAYER_CONTRACT_LENGTH = 16;
 
 /**
  * ContractEngine - Handles all contract-related operations
  */
 export class ContractEngine {
+  /**
+   * Determines if entity is the active player, with save-load fallback
+   * @private
+   */
+  static _isPlayerEntity(entity) {
+    if (!entity) return false;
+    if (entity.isPlayer) return true;
+    const state = gameStateManager.getStateRef();
+    return state?.player?.entityId === entity.id;
+  }
+
   /**
    * Generates a contract offer from a promotion
    * @param {object} promotion - Promotion object
@@ -24,6 +36,7 @@ export class ContractEngine {
    * @returns {object} Contract offer
    */
   static generateOffer(promotion, wrestler) {
+    const isPlayer = this._isPlayerEntity(wrestler);
     const wrestlerPop = wrestler.getComponent('popularity')?.overness || 5;
     const wrestlerStats = wrestler.getComponent('inRingStats');
     const avgStats = wrestlerStats ?
@@ -37,12 +50,16 @@ export class ContractEngine {
       promotionId: promotion.id,
       promotionName: promotion.name,
       weeklySalary: baseSalary,
-      lengthWeeks: 1,
-      remainingWeeks: 1,
+      lengthWeeks: isPlayer ? 8 : 52,
+      remainingWeeks: isPlayer ? 8 : 52,
       hasCreativeControl: false,
       hasMerchCut: wrestlerPop >= 50 ? 5 : 0, // 5% default for popular wrestlers
       tvAppearanceBonus: Math.floor(baseSalary * 0.5),
       noCompeteWeeks: wrestlerPop >= 70 ? 12 : 4,
+      injuryCoveragePct: promotion.prestige >= 75 ? 60 : promotion.prestige >= 40 ? 30 : 0,
+      datesPerMonth: promotion.prestige >= 75 ? 12 : promotion.prestige >= 40 ? 8 : 4,
+      titleOpportunityGuaranteed: false,
+      championshipOpportunityWeeks: 0,
       position: this.calculateCardPosition(wrestlerPop, promotion),
       benefits: []
     };
@@ -52,8 +69,36 @@ export class ContractEngine {
       offer.benefits.push('Health Insurance');
       offer.benefits.push('Travel Covered');
     }
+    if (offer.injuryCoveragePct > 0) {
+      offer.benefits.push(`Injury Coverage ${offer.injuryCoveragePct}%`);
+    }
 
     return offer;
+  }
+
+  /**
+   * Normalizes target values by contract clause
+   * @private
+   */
+  static _normalizeClauseTarget(wrestler, clause, value) {
+    switch (clause) {
+      case 'lengthWeeks':
+        return clamp(Number(value) || 1, 1, this._isPlayerEntity(wrestler) ? MAX_PLAYER_CONTRACT_LENGTH : 52);
+      case 'hasMerchCut':
+        return clamp(Number(value) || 0, 0, 25);
+      case 'injuryCoveragePct':
+        return clamp(Number(value) || 0, 0, 100);
+      case 'datesPerMonth':
+        return clamp(Number(value) || 1, 1, 20);
+      case 'championshipOpportunityWeeks':
+        return clamp(Number(value) || 0, 0, 52);
+      case 'weeklySalary':
+      case 'tvAppearanceBonus':
+      case 'noCompeteWeeks':
+        return Math.max(0, Math.floor(Number(value) || 0));
+      default:
+        return value;
+    }
   }
 
   /**
@@ -124,19 +169,53 @@ export class ContractEngine {
    * @returns {object} Negotiation result
    */
   static negotiateClause(wrestler, clause, offer, targetValue) {
-    const charisma = wrestler.getComponent('entertainmentStats')?.charisma ?? 10;
     const agent = wrestler.getComponent('financial')?.agent;
 
     // Agent quality bonus
     const agentBonus = agent ? agent.quality || 0 : 0;
+    const currentValue = offer[clause];
+    const normalizedTarget = this._normalizeClauseTarget(wrestler, clause, targetValue);
+
+    // Boolean clause negotiation
+    if (typeof currentValue === 'boolean' || typeof normalizedTarget === 'boolean') {
+      const desired = Boolean(normalizedTarget);
+      if (currentValue === desired) {
+        return {
+          success: true,
+          clause,
+          resultValue: desired,
+          narrative: 'That term is already in the contract.',
+          resolution: null
+        };
+      }
+
+      const dc = desired ? 15 : 10;
+      const resolution = ResolutionEngine.resolve({
+        actor: wrestler,
+        action: 'Negotiate Contract',
+        stat: 'charisma',
+        dc,
+        context: {
+          bonuses: [Math.floor(agentBonus / 4)]
+        }
+      });
+
+      const success = resolution.outcome === 'CRITICAL_SUCCESS' || resolution.outcome === 'SUCCESS';
+      const resultValue = success ? desired : currentValue;
+      const narrative = success
+        ? 'Negotiation successful. They accepted that clause.'
+        : 'They refused that clause for now.';
+
+      return { success, clause, resultValue, narrative, resolution };
+    }
 
     // Determine DC based on request
     let dc = 12;
-    const currentValue = offer[clause];
-    const difference = Math.abs(targetValue - currentValue);
+    const difference = Math.abs(normalizedTarget - currentValue);
+    const baseline = Math.max(1, Math.abs(currentValue));
 
-    if (difference > currentValue * 0.5) dc = 16;
-    if (difference > currentValue) dc = 20;
+    if (difference > baseline * 0.5) dc = 16;
+    if (difference > baseline) dc = 20;
 
     // Resolution
     const resolution = ResolutionEngine.resolve({
@@ -156,19 +235,19 @@ export class ContractEngine {
     switch (resolution.outcome) {
       case 'CRITICAL_SUCCESS':
         success = true;
-        resultValue = Math.floor(targetValue * 1.1);
+        resultValue = Math.floor(normalizedTarget * 1.1);
         narrative = 'Incredible negotiation! You got even more than you asked for!';
         break;
 
       case 'SUCCESS':
         success = true;
-        resultValue = targetValue;
+        resultValue = normalizedTarget;
         narrative = 'Negotiation successful. They agreed to your terms.';
         break;
 
       case 'FAILURE':
         success = false;
-        resultValue = Math.floor((currentValue + targetValue) / 2);
+        resultValue = Math.floor((currentValue + normalizedTarget) / 2);
         narrative = 'They wouldn\'t budge that far. Counter-offer made.';
         break;
 
@@ -178,6 +257,8 @@ export class ContractEngine {
         narrative = 'The negotiation backfired. They\'re losing interest.';
         break;
     }
+
+    resultValue = this._normalizeClauseTarget(wrestler, clause, resultValue);
 
     return {
       success,
@@ -287,7 +368,8 @@ export class ContractEngine {
     let offer = offerOrPromotion;
     if (offerOrPromotion && !offerOrPromotion.promotionId && offerOrPromotion.id) {
       const promotion = offerOrPromotion;
-      const resolvedLength = Math.min(lengthWeeks ?? 8, MAX_CONTRACT_LENGTH);
+      const maxLength = this._isPlayerEntity(wrestler) ? MAX_PLAYER_CONTRACT_LENGTH : 52;
+      const resolvedLength = Math.min(lengthWeeks ?? 8, maxLength);
       const resolvedSalary = weeklySalary ?? contract.weeklySalary ?? 0;
       const resolvedPosition = this.normalizePosition(position);
 
@@ -301,6 +383,10 @@ export class ContractEngine {
         hasMerchCut: contract.hasMerchCut ?? 0,
         tvAppearanceBonus: contract.tvAppearanceBonus ?? 0,
         noCompeteWeeks: contract.noCompeteWeeks ?? 0,
+        injuryCoveragePct: contract.injuryCoveragePct ?? 0,
+        datesPerMonth: contract.datesPerMonth ?? 4,
+        titleOpportunityGuaranteed: contract.titleOpportunityGuaranteed ?? false,
+        championshipOpportunityWeeks: contract.championshipOpportunityWeeks ?? 0,
         position: resolvedPosition
       };
     }
@@ -316,12 +402,13 @@ export class ContractEngine {
       }
     }
 
-    // Cap contract length to maximum
-    if (offer.lengthWeeks != null) {
-      offer.lengthWeeks = Math.min(offer.lengthWeeks, MAX_CONTRACT_LENGTH);
+    // Cap player contract length to maximum
+    if (this._isPlayerEntity(wrestler) && offer.lengthWeeks != null) {
+      offer.lengthWeeks = Math.min(offer.lengthWeeks, MAX_PLAYER_CONTRACT_LENGTH);
       if (offer.remainingWeeks == null) {
         offer.remainingWeeks = offer.lengthWeeks;
       }
+      offer.remainingWeeks = Math.min(offer.remainingWeeks, offer.lengthWeeks);
     }
 
     // Store old promotion ID before updating
@@ -341,15 +428,29 @@ export class ContractEngine {
         hasMerchCut: offer.hasMerchCut,
         tvAppearanceBonus: offer.tvAppearanceBonus,
         noCompeteWeeks: offer.noCompeteWeeks,
+        injuryCoveragePct: offer.injuryCoveragePct,
+        datesPerMonth: offer.datesPerMonth,
+        titleOpportunityGuaranteed: offer.titleOpportunityGuaranteed,
+        championshipOpportunityWeeks: offer.championshipOpportunityWeeks,
+        renewalWindowWeeks: 0,
+        pendingRenewalOffer: null,
         position: offer.position
       }
     });
+
+    // If guaranteed title opportunity is negotiated in, queue it.
+    if (this._isPlayerEntity(wrestler) && offer.titleOpportunityGuaranteed) {
+      contract.pendingTitleShot = true;
+    }
 
     // Remove from old promotion roster if switching
     if (oldPromotionId && oldPromotionId !== offer.promotionId) {
       const oldPromotion = state.promotions.get(oldPromotionId);
       if (oldPromotion) {
         oldPromotion.roster = oldPromotion.roster.filter(id => id !== wrestler.id);
+        if (wrestler.isPlayer) {
+          ChampionshipSystem.reassignTitlesForDeparture(oldPromotionId, wrestler.id);
+        }
       }
     }
 
@@ -381,12 +482,32 @@ export class ContractEngine {
       return { error: 'No contract to release' };
     }
 
-    const promotion = gameStateManager.getStateRef().promotions.get(contract.promotionId);
+    const state = gameStateManager.getStateRef();
+    const promotion = state.promotions.get(contract.promotionId);
     const buyoutCost = contract.remainingWeeks * contract.weeklySalary;
+
+    // Player must be able to pay the buyout to break the deal
+    if (wrestler.isPlayer) {
+      const financial = wrestler.getComponent('financial');
+      const balance = financial?.bankBalance ?? 0;
+      if (balance < buyoutCost) {
+        return {
+          error: `Insufficient funds to buy out contract. Need $${buyoutCost}, have $${balance}.`,
+          buyoutCost,
+          balance
+        };
+      }
+      if (financial) {
+        financial.bankBalance -= buyoutCost;
+      }
+    }
 
     // Remove from roster
     if (promotion) {
       promotion.roster = promotion.roster.filter(id => id !== wrestler.id);
+      if (wrestler.isPlayer) {
+        ChampionshipSystem.reassignTitlesForDeparture(promotion.id, wrestler.id);
+      }
     }
 
     // Apply no-compete
@@ -414,37 +535,65 @@ export class ContractEngine {
     const contract = wrestler.getComponent('contract');
     if (!contract) return;
 
-    if (!contract.promotionId || contract.remainingWeeks <= 0) {
+    if (!contract.promotionId) {
       return { expired: false, weeksRemaining: contract.remainingWeeks };
     }
 
-    contract.remainingWeeks--;
+    if (!wrestler.isPlayer) {
+      return { expired: false, weeksRemaining: contract.remainingWeeks };
+    }
+
+    // If in renewal grace period, count down before final expiry.
+    if ((contract.renewalWindowWeeks || 0) > 0) {
+      contract.renewalWindowWeeks--;
+      if (contract.renewalWindowWeeks <= 0) {
+        const promotion = gameStateManager.getStateRef().promotions.get(contract.promotionId);
+        if (promotion) {
+          promotion.roster = promotion.roster.filter(id => id !== wrestler.id);
+          ChampionshipSystem.reassignTitlesForDeparture(promotion.id, wrestler.id);
+        }
+
+        contract.promotionId = null;
+        contract.weeklySalary = 0;
+        contract.pendingRenewalOffer = null;
+        contract.renewalWindowWeeks = 0;
+
+        gameStateManager.dispatch('ADD_LOG_ENTRY', {
+          entry: {
+            category: 'personal',
+            text: 'Contract expired after renewal talks ended. You are now a free agent.',
+            type: 'contract'
+          }
+        });
+        return { expired: true };
+      }
+
+      return {
+        expired: false,
+        renewalWindow: true,
+        renewalWeeksLeft: contract.renewalWindowWeeks
+      };
+    }
+
+    // Decrement remaining weeks, but handle edge case where it's already expired
+    if (contract.remainingWeeks > 0) {
+      contract.remainingWeeks--;
+    }
 
     if (contract.remainingWeeks <= 0) {
-      if (!wrestler.isPlayer) {
-        // NPCs auto-renew to keep rosters populated
-        contract.remainingWeeks = MAX_CONTRACT_LENGTH;
-        return { expired: false, renewed: true };
-      }
-
-      // Player contract expired
-      const promotion = gameStateManager.getStateRef().promotions.get(contract.promotionId);
-      if (promotion) {
-        promotion.roster = promotion.roster.filter(id => id !== wrestler.id);
-      }
-
-      contract.promotionId = null;
-      contract.weeklySalary = 0;
+      // Start renewal grace period instead of immediate expiry.
+      contract.renewalWindowWeeks = 2;
+      contract.pendingRenewalOffer = this.generateRenewalOffer(wrestler);
 
       gameStateManager.dispatch('ADD_LOG_ENTRY', {
         entry: {
           category: 'personal',
-          text: 'Contract has expired. You are now a free agent.',
+          text: 'Contract term ended. Your promotion has opened renewal talks (2-week deadline).',
           type: 'contract'
         }
       });
 
-      return { expired: true };
+      return { expired: false, renewalWindow: true, renewalWeeksLeft: 2 };
     }
 
     return { expired: false, weeksRemaining: contract.remainingWeeks };
@@ -502,6 +651,8 @@ export class ContractEngine {
     // Apply new terms
     Object.assign(contract, terms);
     contract.remainingWeeks = contract.lengthWeeks;
+    contract.pendingRenewalOffer = null;
+    contract.renewalWindowWeeks = 0;
 
     gameStateManager.dispatch('ADD_LOG_ENTRY', {
       entry: {
@@ -510,6 +661,62 @@ export class ContractEngine {
         type: 'contract'
       }
     });
+
+    return { success: true };
+  }
+
+  /**
+   * Generates a renewal offer from current promotion
+   * @param {Entity} wrestler - Wrestler entity
+   * @returns {object|null} Renewal offer
+   */
+  static generateRenewalOffer(wrestler) {
+    const contract = wrestler.getComponent('contract');
+    if (!contract?.promotionId) return null;
+
+    const state = gameStateManager.getStateRef();
+    const promotion = state.promotions.get(contract.promotionId);
+    if (!promotion) return null;
+
+    const baseOffer = this.generateOffer(promotion, wrestler);
+    const targetLength = wrestler.isPlayer
+      ? Math.min(MAX_PLAYER_CONTRACT_LENGTH, Math.max(8, contract.lengthWeeks || 8))
+      : 52;
+    const minRenewalSalary = Math.floor((contract.weeklySalary || 0) * 0.9);
+
+    return {
+      ...baseOffer,
+      promotionId: promotion.id,
+      promotionName: promotion.name,
+      position: this.normalizePosition(contract.position || baseOffer.position),
+      hasCreativeControl: contract.hasCreativeControl || baseOffer.hasCreativeControl,
+      hasMerchCut: Math.max(contract.hasMerchCut || 0, baseOffer.hasMerchCut || 0),
+      weeklySalary: Math.max(minRenewalSalary, baseOffer.weeklySalary),
+      lengthWeeks: targetLength,
+      remainingWeeks: targetLength
+    };
+  }
+
+  /**
+   * Player declines renewal and becomes free agent immediately.
+   * @param {Entity} wrestler - Wrestler entity
+   * @returns {object}
+   */
+  static declineRenewal(wrestler) {
+    const contract = wrestler.getComponent('contract');
+    if (!contract?.promotionId) return { error: 'No active contract' };
+
+    const state = gameStateManager.getStateRef();
+    const promotion = state.promotions.get(contract.promotionId);
+    if (promotion) {
+      promotion.roster = promotion.roster.filter(id => id !== wrestler.id);
+      ChampionshipSystem.reassignTitlesForDeparture(promotion.id, wrestler.id);
+    }
+
+    contract.promotionId = null;
+    contract.weeklySalary = 0;
+    contract.pendingRenewalOffer = null;
+    contract.renewalWindowWeeks = 0;
 
     return { success: true };
   }
@@ -535,6 +742,10 @@ export class ContractEngine {
       position: contract.position,
       hasCreativeControl: contract.hasCreativeControl,
       hasMerchCut: contract.hasMerchCut,
+      injuryCoveragePct: contract.injuryCoveragePct,
+      datesPerMonth: contract.datesPerMonth,
+      titleOpportunityGuaranteed: contract.titleOpportunityGuaranteed,
+      championshipOpportunityWeeks: contract.championshipOpportunityWeeks,
       isExpiringSoon: contract.remainingWeeks <= 8
     };
   }

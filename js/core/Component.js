@@ -54,6 +54,9 @@ export class PhysicalStatsComponent extends Component {
     this.strength = options.strength ?? 10;
     this.resilience = options.resilience ?? 10;
     this.speed = options.speed ?? 10;
+    // Dynamic stamina recovery system
+    this.staminaRecoveryMax = options.staminaRecoveryMax ?? 100; // Current max recovery level
+    this.daysSinceFullRest = options.daysSinceFullRest ?? 0; // Days since stamina hit 100
   }
 
   static deserialize(data) {
@@ -171,6 +174,10 @@ export class ContractComponent extends Component {
     this.hasMerchCut = options.hasMerchCut ?? 0;
     this.tvAppearanceBonus = options.tvAppearanceBonus ?? 0;
     this.noCompeteWeeks = options.noCompeteWeeks ?? 0;
+    this.injuryCoveragePct = options.injuryCoveragePct ?? 0;
+    this.datesPerMonth = options.datesPerMonth ?? 4;
+    this.titleOpportunityGuaranteed = options.titleOpportunityGuaranteed ?? false;
+    this.championshipOpportunityWeeks = options.championshipOpportunityWeeks ?? 0;
   }
 
   static deserialize(data) {

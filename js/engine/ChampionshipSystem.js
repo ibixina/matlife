@@ -93,6 +93,30 @@ export class ChampionshipSystem {
   }
 
   /**
+   * Ensures championships in a promotion have champions assigned
+   * @param {object} promotion - Promotion object
+   */
+  static ensurePromotionChampions(promotion) {
+    const state = gameStateManager.getStateRef();
+    const roster = (promotion.roster || [])
+      .map(id => state.entities.get(id))
+      .filter(e => e)
+      .sort((a, b) => {
+        const popA = a.getComponent('popularity')?.overness || 0;
+        const popB = b.getComponent('popularity')?.overness || 0;
+        return popB - popA;
+      });
+
+    if (roster.length === 0) return;
+
+    for (const [championshipId, championship] of state.championships.entries()) {
+      if (championship.promotionId !== promotion.id) continue;
+      if (championship.currentChampion) continue;
+      this.awardChampionship(championship.id || championshipId, roster[0]);
+    }
+  }
+
+  /**
    * Awards a championship to a wrestler
    * @param {string} championshipId - Championship ID
    * @param {Entity} wrestler - New champion
@@ -190,6 +214,40 @@ export class ChampionshipSystem {
   }
 
   /**
+   * Reassigns any titles held by a departing champion within a promotion
+   * @param {string} promotionId - Promotion ID
+   * @param {string} departingId - Wrestler ID leaving the promotion
+   */
+  static reassignTitlesForDeparture(promotionId, departingId) {
+    const state = gameStateManager.getStateRef();
+    const promotion = state.promotions.get(promotionId);
+    if (!promotion) return;
+
+    for (const [championshipId, championship] of state.championships.entries()) {
+      if (championship.promotionId !== promotionId) continue;
+      if (championship.currentChampion !== departingId) continue;
+
+      const roster = (promotion.roster || [])
+        .filter(id => id !== departingId)
+        .map(id => state.entities.get(id))
+        .filter(e => e);
+
+      if (roster.length === 0) {
+        this.vacateChampionship(championship.id || championshipId, 'Champion left promotion');
+        continue;
+      }
+
+      roster.sort((a, b) => {
+        const popA = a.getComponent('popularity')?.overness || 0;
+        const popB = b.getComponent('popularity')?.overness || 0;
+        return popB - popA;
+      });
+
+      this.awardChampionship(championship.id || championshipId, roster[0]);
+    }
+  }
+
+  /**
    * Vacates a championship
    * @param {string} championshipId - Championship ID
    * @param {string} reason - Reason for vacation
@@ -252,7 +310,7 @@ export class ChampionshipSystem {
     }
 
     return {
-      id: championship.id,
+      id: championship.id || championshipId,
       promotionId: championship.promotionId,
       name: championship.name,
       type: championship.type,
@@ -273,9 +331,10 @@ export class ChampionshipSystem {
     const state = gameStateManager.getStateRef();
     const championships = [];
 
-    for (const championship of state.championships.values()) {
+    for (const [championshipId, championship] of state.championships.entries()) {
       if (championship.promotionId === promotionId) {
-        championships.push(this.getChampionshipInfo(championship.id));
+        const info = this.getChampionshipInfo(championship.id || championshipId);
+        if (info) championships.push(info);
       }
     }
 

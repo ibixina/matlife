@@ -1,0 +1,1928 @@
+{
+  "promotions": [
+    {
+      "id": "promo_wwe",
+      "name": "World Wrestling Entertainment",
+      "shortName": "WWE",
+      "region": "USA",
+      "tier": "global",
+      "prestige": 98,
+      "stylePreference": "Sports Entertainment",
+      "roster": [
+        {
+          "name": "Roman Reigns",
+          "age": 40,
+          "overness": 99,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Cody Rhodes",
+          "age": 40,
+          "overness": 98,
+          "archetype": "Technical"
+        },
+        {
+          "name": "CM Punk",
+          "age": 47,
+          "overness": 96,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Gunther",
+          "age": 38,
+          "overness": 95,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Seth Rollins",
+          "age": 39,
+          "overness": 94,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Rhea Ripley",
+          "age": 29,
+          "overness": 95,
+          "archetype": "Powerhouse",
+          "gender": "Female"
+        },
+        {
+          "name": "Drew McIntyre",
+          "age": 40,
+          "overness": 93,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "LA Knight",
+          "age": 43,
+          "overness": 92,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Jey Uso",
+          "age": 40,
+          "overness": 93,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Sami Zayn",
+          "age": 41,
+          "overness": 91,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Bianca Belair",
+          "age": 36,
+          "overness": 92,
+          "archetype": "Powerhouse",
+          "gender": "Female"
+        },
+        {
+          "name": "Kevin Owens",
+          "age": 41,
+          "overness": 89,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Damian Priest",
+          "age": 43,
+          "overness": 88,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Bron Breakker",
+          "age": 28,
+          "overness": 88,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Dominik Mysterio",
+          "age": 28,
+          "overness": 87,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Finn Bálor",
+          "age": 44,
+          "overness": 86,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Liv Morgan",
+          "age": 31,
+          "overness": 89,
+          "archetype": "Brawler",
+          "gender": "Female"
+        },
+        {
+          "name": "Bayley",
+          "age": 36,
+          "overness": 88,
+          "archetype": "Technical",
+          "gender": "Female"
+        },
+        {
+          "name": "Iyo Sky",
+          "age": 35,
+          "overness": 86,
+          "archetype": "High-Flyer",
+          "gender": "Female"
+        },
+        {
+          "name": "Asuka",
+          "age": 44,
+          "overness": 85,
+          "archetype": "Strong Style",
+          "gender": "Female"
+        },
+        {
+          "name": "Jade Cargill",
+          "age": 33,
+          "overness": 87,
+          "archetype": "Powerhouse",
+          "gender": "Female"
+        },
+        {
+          "name": "Tiffany Stratton",
+          "age": 26,
+          "overness": 88,
+          "archetype": "High-Flyer",
+          "gender": "Female"
+        },
+        {
+          "name": "Logan Paul",
+          "age": 30,
+          "overness": 90,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Randy Orton",
+          "age": 45,
+          "overness": 92,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "AJ Styles",
+          "age": 48,
+          "overness": 86,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Rey Mysterio",
+          "age": 51,
+          "overness": 88,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Jimmy Uso",
+          "age": 40,
+          "overness": 84,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Solo Sikoa",
+          "age": 33,
+          "overness": 86,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Jacob Fatu",
+          "age": 33,
+          "overness": 87,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Tama Tonga",
+          "age": 43,
+          "overness": 80,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Carmelo Hayes",
+          "age": 31,
+          "overness": 83,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Andrade",
+          "age": 36,
+          "overness": 82,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Chad Gable",
+          "age": 40,
+          "overness": 85,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Ilja Dragunov",
+          "age": 32,
+          "overness": 84,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Trick Williams",
+          "age": 29,
+          "overness": 86,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Sheamus",
+          "age": 48,
+          "overness": 83,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Nia Jax",
+          "age": 41,
+          "overness": 85,
+          "archetype": "Powerhouse",
+          "gender": "Female"
+        },
+        {
+          "name": "Lyra Valkyria",
+          "age": 29,
+          "overness": 79,
+          "archetype": "Technical",
+          "gender": "Female"
+        },
+        {
+          "name": "Braun Strowman",
+          "age": 42,
+          "overness": 80,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Bronson Reed",
+          "age": 37,
+          "overness": 81,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Kofi Kingston",
+          "age": 44,
+          "overness": 82,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Xavier Woods",
+          "age": 39,
+          "overness": 80,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Shinsuke Nakamura",
+          "age": 46,
+          "overness": 79,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Chelsea Green",
+          "age": 34,
+          "overness": 81,
+          "archetype": "Brawler",
+          "gender": "Female"
+        },
+        {
+          "name": "Piper Niven",
+          "age": 34,
+          "overness": 76,
+          "archetype": "Powerhouse",
+          "gender": "Female"
+        },
+        {
+          "name": "Tommaso Ciampa",
+          "age": 40,
+          "overness": 78,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Johnny Gargano",
+          "age": 38,
+          "overness": 78,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Ludwig Kaiser",
+          "age": 35,
+          "overness": 79,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Austin Theory",
+          "age": 28,
+          "overness": 77,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Grayson Waller",
+          "age": 36,
+          "overness": 78,
+          "archetype": "Brawler"
+        }
+      ]
+    },
+    {
+      "id": "promo_aew",
+      "name": "All Elite Wrestling",
+      "shortName": "AEW",
+      "region": "USA",
+      "tier": "national",
+      "prestige": 88,
+      "stylePreference": "Mixed",
+      "roster": [
+        {
+          "name": "Will Ospreay",
+          "age": 32,
+          "overness": 96,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Swerve Strickland",
+          "age": 35,
+          "overness": 95,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "MJF",
+          "age": 30,
+          "overness": 95,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Jon Moxley",
+          "age": 40,
+          "overness": 94,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Kazuchika Okada",
+          "age": 38,
+          "overness": 93,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Bryan Danielson",
+          "age": 44,
+          "overness": 94,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Hangman Adam Page",
+          "age": 34,
+          "overness": 91,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Mercedes Moné",
+          "age": 34,
+          "overness": 92,
+          "archetype": "Technical",
+          "gender": "Female"
+        },
+        {
+          "name": "Toni Storm",
+          "age": 30,
+          "overness": 91,
+          "archetype": "Brawler",
+          "gender": "Female"
+        },
+        {
+          "name": "Darby Allin",
+          "age": 33,
+          "overness": 90,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Kenny Omega",
+          "age": 42,
+          "overness": 92,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Matthew Jackson",
+          "age": 39,
+          "overness": 88,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Nicholas Jackson",
+          "age": 36,
+          "overness": 88,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Christian Cage",
+          "age": 52,
+          "overness": 89,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Adam Copeland",
+          "age": 52,
+          "overness": 89,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Orange Cassidy",
+          "age": 41,
+          "overness": 88,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Eddie Kingston",
+          "age": 44,
+          "overness": 87,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Mariah May",
+          "age": 27,
+          "overness": 87,
+          "archetype": "Strong Style",
+          "gender": "Female"
+        },
+        {
+          "name": "Jay White",
+          "age": 33,
+          "overness": 86,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Jack Perry",
+          "age": 28,
+          "overness": 85,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Samoa Joe",
+          "age": 47,
+          "overness": 86,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Dr. Britt Baker DMD",
+          "age": 34,
+          "overness": 85,
+          "archetype": "Brawler",
+          "gender": "Female"
+        },
+        {
+          "name": "Jamie Hayter",
+          "age": 30,
+          "overness": 86,
+          "archetype": "Powerhouse",
+          "gender": "Female"
+        },
+        {
+          "name": "Claudio Castagnoli",
+          "age": 45,
+          "overness": 84,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Pac",
+          "age": 39,
+          "overness": 84,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Konosuke Takeshita",
+          "age": 30,
+          "overness": 85,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Chris Jericho",
+          "age": 55,
+          "overness": 83,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Ricochet",
+          "age": 37,
+          "overness": 86,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Malakai Black",
+          "age": 40,
+          "overness": 82,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Buddy Matthews",
+          "age": 37,
+          "overness": 80,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Brody King",
+          "age": 39,
+          "overness": 81,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Willow Nightingale",
+          "age": 31,
+          "overness": 85,
+          "archetype": "Powerhouse",
+          "gender": "Female"
+        },
+        {
+          "name": "Statlander",
+          "age": 30,
+          "overness": 82,
+          "archetype": "Powerhouse",
+          "gender": "Female"
+        },
+        {
+          "name": "Daniel Garcia",
+          "age": 27,
+          "overness": 83,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Hook",
+          "age": 26,
+          "overness": 82,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Katsuyori Shibata",
+          "age": 46,
+          "overness": 81,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Mina Shirakawa",
+          "age": 38,
+          "overness": 80,
+          "archetype": "Technical",
+          "gender": "Female"
+        },
+        {
+          "name": "Rey Fenix",
+          "age": 35,
+          "overness": 84,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Penta El Zero Miedo",
+          "age": 41,
+          "overness": 85,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Mark Briscoe",
+          "age": 41,
+          "overness": 83,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Wheeler Yuta",
+          "age": 29,
+          "overness": 79,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Kyle Fletcher",
+          "age": 27,
+          "overness": 80,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Deonna Purrazzo",
+          "age": 31,
+          "overness": 78,
+          "archetype": "Technical",
+          "gender": "Female"
+        },
+        {
+          "name": "Roderick Strong",
+          "age": 42,
+          "overness": 79,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Kyle O'Reilly",
+          "age": 39,
+          "overness": 78,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Adam Cole",
+          "age": 36,
+          "overness": 83,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Trent Beretta",
+          "age": 39,
+          "overness": 77,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Brian Cage",
+          "age": 42,
+          "overness": 76,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Anthony Bowens",
+          "age": 35,
+          "overness": 81,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Max Caster",
+          "age": 36,
+          "overness": 80,
+          "archetype": "Brawler"
+        }
+      ]
+    },
+    {
+      "id": "promo_njpw",
+      "name": "New Japan Pro-Wrestling",
+      "shortName": "NJPW",
+      "region": "Japan",
+      "tier": "national",
+      "prestige": 85,
+      "stylePreference": "Strong Style",
+      "roster": [
+        {
+          "name": "Tetsuya Naito",
+          "age": 43,
+          "overness": 93,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Zack Sabre Jr.",
+          "age": 38,
+          "overness": 91,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Shingo Takagi",
+          "age": 43,
+          "overness": 89,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Yota Tsuji",
+          "age": 32,
+          "overness": 88,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Shota Umino",
+          "age": 28,
+          "overness": 87,
+          "archetype": "Technical"
+        },
+        {
+          "name": "SANADA",
+          "age": 38,
+          "overness": 87,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Hiromu Takahashi",
+          "age": 36,
+          "overness": 89,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "El Desperado",
+          "age": 42,
+          "overness": 88,
+          "archetype": "Technical"
+        },
+        {
+          "name": "EVIL",
+          "age": 39,
+          "overness": 85,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "David Finlay",
+          "age": 32,
+          "overness": 84,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Taichi",
+          "age": 46,
+          "overness": 83,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Hiroshi Tanahashi",
+          "age": 49,
+          "overness": 86,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Ren Narita",
+          "age": 28,
+          "overness": 82,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Yuya Uemura",
+          "age": 31,
+          "overness": 81,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Great-O-Khan",
+          "age": 34,
+          "overness": 82,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Gabe Kidd",
+          "age": 29,
+          "overness": 83,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Tomohiro Ishii",
+          "age": 50,
+          "overness": 81,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Hirooki Goto",
+          "age": 46,
+          "overness": 80,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "YOSHI-HASHI",
+          "age": 43,
+          "overness": 79,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Taiji Ishimori",
+          "age": 43,
+          "overness": 80,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "SHO",
+          "age": 36,
+          "overness": 78,
+          "archetype": "Technical"
+        },
+        {
+          "name": "YOH",
+          "age": 37,
+          "overness": 77,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "DOUKI",
+          "age": 34,
+          "overness": 82,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "KUSHIDA",
+          "age": 42,
+          "overness": 78,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Clark Connors",
+          "age": 32,
+          "overness": 77,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Drilla Moloney",
+          "age": 29,
+          "overness": 76,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Chase Owens",
+          "age": 36,
+          "overness": 72,
+          "archetype": "Technical"
+        },
+        {
+          "name": "KENTA",
+          "age": 45,
+          "overness": 79,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Jeff Cobb",
+          "age": 43,
+          "overness": 84,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Callum Newman",
+          "age": 23,
+          "overness": 74,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "HENARE",
+          "age": 33,
+          "overness": 79,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Toru Yano",
+          "age": 47,
+          "overness": 75,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Master Wato",
+          "age": 29,
+          "overness": 76,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "TJP",
+          "age": 41,
+          "overness": 78,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Francesco Akira",
+          "age": 26,
+          "overness": 77,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Kevin Knight",
+          "age": 29,
+          "overness": 76,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Kosei Fujita",
+          "age": 23,
+          "overness": 75,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Ryusuke Taguchi",
+          "age": 46,
+          "overness": 73,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Satoshi Kojima",
+          "age": 55,
+          "overness": 74,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Yuji Nagata",
+          "age": 57,
+          "overness": 75,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Hiroyoshi Tenzan",
+          "age": 55,
+          "overness": 70,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Togi Makabe",
+          "age": 53,
+          "overness": 71,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Tomoaki Honma",
+          "age": 49,
+          "overness": 72,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "El Phantasmo",
+          "age": 39,
+          "overness": 79,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Hikuleo",
+          "age": 35,
+          "overness": 76,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Bad Dude Tito",
+          "age": 34,
+          "overness": 73,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Robbie Eagles",
+          "age": 36,
+          "overness": 75,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Rocky Romero",
+          "age": 43,
+          "overness": 74,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Jake Lee",
+          "age": 37,
+          "overness": 81,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Oleg Boltin",
+          "age": 33,
+          "overness": 75,
+          "archetype": "Powerhouse"
+        }
+      ]
+    },
+    {
+      "id": "promo_tna",
+      "name": "TNA Wrestling",
+      "shortName": "TNA",
+      "region": "USA",
+      "tier": "national",
+      "prestige": 65,
+      "stylePreference": "Mixed",
+      "roster": [
+        {
+          "name": "Nic Nemeth",
+          "age": 45,
+          "overness": 88,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Moose",
+          "age": 41,
+          "overness": 86,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Josh Alexander",
+          "age": 38,
+          "overness": 87,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Joe Hendry",
+          "age": 35,
+          "overness": 90,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Jordynne Grace",
+          "age": 30,
+          "overness": 89,
+          "archetype": "Powerhouse",
+          "gender": "Female"
+        },
+        {
+          "name": "Mustafa Ali",
+          "age": 40,
+          "overness": 85,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Mike Santana",
+          "age": 35,
+          "overness": 83,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Frankie Kazarian",
+          "age": 48,
+          "overness": 82,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Eric Young",
+          "age": 46,
+          "overness": 81,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Eddie Edwards",
+          "age": 42,
+          "overness": 80,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Brian Myers",
+          "age": 40,
+          "overness": 78,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Matt Hardy",
+          "age": 51,
+          "overness": 84,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Jeff Hardy",
+          "age": 48,
+          "overness": 85,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Masha Slamovich",
+          "age": 27,
+          "overness": 84,
+          "archetype": "Strong Style",
+          "gender": "Female"
+        },
+        {
+          "name": "Rosemary",
+          "age": 42,
+          "overness": 81,
+          "archetype": "Brawler",
+          "gender": "Female"
+        },
+        {
+          "name": "Alisha Edwards",
+          "age": 39,
+          "overness": 75,
+          "archetype": "Brawler",
+          "gender": "Female"
+        },
+        {
+          "name": "Ash By Elegance",
+          "age": 35,
+          "overness": 79,
+          "archetype": "Technical",
+          "gender": "Female"
+        },
+        {
+          "name": "Chris Bey",
+          "age": 30,
+          "overness": 82,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Ace Austin",
+          "age": 29,
+          "overness": 81,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Trey Miguel",
+          "age": 31,
+          "overness": 79,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Zachary Wentz",
+          "age": 31,
+          "overness": 80,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Steve Maclin",
+          "age": 38,
+          "overness": 82,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Sami Callihan",
+          "age": 38,
+          "overness": 79,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Rich Swann",
+          "age": 35,
+          "overness": 76,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Leon Slater",
+          "age": 21,
+          "overness": 77,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Dani Luna",
+          "age": 26,
+          "overness": 76,
+          "archetype": "Powerhouse",
+          "gender": "Female"
+        },
+        {
+          "name": "Jody Threat",
+          "age": 35,
+          "overness": 78,
+          "archetype": "Strong Style",
+          "gender": "Female"
+        },
+        {
+          "name": "Tasha Steelz",
+          "age": 30,
+          "overness": 77,
+          "archetype": "Brawler",
+          "gender": "Female"
+        },
+        {
+          "name": "Jonathan Gresham",
+          "age": 36,
+          "overness": 81,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Kushida",
+          "age": 42,
+          "overness": 80,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Alexander Hammerstone",
+          "age": 35,
+          "overness": 82,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Rhino",
+          "age": 50,
+          "overness": 76,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Tommy Dreamer",
+          "age": 55,
+          "overness": 75,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "PCO",
+          "age": 58,
+          "overness": 80,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Laredo Kid",
+          "age": 39,
+          "overness": 77,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Trent Seven",
+          "age": 44,
+          "overness": 76,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Mike Bailey",
+          "age": 35,
+          "overness": 84,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "John Skyler",
+          "age": 38,
+          "overness": 72,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Jason Hotch",
+          "age": 31,
+          "overness": 73,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "AJ Francis",
+          "age": 35,
+          "overness": 75,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "KC Navarro",
+          "age": 26,
+          "overness": 71,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Jake Something",
+          "age": 36,
+          "overness": 78,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Gia Miller",
+          "age": 29,
+          "overness": 65,
+          "archetype": "Sports Entertainment",
+          "gender": "Female"
+        },
+        {
+          "name": "Steph De Lander",
+          "age": 28,
+          "overness": 80,
+          "archetype": "Powerhouse",
+          "gender": "Female"
+        },
+        {
+          "name": "Xia Brookside",
+          "age": 27,
+          "overness": 74,
+          "archetype": "Technical",
+          "gender": "Female"
+        },
+        {
+          "name": "Spitfire",
+          "age": 28,
+          "overness": 75,
+          "archetype": "Brawler",
+          "gender": "Female"
+        },
+        {
+          "name": "Kon",
+          "age": 43,
+          "overness": 74,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Alan Angels",
+          "age": 28,
+          "overness": 73,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Bhupinder Gujjar",
+          "age": 30,
+          "overness": 71,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Lio Rush",
+          "age": 31,
+          "overness": 81,
+          "archetype": "High-Flyer"
+        }
+      ]
+    },
+    {
+      "id": "promo_roh",
+      "name": "Ring of Honor",
+      "shortName": "ROH",
+      "region": "USA",
+      "tier": "regional",
+      "prestige": 60,
+      "stylePreference": "Technical",
+      "roster": [
+        {
+          "name": "Athena",
+          "age": 37,
+          "overness": 88,
+          "archetype": "Strong Style",
+          "gender": "Female"
+        },
+        {
+          "name": "Mark Briscoe",
+          "age": 41,
+          "overness": 87,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Billie Starkz",
+          "age": 21,
+          "overness": 82,
+          "archetype": "Technical",
+          "gender": "Female"
+        },
+        {
+          "name": "Wheeler Yuta",
+          "age": 29,
+          "overness": 83,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Dustin Rhodes",
+          "age": 56,
+          "overness": 84,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Sammy Guevara",
+          "age": 32,
+          "overness": 81,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Dalton Castle",
+          "age": 40,
+          "overness": 80,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Johnny TV",
+          "age": 46,
+          "overness": 79,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Taya Valkyrie",
+          "age": 42,
+          "overness": 78,
+          "archetype": "Powerhouse",
+          "gender": "Female"
+        },
+        {
+          "name": "Brian Cage",
+          "age": 42,
+          "overness": 80,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Lance Archer",
+          "age": 49,
+          "overness": 79,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Lee Moriarty",
+          "age": 31,
+          "overness": 78,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Shane Taylor",
+          "age": 39,
+          "overness": 77,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Kyle Fletcher",
+          "age": 27,
+          "overness": 84,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Queen Aminata",
+          "age": 33,
+          "overness": 81,
+          "archetype": "Strong Style",
+          "gender": "Female"
+        },
+        {
+          "name": "Red Velvet",
+          "age": 33,
+          "overness": 79,
+          "archetype": "High-Flyer",
+          "gender": "Female"
+        },
+        {
+          "name": "Tony Nese",
+          "age": 40,
+          "overness": 76,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Ari Daivari",
+          "age": 36,
+          "overness": 75,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Mark Sterling",
+          "age": 42,
+          "overness": 77,
+          "archetype": "Sports Entertainment"
+        },
+        {
+          "name": "Josh Woods",
+          "age": 36,
+          "overness": 76,
+          "archetype": "Technical"
+        },
+        {
+          "name": "The Beast Mortos",
+          "age": 35,
+          "overness": 82,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Komander",
+          "age": 27,
+          "overness": 80,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Action Andretti",
+          "age": 28,
+          "overness": 77,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Top Flight (Dante)",
+          "age": 25,
+          "overness": 79,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Top Flight (Darius)",
+          "age": 26,
+          "overness": 78,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Leyla Hirsch",
+          "age": 27,
+          "overness": 76,
+          "archetype": "Technical",
+          "gender": "Female"
+        },
+        {
+          "name": "Marina Shafir",
+          "age": 37,
+          "overness": 77,
+          "archetype": "Strong Style",
+          "gender": "Female"
+        },
+        {
+          "name": "Diamanté",
+          "age": 35,
+          "overness": 75,
+          "archetype": "Brawler",
+          "gender": "Female"
+        },
+        {
+          "name": "Mercedes Martinez",
+          "age": 45,
+          "overness": 78,
+          "archetype": "Brawler",
+          "gender": "Female"
+        },
+        {
+          "name": "Abadon",
+          "age": 33,
+          "overness": 76,
+          "archetype": "Brawler",
+          "gender": "Female"
+        },
+        {
+          "name": "Iron Savages (Bronson)",
+          "age": 32,
+          "overness": 73,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Iron Savages (Boulder)",
+          "age": 34,
+          "overness": 73,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Jack Cartwheel",
+          "age": 28,
+          "overness": 75,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Blake Christian",
+          "age": 28,
+          "overness": 76,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "AR Fox",
+          "age": 38,
+          "overness": 75,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Serpentico",
+          "age": 42,
+          "overness": 72,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Angelico",
+          "age": 36,
+          "overness": 74,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Griff Garrison",
+          "age": 28,
+          "overness": 73,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Cole Karter",
+          "age": 25,
+          "overness": 72,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Maria Kanellis",
+          "age": 44,
+          "overness": 76,
+          "archetype": "Sports Entertainment",
+          "gender": "Female"
+        },
+        {
+          "name": "Mike Bennett",
+          "age": 40,
+          "overness": 77,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Matt Taven",
+          "age": 41,
+          "overness": 78,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Kiera Hogan",
+          "age": 31,
+          "overness": 75,
+          "archetype": "Brawler",
+          "gender": "Female"
+        },
+        {
+          "name": "Lady Frost",
+          "age": 39,
+          "overness": 77,
+          "archetype": "High-Flyer",
+          "gender": "Female"
+        },
+        {
+          "name": "Lee Johnson",
+          "age": 28,
+          "overness": 76,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "Nyla Rose",
+          "age": 43,
+          "overness": 79,
+          "archetype": "Powerhouse",
+          "gender": "Female"
+        },
+        {
+          "name": "Preston Vance",
+          "age": 33,
+          "overness": 75,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Rhett Titus",
+          "age": 38,
+          "overness": 71,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Trish Adora",
+          "age": 36,
+          "overness": 74,
+          "archetype": "Technical",
+          "gender": "Female"
+        },
+        {
+          "name": "Aaron Solo",
+          "age": 33,
+          "overness": 70,
+          "archetype": "Technical"
+        }
+      ]
+    },
+    {
+      "id": "promo_aaa",
+      "name": "Lucha Libre AAA",
+      "shortName": "AAA",
+      "region": "Mexico",
+      "tier": "regional",
+      "prestige": 65,
+      "stylePreference": "Lucha Libre",
+      "roster": [
+        {
+          "name": "El Hijo del Vikingo",
+          "age": 28,
+          "overness": 91,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Psycho Clown",
+          "age": 40,
+          "overness": 90,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Pagano",
+          "age": 40,
+          "overness": 88,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Alberto El Patrón",
+          "age": 48,
+          "overness": 85,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Laredo Kid",
+          "age": 39,
+          "overness": 84,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Octagón Jr.",
+          "age": 34,
+          "overness": 82,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Abismo Negro Jr.",
+          "age": 33,
+          "overness": 80,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Flammer",
+          "age": 26,
+          "overness": 83,
+          "archetype": "Brawler",
+          "gender": "Female"
+        },
+        {
+          "name": "Faby Apache",
+          "age": 45,
+          "overness": 82,
+          "archetype": "Strong Style",
+          "gender": "Female"
+        },
+        {
+          "name": "Lady Shani",
+          "age": 33,
+          "overness": 81,
+          "archetype": "Lucha Libre",
+          "gender": "Female"
+        },
+        {
+          "name": "La Hiedra",
+          "age": 28,
+          "overness": 80,
+          "archetype": "Brawler",
+          "gender": "Female"
+        },
+        {
+          "name": "Cibernético",
+          "age": 51,
+          "overness": 84,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Negro Casas",
+          "age": 66,
+          "overness": 83,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Vampiro",
+          "age": 58,
+          "overness": 85,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Mr. Iguana",
+          "age": 32,
+          "overness": 79,
+          "archetype": "Sports Entertainment"
+        },
+        {
+          "name": "Niño Hamburguesa",
+          "age": 30,
+          "overness": 81,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Murder Clown",
+          "age": 39,
+          "overness": 80,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Dave The Clown",
+          "age": 35,
+          "overness": 78,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Panic Clown",
+          "age": 31,
+          "overness": 76,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Aero Star",
+          "age": 41,
+          "overness": 79,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Myzteziz Jr.",
+          "age": 32,
+          "overness": 78,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Arez",
+          "age": 34,
+          "overness": 77,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Latigo",
+          "age": 33,
+          "overness": 75,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Toxin",
+          "age": 31,
+          "overness": 76,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Dralístico",
+          "age": 34,
+          "overness": 82,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Kratoz",
+          "age": 30,
+          "overness": 72,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Dalys",
+          "age": 50,
+          "overness": 80,
+          "archetype": "Brawler",
+          "gender": "Female"
+        },
+        {
+          "name": "Lady Maravilla",
+          "age": 31,
+          "overness": 77,
+          "archetype": "Brawler",
+          "gender": "Female"
+        },
+        {
+          "name": "Chik Tormenta",
+          "age": 39,
+          "overness": 76,
+          "archetype": "Powerhouse",
+          "gender": "Female"
+        },
+        {
+          "name": "Sexy Star II",
+          "age": 26,
+          "overness": 75,
+          "archetype": "Lucha Libre",
+          "gender": "Female"
+        },
+        {
+          "name": "Maravilla",
+          "age": 30,
+          "overness": 74,
+          "archetype": "Technical",
+          "gender": "Female"
+        },
+        {
+          "name": "Jessy Queen",
+          "age": 28,
+          "overness": 73,
+          "archetype": "Brawler",
+          "gender": "Female"
+        },
+        {
+          "name": "Pimpinela Escarlata",
+          "age": 56,
+          "overness": 82,
+          "archetype": "Sports Entertainment"
+        },
+        {
+          "name": "Dulce Kanela",
+          "age": 29,
+          "overness": 77,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Microman",
+          "age": 27,
+          "overness": 85,
+          "archetype": "High-Flyer"
+        },
+        {
+          "name": "La Parkita",
+          "age": 34,
+          "overness": 76,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "La Parkita Negra",
+          "age": 33,
+          "overness": 75,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Mini Abismo Negro",
+          "age": 35,
+          "overness": 74,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Mini Psycho Clown",
+          "age": 32,
+          "overness": 76,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Chessman",
+          "age": 50,
+          "overness": 78,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Forastero",
+          "age": 31,
+          "overness": 79,
+          "archetype": "Strong Style"
+        },
+        {
+          "name": "Sansón",
+          "age": 31,
+          "overness": 79,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Cuatrero",
+          "age": 29,
+          "overness": 78,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Puma King",
+          "age": 35,
+          "overness": 77,
+          "archetype": "Technical"
+        },
+        {
+          "name": "Sam Adonis",
+          "age": 36,
+          "overness": 78,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Mecha Wolf",
+          "age": 38,
+          "overness": 76,
+          "archetype": "Lucha Libre"
+        },
+        {
+          "name": "Bestia 666",
+          "age": 36,
+          "overness": 77,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "Vampiro",
+          "age": 58,
+          "overness": 84,
+          "archetype": "Brawler"
+        },
+        {
+          "name": "El Mesías",
+          "age": 50,
+          "overness": 81,
+          "archetype": "Powerhouse"
+        },
+        {
+          "name": "Konnan",
+          "age": 62,
+          "overness": 88,
+          "archetype": "Sports Entertainment"
+        }
+      ]
+    }
+  ]
+}

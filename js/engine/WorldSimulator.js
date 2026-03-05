@@ -37,127 +37,150 @@ export class WorldSimulator {
    */
   static tick(state) {
     const pendingActions = [];
+    gameStateManager.beginBatch();
+    try {
+      // 1. Advance calendar
+      gameCalendar.tick();
 
-    // 1. Advance calendar
-    gameCalendar.tick();
+      // 2. Refresh all tags
+      TagEngine.runAllEntities(state);
 
-    // 2. Refresh all tags
-    TagEngine.runAllEntities(state);
+      // 3. Process daily stamina recovery for all entities
+      this._processDailyStaminaRecovery(state);
 
-    // 3. Tick injuries for all entities (once per day)
-    this._tickAllInjuries(state);
+      // 4. Tick injuries for all entities (once per day)
+      this._tickAllInjuries(state);
 
-    // Process no-compete clauses daily
-    this._processNoCompeteClauses(state);
+      // Process no-compete clauses daily
+      this._processNoCompeteClauses(state);
 
-    // 4. If new week, process weekly systems
-    const calendar = state.calendar;
-    if (calendar.day === 0) {
-      // Process finances for player
+      // 4. If new week, process weekly systems
+      const calendar = state.calendar;
+      if (calendar.day === 0) {
+        // Process finances for player
+        const player = gameStateManager.getPlayerEntity();
+        if (player) {
+          const financialReport = FinancialEngine.processWeeklyFinances(player, state);
+
+          // Log financial summary
+          if (financialReport) {
+            const netChangeText = financialReport.netChange >= 0 ?
+              `+$${financialReport.netChange}` : `-$${Math.abs(financialReport.netChange)}`;
+
+            gameStateManager.dispatch('ADD_LOG_ENTRY', {
+              entry: {
+                category: 'system',
+                text: `Weekly Financial Summary: Income $${financialReport.totalIncome}, Expenses $${financialReport.totalExpenses}, Net ${netChangeText}. Balance: $${financialReport.newBalance}`,
+                type: 'financial',
+                financialReport
+              }
+            });
+          }
+        }
+
+        // Rebuild promotion rosters from active contracts (prevents roster desync)
+        this._rebuildPromotionRosters(state);
+
+        // Ensure promotions always have champions after roster rebuilds
+        for (const promotion of state.promotions.values()) {
+          ChampionshipSystem.ensurePromotionChampions(promotion);
+        }
+
+        // Ensure champions are positioned appropriately on the card
+        CardPositionSystem.syncChampionPositions(state);
+
+        // Process all entities' weekly systems
+        for (const entity of state.entities.values()) {
+          // Social media decay
+          SocialMediaSystem.processWeekly(entity);
+
+          // Lifestyle processing
+          LifestyleEngine.processWeekly(entity);
+
+          // PED effects
+          WellnessEngine.processWeekly(entity);
+
+          // Contract expiration
+          ContractEngine.processContractExpiration(entity);
+
+          // Reset weekly training counter
+          TrainingSystem.resetWeeklyCounter(entity);
+
+          // Random wellness test if under contract
+          const contract = entity.getComponent('contract');
+          if (contract?.promotionId) {
+            const promotion = state.promotions.get(contract.promotionId);
+            if (promotion) {
+              WellnessEngine.randomTest(entity, promotion);
+            }
+          }
+
+          // Check for perk unlocks
+          PerkSystem.checkAndUnlockPerks(entity);
+
+          // Reset weekly match counter
+          const careerStats = entity.getComponent('careerStats');
+          if (careerStats) {
+            careerStats.matchesThisWeek = 0;
+          }
+
+          // Weekly stamina recovery max restoration (restore 20 points each week)
+          const physicalStats = entity.getComponent('physicalStats');
+          if (physicalStats && physicalStats.staminaRecoveryMax !== undefined) {
+            physicalStats.staminaRecoveryMax = Math.min(100, physicalStats.staminaRecoveryMax + 20);
+          }
+        }
+
+        // Drift relationships
+        RelationshipManager.driftRelationships();
+
+        // Tick feuds
+        DynamicFeudSystem.tickAllFeuds();
+
+        // Tick storylines
+        StorylineManager.tickAllStorylines();
+
+        // Check for new year (aging)
+        if (state.calendar.week === 1 && state.calendar.month === 1) {
+          AgingEngine.ageOneYear();
+        }
+
+        // Evaluate card positions monthly
+        if (state.calendar.week === 2) {
+          CardPositionSystem.evaluateAllRosters(state);
+        }
+
+        // Process AI promotions (weekly, not every day)
+        this._processAIPromotions(state);
+      }
+
+      // 5. Check for show days and queue matches/promos
       const player = gameStateManager.getPlayerEntity();
       if (player) {
-        const financialReport = FinancialEngine.processWeeklyFinances(player, state);
-
-        // Log financial summary
-        if (financialReport) {
-          const netChangeText = financialReport.netChange >= 0 ?
-            `+$${financialReport.netChange}` : `-$${Math.abs(financialReport.netChange)}`;
-
-          gameStateManager.dispatch('ADD_LOG_ENTRY', {
-            entry: {
-              category: 'system',
-              text: `Weekly Financial Summary: Income $${financialReport.totalIncome}, Expenses $${financialReport.totalExpenses}, Net ${netChangeText}. Balance: $${financialReport.newBalance}`,
-              type: 'financial',
-              financialReport
+        const playerContract = player.getComponent('contract');
+        if (playerContract && playerContract.promotionId) {
+          const promotion = state.promotions.get(playerContract.promotionId);
+          if (promotion && gameCalendar.isShowDay(promotion)) {
+            // Generate show card
+            const showAction = this._generateShowCard(promotion, player, state);
+            if (showAction) {
+              pendingActions.push(showAction);
             }
-          });
-        }
-      }
-
-      // Process all entities' weekly systems
-      for (const entity of state.entities.values()) {
-        // Social media decay
-        SocialMediaSystem.processWeekly(entity);
-
-        // Lifestyle processing
-        LifestyleEngine.processWeekly(entity);
-
-        // PED effects
-        WellnessEngine.processWeekly(entity);
-
-        // Contract expiration
-        ContractEngine.processContractExpiration(entity);
-
-        // Reset weekly training counter
-        TrainingSystem.resetWeeklyCounter(entity);
-
-        // Random wellness test if under contract
-        const contract = entity.getComponent('contract');
-        if (contract?.promotionId) {
-          const promotion = state.promotions.get(contract.promotionId);
-          if (promotion) {
-            WellnessEngine.randomTest(entity, promotion);
-          }
-        }
-
-        // Check for perk unlocks
-        PerkSystem.checkAndUnlockPerks(entity);
-
-        // Reset weekly match counter
-        const careerStats = entity.getComponent('careerStats');
-        if (careerStats) {
-          careerStats.matchesThisWeek = 0;
-        }
-      }
-
-      // Drift relationships
-      RelationshipManager.driftRelationships();
-
-      // Tick feuds
-      DynamicFeudSystem.tickAllFeuds();
-
-      // Tick storylines
-      StorylineManager.tickAllStorylines();
-
-      // Check for new year (aging)
-      if (state.calendar.week === 1 && state.calendar.month === 1) {
-        AgingEngine.ageOneYear();
-      }
-
-      // Evaluate card positions monthly
-      if (state.calendar.week === 2) {
-        CardPositionSystem.evaluateAllRosters(state);
-      }
-
-      // Process AI promotions (weekly, not every day)
-      this._processAIPromotions(state);
-    }
-
-    // 5. Check for show days and queue matches/promos
-    const player = gameStateManager.getPlayerEntity();
-    if (player) {
-      const playerContract = player.getComponent('contract');
-      if (playerContract && playerContract.promotionId) {
-        const promotion = state.promotions.get(playerContract.promotionId);
-        if (promotion && gameCalendar.isShowDay(promotion)) {
-          // Generate show card
-          const showAction = this._generateShowCard(promotion, player, state);
-          if (showAction) {
-            pendingActions.push(showAction);
           }
         }
       }
+
+      // 6. Log the day passage
+      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        entry: {
+          category: 'system',
+          text: `Advanced to ${gameCalendar.getCurrentDate()}`,
+          type: 'time'
+        }
+      });
+    } finally {
+      gameStateManager.endBatch();
     }
-
-
-    // 6. Log the day passage
-    gameStateManager.dispatch('ADD_LOG_ENTRY', {
-      entry: {
-        category: 'system',
-        text: `Advanced to ${gameCalendar.getCurrentDate()}`,
-        type: 'time'
-      }
-    });
 
     return pendingActions;
   }
@@ -248,6 +271,105 @@ export class WorldSimulator {
   }
 
   /**
+   * Processes daily stamina recovery for all entities
+   * Dynamic recovery: if stamina was fully depleted, max recovery drops
+   * Taking days off allows recovery max to restore back to 100
+   * @private
+   * @param {object} state - Game state
+   */
+  static _processDailyStaminaRecovery(state) {
+    for (const entity of state.entities.values()) {
+      const physicalStats = entity.getComponent('physicalStats');
+      if (!physicalStats) continue;
+
+      // Initialize recovery tracking if not present
+      if (physicalStats.staminaRecoveryMax === undefined) {
+        physicalStats.staminaRecoveryMax = 100;
+      }
+      if (physicalStats.daysSinceFullRest === undefined) {
+        physicalStats.daysSinceFullRest = 0;
+      }
+
+      const currentStamina = physicalStats.stamina;
+      const recoveryMax = physicalStats.staminaRecoveryMax;
+
+      // Check if stamina was fully depleted (at or near 0)
+      if (currentStamina <= 5) {
+        // Reduce recovery max by 10 (minimum 50)
+        physicalStats.staminaRecoveryMax = Math.max(50, recoveryMax - 10);
+        physicalStats.daysSinceFullRest = 0;
+      } else if (currentStamina >= recoveryMax - 5) {
+        // If stamina is near the recovery max, count as a rest day
+        physicalStats.daysSinceFullRest++;
+        
+        // After 2 days of rest, start restoring recovery max
+        if (physicalStats.daysSinceFullRest >= 2) {
+          physicalStats.staminaRecoveryMax = Math.min(100, recoveryMax + 10);
+        }
+      } else {
+        // Partial usage, don't change recovery max but reset rest counter
+        physicalStats.daysSinceFullRest = 0;
+      }
+
+      // Recover stamina toward the current recovery max
+      // Calculate recovery amount - more aggressive recovery when low
+      let recoveryAmount;
+      const targetStamina = physicalStats.staminaRecoveryMax;
+      const staminaDeficit = targetStamina - currentStamina;
+      
+      if (staminaDeficit > 50) {
+        // Large deficit: recover 40% of the way to target
+        recoveryAmount = Math.floor(staminaDeficit * 0.4);
+      } else if (staminaDeficit > 20) {
+        // Medium deficit: recover 30% of the way to target
+        recoveryAmount = Math.floor(staminaDeficit * 0.3);
+      } else {
+        // Small deficit: recover 20% or flat 5, whichever is higher
+        recoveryAmount = Math.max(5, Math.floor(staminaDeficit * 0.2));
+      }
+
+      // Apply recovery
+      physicalStats.stamina = Math.min(targetStamina, currentStamina + recoveryAmount);
+    }
+  }
+
+  /**
+   * Rebuilds promotion rosters from active contracts
+   * @private
+   */
+  static _rebuildPromotionRosters(state) {
+    // Initialize empty rosters
+    for (const promotion of state.promotions.values()) {
+      promotion.roster = [];
+    }
+
+    // Re-add contracted wrestlers
+    for (const entity of state.entities.values()) {
+      const contract = entity.getComponent('contract');
+      if (!contract?.promotionId) continue;
+      const promotion = state.promotions.get(contract.promotionId);
+      if (promotion) {
+        promotion.roster.push(entity.id);
+      }
+    }
+
+    // Ensure current champions remain on their promotion rosters (AI wrestlers only)
+    for (const championship of state.championships.values()) {
+      const champId = championship.currentChampion;
+      if (!champId) continue;
+      const promotion = state.promotions.get(championship.promotionId);
+      if (!promotion) continue;
+      if (!promotion.roster.includes(champId)) {
+        // Only keep AI champions on roster - player should have titles reassigned when leaving
+        const champEntity = state.entities.get(champId);
+        if (champEntity && !champEntity.isPlayer) {
+          promotion.roster.push(champId);
+        }
+      }
+    }
+  }
+
+  /**
    * Generates a show card for a promotion
    * @private
    * @param {object} promotion - Promotion object
@@ -259,6 +381,31 @@ export class WorldSimulator {
     const rosterIds = promotion.roster || [];
 
     if (!rosterIds.includes(player.id)) {
+      return null;
+    }
+
+    const contract = player.getComponent('contract');
+    if (!contract) return null;
+
+    // Enforce per-month dates from contract terms
+    const monthKey = `${state.calendar.year}-${state.calendar.month}`;
+    if (contract.bookedDatesMonthKey !== monthKey) {
+      contract.bookedDatesMonthKey = monthKey;
+      contract.bookedDatesThisMonth = 0;
+      contract.datesCapNotifiedMonthKey = null;
+    }
+    const maxDates = Math.max(1, contract.datesPerMonth || 4);
+    if ((contract.bookedDatesThisMonth || 0) >= maxDates) {
+      if (contract.datesCapNotifiedMonthKey !== monthKey) {
+        gameStateManager.dispatch('ADD_LOG_ENTRY', {
+          entry: {
+            category: 'contract',
+            text: `📅 Contract date limit reached (${maxDates}/${maxDates}) for this month. You're off this show.`,
+            type: 'contract'
+          }
+        });
+        contract.datesCapNotifiedMonthKey = monthKey;
+      }
       return null;
     }
 
@@ -276,7 +423,8 @@ export class WorldSimulator {
       if (npcContract) {
         npcContract.promotionId = promotion.id;
         npcContract.weeklySalary = 100;
-        npcContract.remainingWeeks = 1;
+        npcContract.lengthWeeks = 52;
+        npcContract.remainingWeeks = 52;
       }
       promotion.roster.push(npc.id);
       opponents = [npc];
@@ -292,9 +440,7 @@ export class WorldSimulator {
     const playerOverness = player.getComponent('popularity')?.overness || 0;
     const opponentOverness = opponent.getComponent('popularity')?.overness || 0;
     const winChance = 0.5 + (playerOverness - opponentOverness) / 200;
-    const bookedWinnerId = Math.random() < winChance ? player.id : opponent.id;
-
-    const contract = player.getComponent('contract');
+    let bookedWinnerId = Math.random() < winChance ? player.id : opponent.id;
     let isTitleMatch = false;
     let titleId = null;
 
@@ -337,6 +483,51 @@ export class WorldSimulator {
         }
       }
     }
+
+    // If player is champion, proactively book defenses sometimes.
+    if (!isTitleMatch) {
+      const playerTitles = [];
+      for (const [championshipId, championship] of state.championships.entries()) {
+        if (championship.promotionId !== promotion.id) continue;
+        if (championship.currentChampion !== player.id) continue;
+        playerTitles.push({ id: championship.id || championshipId, ...championship });
+      }
+
+      if (playerTitles.length > 0) {
+        const hasUndefendedTitle = playerTitles.some(t => {
+          const reign = t.reigns?.[t.reigns.length - 1];
+          return !reign || (reign.defenses || 0) === 0;
+        });
+        const defenseChance = hasUndefendedTitle ? 0.85 : 0.45;
+
+        if (Math.random() < defenseChance) {
+          const sortedTitles = [...playerTitles].sort((a, b) => (b.prestige || 0) - (a.prestige || 0));
+          const title = sortedTitles[0];
+
+          // Pick strongest available contender
+          const contenders = (promotion.roster || [])
+            .filter(id => id !== player.id)
+            .map(id => state.entities.get(id))
+            .filter(e => e);
+
+          if (contenders.length > 0) {
+            contenders.sort((a, b) => {
+              const popA = a.getComponent('popularity')?.overness || 0;
+              const popB = b.getComponent('popularity')?.overness || 0;
+              return popB - popA;
+            });
+            opponent = contenders[0];
+          }
+
+          isTitleMatch = true;
+          titleId = title.id;
+          // Champions are slightly favored in scripted defenses
+          bookedWinnerId = Math.random() < 0.6 ? player.id : opponent.id;
+        }
+      }
+    }
+
+    contract.bookedDatesThisMonth = (contract.bookedDatesThisMonth || 0) + 1;
 
     return {
       type: 'match',

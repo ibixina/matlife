@@ -73,13 +73,21 @@ export class PlayerInfoPanel {
 
     // Update key stats
     if (physicalStats) {
-      this.updateElement('stat-strength', Math.round(physicalStats.strength));
+      this.updateStatPill('stat-strength', Math.round(physicalStats.strength));
+      this.updateStatPill('stat-stamina', Math.round(physicalStats.stamina));
+      this.updateStatPill('stat-speed', Math.round(physicalStats.speed));
+      this.updateStatPill('stat-resilience', Math.round(physicalStats.resilience));
     }
     if (inRingStats) {
-      this.updateElement('stat-aerial', Math.round(inRingStats.aerial));
+      this.updateStatPill('stat-brawling', Math.round(inRingStats.brawling));
+      this.updateStatPill('stat-technical', Math.round(inRingStats.technical));
+      this.updateStatPill('stat-aerial', Math.round(inRingStats.aerial));
+      this.updateStatPill('stat-selling', Math.round(inRingStats.selling));
+      this.updateStatPill('stat-psychology', Math.round(inRingStats.psychology));
     }
     if (entertainmentStats) {
-      this.updateElement('stat-mic', Math.round(entertainmentStats.micSkills));
+      this.updateStatPill('stat-mic', Math.round(entertainmentStats.micSkills));
+      this.updateStatPill('stat-charisma', Math.round(entertainmentStats.charisma));
     }
 
     // Update bars
@@ -112,6 +120,23 @@ export class PlayerInfoPanel {
     if (el) {
       el.textContent = value;
     }
+  }
+
+  /**
+   * Updates stat value and heat color on its pill container
+   * @private
+   * @param {string} id - Stat value element ID
+   * @param {number} value - Stat value (0-100)
+   */
+  updateStatPill(id, value) {
+    this.updateElement(id, value);
+    const el = document.getElementById(id);
+    if (!el) return;
+    const pill = el.closest('.stat-pill');
+    if (!pill) return;
+    const clamped = Math.max(0, Math.min(100, Number(value) || 0));
+    const hue = Math.round((clamped / 100) * 120); // 0=red, 120=green
+    pill.style.setProperty('--heat-h', hue.toString());
   }
 
   /**
