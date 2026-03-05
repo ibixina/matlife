@@ -92,10 +92,36 @@ const PERKS = {
 };
 
 export class PerkSystem {
+  static _normalizePerkList(rawList) {
+    if (Array.isArray(rawList)) {
+      return rawList.filter(id => typeof id === 'string');
+    }
+
+    if (typeof rawList === 'string') {
+      return [rawList];
+    }
+
+    if (rawList && typeof rawList === 'object') {
+      return Object.keys(rawList)
+        .sort((a, b) => Number(a) - Number(b))
+        .map(key => rawList[key])
+        .filter(id => typeof id === 'string');
+    }
+
+    return [];
+  }
+
+  static _readPerkList(entity, componentName) {
+    return this._normalizePerkList(entity.getComponent(componentName));
+  }
+
+  static _writePerkList(entity, componentName, list) {
+    entity.addComponent(componentName, this._normalizePerkList(list));
+  }
+
   static checkAndUnlockPerks(entity) {
     const careerStats = entity.getComponent('careerStats');
-    const raw = entity.getComponent('unlockedPerks');
-    const unlockedPerks = Array.isArray(raw) ? raw : [];
+    const unlockedPerks = this._readPerkList(entity, 'unlockedPerks');
     const newUnlocks = [];
 
     for (const [perkId, perk] of Object.entries(PERKS)) {
@@ -116,7 +142,7 @@ export class PerkSystem {
       }
     }
 
-    entity.addComponent('unlockedPerks', unlockedPerks);
+    this._writePerkList(entity, 'unlockedPerks', unlockedPerks);
     return newUnlocks;
   }
 
@@ -155,10 +181,8 @@ export class PerkSystem {
   }
 
   static activatePerk(entity, perkId) {
-    const rawUnlocked = entity.getComponent('unlockedPerks');
-    const unlockedPerks = Array.isArray(rawUnlocked) ? rawUnlocked : [];
-    const rawActive = entity.getComponent('activePerks');
-    const activePerks = Array.isArray(rawActive) ? rawActive : [];
+    const unlockedPerks = this._readPerkList(entity, 'unlockedPerks');
+    const activePerks = this._readPerkList(entity, 'activePerks');
 
     if (!unlockedPerks.includes(perkId)) {
       return { error: 'Perk not unlocked' };
@@ -173,7 +197,7 @@ export class PerkSystem {
     }
 
     activePerks.push(perkId);
-    entity.addComponent('activePerks', activePerks);
+    this._writePerkList(entity, 'activePerks', activePerks);
 
     this.applyPerkEffects(entity, perkId);
 
@@ -186,8 +210,7 @@ export class PerkSystem {
   }
 
   static deactivatePerk(entity, perkId) {
-    const rawActive = entity.getComponent('activePerks');
-    const activePerks = Array.isArray(rawActive) ? rawActive : [];
+    const activePerks = this._readPerkList(entity, 'activePerks');
     const index = activePerks.indexOf(perkId);
 
     if (index === -1) {
@@ -195,7 +218,7 @@ export class PerkSystem {
     }
 
     activePerks.splice(index, 1);
-    entity.addComponent('activePerks', activePerks);
+    this._writePerkList(entity, 'activePerks', activePerks);
 
     this.removePerkEffects(entity, perkId);
 
@@ -242,10 +265,11 @@ export class PerkSystem {
   }
 
   static getAvailablePerks(entity) {
-    const rawUnlocked = entity.getComponent('unlockedPerks');
-    const unlockedPerks = Array.isArray(rawUnlocked) ? rawUnlocked : [];
-    const rawActive = entity.getComponent('activePerks');
-    const activePerks = Array.isArray(rawActive) ? rawActive : [];
+    // Always evaluate unlocks when perks are opened so newly completed ones appear immediately.
+    this.checkAndUnlockPerks(entity);
+
+    const unlockedPerks = this._readPerkList(entity, 'unlockedPerks');
+    const activePerks = this._readPerkList(entity, 'activePerks');
 
     return {
       unlocked: unlockedPerks.map(id => PERKS[id]).filter(Boolean),

@@ -930,14 +930,14 @@ export class ActionPanel {
           if (player && opponent) {
             // Book a final "feud ender" match
             const matchTypes = DynamicFeudSystem.getFeudMatchTypes(feud.id);
-            const finalMatchType = matchTypes.includes('Retirement Match') 
-              ? 'Retirement Match' 
+            const finalMatchType = matchTypes.includes('Retirement Match')
+              ? 'Retirement Match'
               : matchTypes.includes('Loser Leaves Town')
                 ? 'Loser Leaves Town'
                 : matchTypes[matchTypes.length - 1];
-            
+
             this._bookMatchWithType(player, opponent, finalMatchType);
-            
+
             gameStateManager.dispatch('ADD_LOG_ENTRY', {
               entry: {
                 category: 'backstage',
@@ -1029,7 +1029,6 @@ export class ActionPanel {
         ${relationship.type === 'romantic' ? `<p style="font-size: 0.8rem;">Romance: ${romanceLevel} | Trust: ${trust}</p>` : ''}
         ${relationship.affinity >= 50 ? '<p style="font-size: 0.8rem; color: #4caf50;">✓ Chemistry bonus in matches</p>' : ''}
         ${relationship.affinity <= -50 ? '<p style="font-size: 0.8rem; color: #f44336;">⚠️ Risk of backstage conflict</p>' : ''}
-        <p style="font-size: 0.75rem; color: #4fc3f7; margin-top: 0.5rem;">👆 Click for actions</p>
       `;
       card.addEventListener('click', () => {
         this.renderRelationshipActions(player, entity, relationship);
@@ -1091,10 +1090,10 @@ export class ActionPanel {
 
     // Basic social actions
     const socializeCard = this.createActionCard(
-      'Socialize',
+      'Show Respect',
       'Spend time together and improve your relationship',
       () => {
-        this.socializeWithWrestler(player, target);
+        this.showRespect(player, target);
         this.renderRelationshipActions(player, target, this._getRel(player.id, target.id));
       }
     );
@@ -2481,13 +2480,13 @@ export class ActionPanel {
 
     const activeFeud = this._getActiveFeud(player.id, opponent.id);
     const feudMatchTypes = activeFeud ? DynamicFeudSystem.getFeudMatchTypes(activeFeud.id) : [];
-    
+
     // Show match type selection if multiple options available
     if (feudMatchTypes.length > 1) {
       this._showMatchTypeSelection(player, opponent, feudMatchTypes);
       return;
     }
-    
+
     // Single option or no feud - proceed directly
     const matchType = feudMatchTypes.length ? feudMatchTypes[0] : 'Standard Singles';
     this._bookMatchWithType(player, opponent, matchType);
@@ -2860,7 +2859,7 @@ export class ActionPanel {
     let trustDelta;
     let affinityDelta;
 
-    switch(result.outcome) {
+    switch (result.outcome) {
       case 'CRITICAL_SUCCESS':
         narrativeKey = 'nsfw_intimate_critical_success';
         romanceDelta = 25;
@@ -3024,7 +3023,7 @@ export class ActionPanel {
     let trustDelta;
     let affinityDelta;
 
-    switch(result.outcome) {
+    switch (result.outcome) {
       case 'CRITICAL_SUCCESS':
         narrative = `You and ${targetName} share an intensely passionate and rough encounter. The power dynamic is electric, leaving both of you completely satisfied and deeply connected.`;
         romanceDelta = 30;
@@ -3104,7 +3103,7 @@ export class ActionPanel {
     let affinityDelta;
     let exposed = false;
 
-    switch(result.outcome) {
+    switch (result.outcome) {
       case 'CRITICAL_SUCCESS':
         narrative = `You and ${targetName} find a secluded backstage area and engage in a thrilling, risky encounter. The possibility of being caught only heightens the intensity. No one discovers you.`;
         romanceDelta = 28;
@@ -3203,7 +3202,7 @@ export class ActionPanel {
     let trustDelta;
     let affinityDelta;
 
-    switch(result.outcome) {
+    switch (result.outcome) {
       case 'CRITICAL_SUCCESS':
         narrative = `You and ${targetName} explore ${chosenKink} together, discovering shared desires you never knew you had. The experience is mind-blowing and brings you incredibly close.`;
         romanceDelta = 26;
@@ -3300,7 +3299,7 @@ export class ActionPanel {
     let trustDelta;
     let affinityDelta;
 
-    switch(result.outcome) {
+    switch (result.outcome) {
       case 'CRITICAL_SUCCESS':
         narrative = `You, ${targetName}, and ${partnerNames} share an incredibly wild and satisfying group encounter. The chemistry is off the charts and everyone leaves completely fulfilled.`;
         romanceDelta = 35;
@@ -3386,7 +3385,7 @@ export class ActionPanel {
     let affinityDelta;
     let exposed = false;
 
-    switch(result.outcome) {
+    switch (result.outcome) {
       case 'CRITICAL_SUCCESS':
         narrative = `After the arena clears, you and ${targetName} find yourselves alone in the ring. The ropes become your playground as you explore each other in the very place you do battle. The symbolism is not lost on either of you.`;
         romanceDelta = 28;
@@ -3476,7 +3475,7 @@ export class ActionPanel {
     let trustDelta;
     let affinityDelta;
 
-    switch(result.outcome) {
+    switch (result.outcome) {
       case 'CRITICAL_SUCCESS':
         narrative = `The locker room shower becomes a steamy paradise as you and ${targetName} explore each other under the hot water. Soap-slicked bodies slide together in a sensual dance that leaves you both breathless and thoroughly satisfied.`;
         romanceDelta = 24;
@@ -3555,7 +3554,7 @@ export class ActionPanel {
     let trustDelta;
     let affinityDelta;
 
-    switch(result.outcome) {
+    switch (result.outcome) {
       case 'CRITICAL_SUCCESS':
         narrative = `Against the locker room wall, you and ${targetName} give in to urgent desire. It's fast, intense, and incredibly satisfying - pure animal passion without any pretense.`;
         romanceDelta = 18;
@@ -3634,7 +3633,7 @@ export class ActionPanel {
     let trustDelta;
     let affinityDelta;
 
-    switch(result.outcome) {
+    switch (result.outcome) {
       case 'CRITICAL_SUCCESS':
         narrative = `The hotel room becomes your sanctuary for the night. You and ${targetName} explore every inch of each other, trying things you've only fantasized about. By morning, you're both exhausted, sore, and completely satisfied.`;
         romanceDelta = 35;
@@ -3713,7 +3712,7 @@ export class ActionPanel {
     let trustDelta;
     let affinityDelta;
 
-    switch(result.outcome) {
+    switch (result.outcome) {
       case 'CRITICAL_SUCCESS':
         narrative = `Covered in oil, you and ${targetName} grapple in a private room. Every hold becomes foreplay, every escape an invitation. The wrestling quickly turns into something much more intimate as slick bodies slide together.`;
         romanceDelta = 26;
@@ -3792,7 +3791,7 @@ export class ActionPanel {
     let trustDelta;
     let affinityDelta;
 
-    switch(result.outcome) {
+    switch (result.outcome) {
       case 'CRITICAL_SUCCESS':
         narrative = `You take complete control as ${targetName} surrenders over your knee. Each impact builds tension and desire, the mix of pain and pleasure driving you both wild. By the end, ${targetName} is begging for more and you deliver.`;
         romanceDelta = 28;
@@ -3872,7 +3871,7 @@ export class ActionPanel {
     let affinityDelta;
     let leaked = false;
 
-    switch(result.outcome) {
+    switch (result.outcome) {
       case 'CRITICAL_SUCCESS':
         narrative = `You set up the camera and you and ${targetName} create an incredibly erotic video together. Watching yourselves on the screen adds a whole new dimension to your intimacy. The video stays safely between you two.`;
         romanceDelta = 32;
@@ -3978,7 +3977,7 @@ export class ActionPanel {
     gameStateManager.dispatch('ADD_LOG_ENTRY', {
       entry: {
         category: 'backstage',
-        text: wasCommitted 
+        text: wasCommitted
           ? `💔 You have ended your committed relationship with ${targetName}.`
           : `💔 You have ended your romantic connection with ${targetName}.`,
         type: 'social'
@@ -4206,20 +4205,37 @@ export class ActionPanel {
 
     const championships = ChampionshipSystem.getWrestlerChampionships(player);
     if (championships.length === 0) {
-      titlesSection.innerHTML += '<p style="margin-top: 0.5rem; color: var(--text-muted);">No championships yet</p>';
+      const emptyState = document.createElement('p');
+      emptyState.style.marginTop = '0.5rem';
+      emptyState.style.color = 'var(--text-muted)';
+      emptyState.textContent = 'No championships yet';
+      titlesSection.appendChild(emptyState);
     } else {
+      const champList = document.createDocumentFragment();
       championships.forEach(champ => {
         const reignText = champ.totalReigns > 1 ?
           `${champ.totalReigns} reigns, ${champ.totalDefenses} defenses` :
           `Current champion (${champ.reigns[champ.reigns.length - 1]?.defenses || 0} defenses)`;
 
-        titlesSection.innerHTML += `
-          <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(255,200,87,0.1); border-radius: var(--radius-sm);">
-            <strong>${champ.name}</strong><br/>
-            <span style="font-size: 0.85rem;">${reignText}</span>
-          </div>
-        `;
+        const champCard = document.createElement('div');
+        champCard.style.marginTop = '0.5rem';
+        champCard.style.padding = '0.5rem';
+        champCard.style.background = 'rgba(255,200,87,0.1)';
+        champCard.style.borderRadius = 'var(--radius-sm)';
+
+        const nameEl = document.createElement('strong');
+        nameEl.textContent = champ.name;
+        champCard.appendChild(nameEl);
+        champCard.appendChild(document.createElement('br'));
+
+        const reignEl = document.createElement('span');
+        reignEl.style.fontSize = '0.85rem';
+        reignEl.textContent = reignText;
+        champCard.appendChild(reignEl);
+
+        champList.appendChild(champCard);
       });
+      titlesSection.appendChild(champList);
     }
     this.container.appendChild(titlesSection);
 
@@ -4236,14 +4252,28 @@ export class ActionPanel {
       storyCard.className = 'panel mb-md';
       storyCard.innerHTML = '<h4>🎬 Active Storylines</h4>';
 
+      const storyList = document.createDocumentFragment();
       storylines.forEach(story => {
-        storyCard.innerHTML += `
-          <div style="margin-top: 0.5rem; padding: 0.5rem; background: var(--bg-tertiary); border-radius: var(--radius-sm);">
-            <strong>${story.name}</strong> (${story.type})<br/>
-            <span style="font-size: 0.85rem;">Beat ${story.currentBeat + 1}/${story.totalBeats} | Quality: ${story.quality}/100</span>
-          </div>
-        `;
+        const row = document.createElement('div');
+        row.style.marginTop = '0.5rem';
+        row.style.padding = '0.5rem';
+        row.style.background = 'var(--bg-tertiary)';
+        row.style.borderRadius = 'var(--radius-sm)';
+
+        const title = document.createElement('strong');
+        title.textContent = story.name;
+        row.appendChild(title);
+        row.append(` (${story.type})`);
+        row.appendChild(document.createElement('br'));
+
+        const info = document.createElement('span');
+        info.style.fontSize = '0.85rem';
+        info.textContent = `Beat ${story.currentBeat + 1}/${story.totalBeats} | Quality: ${story.quality}/100`;
+        row.appendChild(info);
+
+        storyList.appendChild(row);
       });
+      storyCard.appendChild(storyList);
       this.container.appendChild(storyCard);
     }
   }
@@ -4588,21 +4618,34 @@ export class ActionPanel {
         </p>
       `;
 
+      const activeList = document.createDocumentFragment();
       perkData.active.forEach(perk => {
-        activeDiv.innerHTML += `
-          <div style="padding: 0.5rem; margin-top: 0.5rem; background: rgba(76,175,80,0.2); border-radius: var(--radius-sm);">
-            <strong>${perk.name}</strong> (${perk.category})<br/>
-            <span style="font-size: 0.8rem;">${perk.description}</span>
-          </div>
-        `;
+        const perkRow = document.createElement('div');
+        perkRow.style.padding = '0.5rem';
+        perkRow.style.marginTop = '0.5rem';
+        perkRow.style.background = 'rgba(76,175,80,0.2)';
+        perkRow.style.borderRadius = 'var(--radius-sm)';
+
+        const nameEl = document.createElement('strong');
+        nameEl.textContent = perk.name;
+        perkRow.appendChild(nameEl);
+        perkRow.append(` (${perk.category})`);
+        perkRow.appendChild(document.createElement('br'));
+
+        const descEl = document.createElement('span');
+        descEl.style.fontSize = '0.8rem';
+        descEl.textContent = perk.description;
+        perkRow.appendChild(descEl);
+
+        activeList.appendChild(perkRow);
       });
+      activeDiv.appendChild(activeList);
       this.container.appendChild(activeDiv);
     }
 
     // Show unlocked but inactive perks
-    const unlockedInactive = perkData.unlocked.filter(p =>
-      !perkData.active.find(ap => ap.id === p.id)
-    );
+    const activePerkIds = new Set(perkData.active.map(perk => perk.id));
+    const unlockedInactive = perkData.unlocked.filter(perk => !activePerkIds.has(perk.id));
 
     if (unlockedInactive.length > 0) {
       const inactiveDiv = document.createElement('div');
@@ -4629,22 +4672,43 @@ export class ActionPanel {
     progressDiv.innerHTML = '<h5>Perk Progress</h5>';
 
     const progress = PerkSystem.getPerkProgress(player);
-    Object.values(progress).slice(0, 5).forEach(p => { // Show first 5
-      if (!p.completed) {
-        const percent = Math.min(100, (p.current / p.requirement.value) * 100);
-        progressDiv.innerHTML += `
-          <div style="margin-top: 0.5rem;">
-            <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
-              <span>${p.name}</span>
-              <span>${p.current}/${p.requirement.value}</span>
-            </div>
-            <div style="height: 4px; background: var(--bg-tertiary); border-radius: 2px; margin-top: 2px;">
-              <div style="height: 100%; width: ${percent}%; background: var(--accent-secondary); border-radius: 2px;"></div>
-            </div>
-          </div>
-        `;
-      }
+    const progressRows = document.createDocumentFragment();
+    Object.values(progress).filter(p => !p.completed).slice(0, 5).forEach(p => { // Show first 5
+      const percent = Math.min(100, (p.current / p.requirement.value) * 100);
+      const row = document.createElement('div');
+      row.style.marginTop = '0.5rem';
+
+      const labels = document.createElement('div');
+      labels.style.display = 'flex';
+      labels.style.justifyContent = 'space-between';
+      labels.style.fontSize = '0.85rem';
+
+      const name = document.createElement('span');
+      name.textContent = p.name;
+      labels.appendChild(name);
+
+      const value = document.createElement('span');
+      value.textContent = `${p.current}/${p.requirement.value}`;
+      labels.appendChild(value);
+      row.appendChild(labels);
+
+      const track = document.createElement('div');
+      track.style.height = '4px';
+      track.style.background = 'var(--bg-tertiary)';
+      track.style.borderRadius = '2px';
+      track.style.marginTop = '2px';
+
+      const fill = document.createElement('div');
+      fill.style.height = '100%';
+      fill.style.width = `${percent}%`;
+      fill.style.background = 'var(--accent-secondary)';
+      fill.style.borderRadius = '2px';
+      track.appendChild(fill);
+
+      row.appendChild(track);
+      progressRows.appendChild(row);
     });
+    progressDiv.appendChild(progressRows);
     this.container.appendChild(progressDiv);
   }
 }

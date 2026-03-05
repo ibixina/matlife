@@ -52,11 +52,19 @@ export function randomFloat(min, max) {
  * @returns {any} The selected value
  */
 export function weightedRandom(items) {
-  const totalWeight = items.reduce((sum, item) => sum + item.weight, 0);
+  if (!Array.isArray(items) || items.length === 0) {
+    return null;
+  }
+
+  const totalWeight = items.reduce((sum, item) => sum + Math.max(0, item.weight || 0), 0);
+  if (totalWeight <= 0) {
+    return items[0].value;
+  }
+
   let random = Math.random() * totalWeight;
   
   for (const item of items) {
-    random -= item.weight;
+    random -= Math.max(0, item.weight || 0);
     if (random <= 0) {
       return item.value;
     }

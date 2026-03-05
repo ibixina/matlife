@@ -42,6 +42,7 @@ export class EventManager {
     const playerTags = playerEntity.getTags ? playerEntity.getTags() : [];
     const currentWeek = state.calendar.absoluteWeek;
     const scoutMode = this._getScoutNoticeMode(playerEntity, state, playerTags);
+    const requirementContext = this._buildRequirementContext(playerEntity, state);
 
     // Filter templates
     const eligibleTemplates = this.eventTemplates.filter(template => {
@@ -69,7 +70,7 @@ export class EventManager {
       // Check cooldown
       if (template.cooldownWeeks) {
         const lastFired = this.cooldowns.get(template.id);
-        if (lastFired && (currentWeek - lastFired) < template.cooldownWeeks) {
+        if (lastFired !== undefined && (currentWeek - lastFired) < template.cooldownWeeks) {
           return false;
         }
       }
@@ -82,7 +83,7 @@ export class EventManager {
       }
 
       // Check declarative requirements (context-aware gating)
-      if (template.requirements && !this._passesRequirements(template.requirements, playerEntity, state)) {
+      if (template.requirements && !this._passesRequirements(template.requirements, requirementContext)) {
         return false;
       }
 
@@ -112,7 +113,7 @@ export class EventManager {
     const selectedEvent = weightedRandom(weightedItems);
 
     // Create an instance clone
-    const eventInstance = JSON.parse(JSON.stringify(selectedEvent));
+    const eventInstance = this._cloneEventTemplate(selectedEvent);
     eventInstance.context = {};
 
     if (eventInstance.id === 'scout_notice') {
@@ -185,40 +186,32 @@ export class EventManager {
    * Evaluates declarative requirements for an event template.
    * @private
    * @param {object} requirements
-   * @param {Entity} playerEntity
-   * @param {object} state
+   * @param {object} context
    * @returns {boolean}
    */
-  _passesRequirements(requirements, playerEntity, state) {
+  _passesRequirements(requirements, context) {
     if (!requirements) return true;
 
-    const identity = playerEntity.getComponent('identity');
-    const popularity = playerEntity.getComponent('popularity');
-    const contract = playerEntity.getComponent('contract');
-    const financial = playerEntity.getComponent('financial');
-    const lifestyle = playerEntity.getComponent('lifestyle');
-    const condition = playerEntity.getComponent('condition');
-    const inRing = playerEntity.getComponent('inRingStats');
-    const entertainment = playerEntity.getComponent('entertainmentStats');
-    const promotion = contract?.promotionId ? state.promotions.get(contract.promotionId) : null;
-    const flags = state.eventFlags || {};
-
-    const overness = popularity?.overness || 0;
-    const momentum = popularity?.momentum || 0;
-    const burnout = lifestyle?.burnout || 0;
-    const bankBalance = financial?.bankBalance || 0;
-    const charisma = entertainment?.charisma || 0;
-    const micSkills = entertainment?.micSkills || 0;
-    const brawling = inRing?.brawling || 0;
-    const technical = inRing?.technical || 0;
-    const aerial = inRing?.aerial || 0;
-    const ringAvg = (brawling + technical + aerial) / 3;
-    const hasInjury = !!(condition?.injuries || []).some(i => (i.daysRemaining || 0) > 0);
-
-    const isChampion = Array.from(state.championships.values()).some(c => c.currentChampion === playerEntity.id);
-    const activeFeud = Array.from(state.feuds.values()).some(f =>
-      !f.resolved && (f.entityA === playerEntity.id || f.entityB === playerEntity.id)
-    );
+    const {
+      playerEntity,
+      identity,
+      contract,
+      promotion,
+      flags,
+      overness,
+      momentum,
+      burnout,
+      bankBalance,
+      charisma,
+      micSkills,
+      brawling,
+      technical,
+      aerial,
+      ringAvg,
+      hasInjury,
+      isChampion,
+      activeFeud
+    } = context;
 
     if (requirements.requiresContract === true && !contract?.promotionId) return false;
     if (requirements.requiresContract === false && !!contract?.promotionId) return false;
@@ -265,6 +258,62 @@ export class EventManager {
     }
 
     return true;
+  }
+
+  /**
+   * Pre-computes requirement fields to avoid repeated map scans per template.
+   * @private
+   */
+  _buildRequirementContext(playerEntity, state) {
+    const identity = playerEntity.getComponent('identity');
+    const popularity = playerEntity.getComponent('popularity');
+    const contract = playerEntity.getComponent('contract');
+    const financial = playerEntity.getComponent('financial');
+    const lifestyle = playerEntity.getComponent('lifestyle');
+    const condition = playerEntity.getComponent('condition');
+    const inRing = playerEntity.getComponent('inRingStats');
+    const entertainment = playerEntity.getComponent('entertainmentStats');
+    const promotion = contract?.promotionId ? state.promotions.get(contract.promotionId) : null;
+    const flags = state.eventFlags || {};
+
+    const brawling = inRing?.brawling || 0;
+    const technical = inRing?.technical || 0;
+    const aerial = inRing?.aerial || 0;
+
+    return {
+      playerEntity,
+      identity,
+      contract,
+      promotion,
+      flags,
+      overness: popularity?.overness || 0,
+      momentum: popularity?.momentum || 0,
+      burnout: lifestyle?.burnout || 0,
+      bankBalance: financial?.bankBalance || 0,
+      charisma: entertainment?.charisma || 0,
+      micSkills: entertainment?.micSkills || 0,
+      brawling,
+      technical,
+      aerial,
+      ringAvg: (brawling + technical + aerial) / 3,
+      hasInjury: !!(condition?.injuries || []).some(i => (i.daysRemaining || 0) > 0),
+      isChampion: Array.from(state.championships.values()).some(c => c.currentChampion === playerEntity.id),
+      activeFeud: Array.from(state.feuds.values()).some(f =>
+        !f.resolved && (f.entityA === playerEntity.id || f.entityB === playerEntity.id)
+      )
+    };
+  }
+
+  /**
+   * Clone helper with fallback for environments where structuredClone fails.
+   * @private
+   */
+  _cloneEventTemplate(template) {
+    try {
+      return structuredClone(template);
+    } catch {
+      return JSON.parse(JSON.stringify(template));
+    }
   }
 
   /**

@@ -6,6 +6,7 @@
 import { gameStateManager } from '../core/GameStateManager.js';
 import { Entity } from '../core/Entity.js';
 import { deserializeComponent } from '../core/Component.js';
+import { deepClone } from '../core/Utils.js';
 
 /**
  * SaveLoadManager - Handles game persistence
@@ -96,11 +97,33 @@ export class SaveLoadManager {
     for (const [name, component] of components) {
       if (component && typeof component.serialize === 'function') {
         serialized[name] = component.serialize();
+      } else if (component !== null && typeof component === 'object') {
+        serialized[name] = deepClone(component);
       } else {
-        serialized[name] = { ...component };
+        serialized[name] = component;
       }
     }
     return serialized;
+  }
+
+  /**
+   * Normalizes perk arrays, including migration from legacy object form.
+   * @private
+   */
+  _normalizePerkComponent(value) {
+    if (Array.isArray(value)) {
+      return value.filter(id => typeof id === 'string');
+    }
+    if (typeof value === 'string') {
+      return [value];
+    }
+    if (value && typeof value === 'object') {
+      return Object.keys(value)
+        .sort((a, b) => Number(a) - Number(b))
+        .map(key => value[key])
+        .filter(id => typeof id === 'string');
+    }
+    return [];
   }
 
   /**
@@ -137,6 +160,10 @@ export class SaveLoadManager {
 
         // Restore components
         for (const [compName, compData] of Object.entries(entityData.components)) {
+          if (compName === 'unlockedPerks' || compName === 'activePerks') {
+            entity.components.set(compName, this._normalizePerkComponent(compData));
+            continue;
+          }
           try {
             const component = deserializeComponent(compName, compData);
             entity.components.set(compName, component);
