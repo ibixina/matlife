@@ -4300,9 +4300,9 @@ export class ActionPanel {
     } else {
       const champList = document.createDocumentFragment();
       championships.forEach(champ => {
-        const reignText = champ.totalReigns > 1 ?
-          `${champ.totalReigns} reigns, ${champ.totalDefenses} defenses` :
-          `Current champion (${champ.reigns[champ.reigns.length - 1]?.defenses || 0} defenses)`;
+        const reignText = champ.isCurrent ?
+          `Current champion (${champ.reigns[champ.reigns.length - 1]?.defenses || 0} defenses)` :
+          `${champ.totalReigns} reign${champ.totalReigns > 1 ? 's' : ''}, ${champ.totalDefenses} defense${champ.totalDefenses !== 1 ? 's' : ''}`;
 
         const champCard = document.createElement('div');
         champCard.style.marginTop = '0.5rem';
