@@ -3285,9 +3285,22 @@ export class ActionPanel {
     }
 
     const state = gameStateManager.getStateRef();
-    const potentialPartners = Array.from(state.entities.values())
-      .filter(e => e.id !== player.id && e.id !== target.id)
+    
+    // Get all relationships for the player and sort by affinity
+    const relationships = Array.from(state.relationships.entries())
+      .filter(([key, rel]) => key.startsWith(player.id + '_') || key.endsWith('_' + player.id))
+      .map(([key, rel]) => {
+        // Extract the other person's ID from the key
+        const otherId = key.replace(player.id, '').replace('_', '');
+        return { id: otherId, ...rel };
+      })
+      .filter(rel => rel.id !== player.id && rel.id !== target.id && (rel.affinity > 20 || rel.romanceLevel > 20))
+      .sort((a, b) => (b.affinity || 0) + (b.romanceLevel || 0) - ((a.affinity || 0) + (a.romanceLevel || 0)))
       .slice(0, 3);
+    
+    const potentialPartners = relationships
+      .map(rel => state.entities.get(rel.id))
+      .filter(e => e !== undefined);
 
     if (potentialPartners.length === 0) {
       gameStateManager.dispatch('ADD_LOG_ENTRY', {
