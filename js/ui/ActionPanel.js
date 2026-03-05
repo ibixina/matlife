@@ -3286,19 +3286,32 @@ export class ActionPanel {
 
     const state = gameStateManager.getStateRef();
     
-    // Get all relationships for the player and sort by affinity
+    // Get target's gender for matching
+    const targetGender = target.getComponent('identity')?.gender || 'Male';
+    
+    // Get all relationships for the player and sort by affinity, filtering by matching gender
     const relationships = Array.from(state.relationships.entries())
       .filter(([key, rel]) => key.startsWith(player.id + '_') || key.endsWith('_' + player.id))
       .map(([key, rel]) => {
         // Extract the other person's ID from the key
         const otherId = key.replace(player.id, '').replace('_', '');
         return { id: otherId, ...rel };
-      })
-      .filter(rel => rel.id !== player.id && rel.id !== target.id && (rel.affinity > 20 || rel.romanceLevel > 20))
-      .sort((a, b) => (b.affinity || 0) + (b.romanceLevel || 0) - ((a.affinity || 0) + (a.romanceLevel || 0)))
-      .slice(0, 3);
+      });
     
+    // Filter by gender match and relationship quality, then sort by closeness
     const potentialPartners = relationships
+      .filter(rel => {
+        if (rel.id === player.id || rel.id === target.id) return false;
+        const entity = state.entities.get(rel.id);
+        if (!entity) return false;
+        const entityGender = entity.getComponent('identity')?.gender || 'Male';
+        // Only include same-gender wrestlers
+        if (entityGender !== targetGender) return false;
+        // Must have some relationship
+        return (rel.affinity > 20 || rel.romanceLevel > 20);
+      })
+      .sort((a, b) => (b.affinity || 0) + (b.romanceLevel || 0) - ((a.affinity || 0) + (a.romanceLevel || 0)))
+      .slice(0, 3)
       .map(rel => state.entities.get(rel.id))
       .filter(e => e !== undefined);
 
