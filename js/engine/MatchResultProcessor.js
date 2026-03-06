@@ -123,10 +123,23 @@ export class MatchResultProcessor {
 
     const previousChampionId = title.currentChampion;
 
-    // If winner is NOT the previous champion, award it
+    // If winner is NOT the previous champion, award it (new champion)
     if (winner.id !== previousChampionId) {
       const prevChamp = previousChampionId ? state.entities.get(previousChampionId) : null;
       ChampionshipSystem.awardChampionship(titleId, winner, prevChamp);
+
+      // Create feud between new champion and the person they beat (if not already in a feud)
+      const feudId = [winner.id, loser.id].sort().join('_');
+      if (!state.feuds.has(feudId)) {
+        // Check if either wrestler already has an active feud
+        const winnerHasFeud = DynamicFeudSystem.hasActiveFeud(winner.id);
+        const loserHasFeud = DynamicFeudSystem.hasActiveFeud(loser.id);
+        
+        // Only create feud if neither is already in a different feud
+        if (!winnerHasFeud && !loserHasFeud) {
+          DynamicFeudSystem.startFeud(winner, loser, 'Title rivalry');
+        }
+      }
     } else {
       // Champion retained, record defense
       ChampionshipSystem.recordDefense(titleId, matchRating);

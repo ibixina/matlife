@@ -532,6 +532,37 @@ export class DynamicFeudSystem {
   }
 
   /**
+   * Checks if an entity has any active feud
+   * @param {string} entityId - Entity ID
+   * @returns {boolean}
+   */
+  static hasActiveFeud(entityId) {
+    const state = gameStateManager.getStateRef();
+    
+    for (const [feudId, feud] of state.feuds) {
+      if ((feud.entityA === entityId || feud.entityB === entityId) && !feud.resolved) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Gets the opponent from an entity's active feud (if any)
+   * @param {string} entityId - Entity ID
+   * @returns {string|null} Opponent entity ID or null
+   */
+  static getActiveFeudOpponent(entityId) {
+    const state = gameStateManager.getStateRef();
+    
+    for (const [feudId, feud] of state.feuds) {
+      if (feud.entityA === entityId && !feud.resolved) return feud.entityB;
+      if (feud.entityB === entityId && !feud.resolved) return feud.entityA;
+    }
+    return null;
+  }
+
+  /**
    * Gets available match types for a feud
    * @param {string} feudId - Feud ID
    * @returns {string[]} Array of match types

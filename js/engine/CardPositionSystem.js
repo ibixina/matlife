@@ -5,6 +5,7 @@
  */
 
 import { gameStateManager } from '../core/GameStateManager.js';
+import RelationshipManager from './RelationshipManager.js';
 
 /**
  * Card positions from lowest to highest
@@ -83,6 +84,11 @@ export class CardPositionSystem {
 
     if (!contract || !popularity) {
       return { error: 'Missing required components' };
+    }
+
+    // Initialize position if not set
+    if (!contract.position) {
+      contract.position = 'dark_match';
     }
 
     const currentPosition = contract.position || 'dark_match';
@@ -167,9 +173,10 @@ export class CardPositionSystem {
     const oldPosition = contract.position;
     contract.position = newPositionKey;
 
-    // Increase salary with promotion
+    // Increase salary with promotion (respect negotiated salaries - never decrease)
     const oldSalary = contract.weeklySalary;
-    contract.weeklySalary = Math.floor(contract.weeklySalary * newPosition.salaryMod);
+    const calculatedSalary = Math.floor(contract.weeklySalary * newPosition.salaryMod);
+    contract.weeklySalary = Math.max(oldSalary, calculatedSalary);
 
     // Log promotion
     gameStateManager.dispatch('ADD_LOG_ENTRY', {
@@ -206,9 +213,15 @@ export class CardPositionSystem {
     const oldPosition = contract.position;
     contract.position = newPositionKey;
 
-    // Decrease salary with demotion
+    // Store original negotiated salary if not already stored
+    if (!contract.negotiatedSalary) {
+      contract.negotiatedSalary = contract.weeklySalary;
+    }
+
+    // Decrease salary with demotion (respect negotiated salaries - never go below)
     const oldSalary = contract.weeklySalary;
-    contract.weeklySalary = Math.max(50, Math.floor(contract.weeklySalary * newPosition.salaryMod));
+    const calculatedSalary = Math.max(50, Math.floor(contract.negotiatedSalary * newPosition.salaryMod));
+    contract.weeklySalary = Math.max(contract.negotiatedSalary, calculatedSalary);
 
     // Log demotion
     gameStateManager.dispatch('ADD_LOG_ENTRY', {
@@ -294,8 +307,76 @@ export class CardPositionSystem {
 
       for (const wrestlerId of promotion.roster) {
         const wrestler = state.entities.get(wrestlerId);
-        if (wrestler && !wrestler.isPlayer) {
+        if (wrestler) {
           this.evaluatePosition(wrestler, promotion);
+        }
+      }
+    }
+
+    // Check for automatic title shot opportunities (both player and NPCs)
+    this.evaluateTitleShotOpportunities(state);
+  }
+
+  /**
+   * Evaluates title shot opportunities for all wrestlers
+   * @private
+   */
+  static evaluateTitleShotOpportunities(state) {
+    for (const promotion of state.promotions.values()) {
+      if (!promotion.roster) continue;
+
+      for (const wrestlerId of promotion.roster) {
+        const wrestler = state.entities.get(wrestlerId);
+        if (!wrestler) continue;
+
+        const contract = wrestler.getComponent('contract');
+        const popularity = wrestler.getComponent('popularity');
+        if (!contract || !popularity) continue;
+
+        // Skip if already has pending title shot or is champion
+        if (contract.pendingTitleShot) continue;
+
+        // Check if already a champion
+        let isChampion = false;
+        for (const [titleId, title] of state.championships.entries()) {
+          if (title.currentChampion === wrestler.id) {
+            isChampion = true;
+            break;
+          }
+        }
+        if (isChampion) continue;
+
+        // Get championships in wrestler's promotion
+        const championships = [];
+        for (const [titleId, title] of state.championships.entries()) {
+          if (title.promotionId === contract.promotionId && title.currentChampion && title.currentChampion !== wrestler.id) {
+            championships.push({ id: titleId, ...title });
+          }
+        }
+
+        if (championships.length === 0) continue;
+
+        // Check overness and momentum thresholds
+        const overness = popularity.overness || 0;
+        const momentum = popularity.momentum || 0;
+
+        // High overness + momentum = automatic title shot opportunity
+        if (overness >= 85 && momentum >= 70) {
+          // 30% chance per month when thresholds met
+          if (Math.random() < 0.3) {
+            contract.pendingTitleShot = true;
+
+            // Notify if it's the player
+            if (wrestler.isPlayer) {
+              gameStateManager.dispatch('ADD_LOG_ENTRY', {
+                entry: {
+                  category: 'backstage',
+                  text: `📋 The booker offers you a title shot based on your excellent performance!`,
+                  type: 'booker'
+                }
+              });
+            }
+          }
         }
       }
     }

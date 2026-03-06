@@ -241,6 +241,22 @@ export class MatchSimulator {
   }
 
   static _determineStyle(entity) {
+    const identity = entity.getComponent('identity') || {};
+    const gimmick = (identity.gimmick || '').toString().trim();
+    
+    const archetypeToStyle = {
+      'High-Flyer': 'Aerial',
+      'Powerhouse': 'Powerhouse',
+      'Technical': 'Technical',
+      'Brawler': 'Brawler',
+      'Strong Style': 'Brawler',
+      'Lucha Libre': 'Aerial'
+    };
+    
+    if (gimmick && archetypeToStyle[gimmick]) {
+      return archetypeToStyle[gimmick];
+    }
+    
     const inRing = entity.getComponent('inRingStats') || {};
     const physical = entity.getComponent('physicalStats') || {};
 

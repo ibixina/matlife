@@ -148,6 +148,7 @@ export class WorldSimulator {
         // Evaluate card positions monthly
         if (state.calendar.week === 2) {
           CardPositionSystem.evaluateAllRosters(state);
+          this._generatePlayerPromotionFeuds(state);
         }
 
         // Process AI promotions (weekly, not every day)
@@ -504,19 +505,36 @@ export class WorldSimulator {
           const sortedTitles = [...playerTitles].sort((a, b) => (b.prestige || 0) - (a.prestige || 0));
           const title = sortedTitles[0];
 
-          // Pick strongest available contender
+          // Pick strongest available contender (avoid recently faced opponents)
           const contenders = (promotion.roster || [])
             .filter(id => id !== player.id)
             .map(id => state.entities.get(id))
             .filter(e => e);
 
+          // Get recent opponents from contract history
+          const recentOpponents = contract.recentOpponents || [];
+
           if (contenders.length > 0) {
-            contenders.sort((a, b) => {
+            // Filter out recent opponents, prioritize those not recently faced
+            let availableContenders = contenders.filter(c => !recentOpponents.includes(c.id));
+            
+            // If all have been faced recently, allow repeats but shuffle for variety
+            if (availableContenders.length === 0) {
+              availableContenders = contenders;
+            }
+            
+            availableContenders.sort((a, b) => {
               const popA = a.getComponent('popularity')?.overness || 0;
               const popB = b.getComponent('popularity')?.overness || 0;
               return popB - popA;
             });
-            opponent = contenders[0];
+            
+            // Pick random from top 3 to add variety
+            const topContenders = availableContenders.slice(0, Math.min(3, availableContenders.length));
+            opponent = topContenders[randomInt(0, topContenders.length - 1)];
+            
+            // Track this opponent
+            contract.recentOpponents = [...(contract.recentOpponents || []), opponent.id].slice(-10);
           }
 
           isTitleMatch = true;
@@ -557,6 +575,67 @@ export class WorldSimulator {
 
       // Use AIPromotionSystem for comprehensive simulation
       AIPromotionSystem.simulateWeek(promotion, state);
+    }
+  }
+
+  /**
+   * Generates feuds for player's promotion based on relationships
+   * @private
+   * @param {object} state - Game state
+   */
+  static _generatePlayerPromotionFeuds(state) {
+    const player = gameStateManager.getPlayerEntity();
+    if (!player) return;
+
+    const playerContract = player.getComponent('contract');
+    if (!playerContract?.promotionId) return;
+
+    const promotion = state.promotions.get(playerContract.promotionId);
+    if (!promotion?.roster || promotion.roster.length < 4) return;
+
+    // 30% chance to generate a new feud each month
+    if (Math.random() > 0.3) return;
+
+    const roster = promotion.roster
+      .map(id => state.entities.get(id))
+      .filter(e => e && e.id !== player.id);
+
+    if (roster.length < 3) return;
+
+    // Find pairs with extreme affinity or create rivalry from exciting matches
+    const candidates = [];
+
+    for (let i = 0; i < roster.length; i++) {
+      for (let j = i + 1; j < roster.length; j++) {
+        const relationship = RelationshipManager.getRelationship(roster[i].id, roster[j].id);
+
+        // Start feud if affinity is very negative
+        if (relationship && relationship.affinity <= -30) {
+          const feudId = [roster[i].id, roster[j].id].sort().join('_');
+          if (!state.feuds.has(feudId)) {
+            candidates.push({ wrestlers: [roster[i], roster[j]], affinity: relationship.affinity });
+          }
+        }
+      }
+    }
+
+    // Also check player relationships - high heat can start feuds
+    for (const wrestler of roster) {
+      const playerRel = RelationshipManager.getRelationship(player.id, wrestler.id);
+      if (playerRel && playerRel.affinity <= -40) {
+        const feudId = [player.id, wrestler.id].sort().join('_');
+        if (!state.feuds.has(feudId)) {
+          candidates.push({ wrestlers: [player, wrestler], affinity: playerRel.affinity });
+        }
+      }
+    }
+
+    if (candidates.length > 0) {
+      const selected = candidates[randomInt(0, candidates.length - 1)];
+      const cause = selected.affinity < -50 
+        ? ' intense rivalry' 
+        : 'building tension';
+      DynamicFeudSystem.startFeud(selected.wrestlers[0], selected.wrestlers[1], cause);
     }
   }
 

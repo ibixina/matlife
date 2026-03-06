@@ -178,6 +178,9 @@ export class ContractComponent extends Component {
     this.datesPerMonth = options.datesPerMonth ?? 4;
     this.titleOpportunityGuaranteed = options.titleOpportunityGuaranteed ?? false;
     this.championshipOpportunityWeeks = options.championshipOpportunityWeeks ?? 0;
+    this.position = options.position ?? null;
+    this.negotiatedSalary = options.negotiatedSalary ?? null;
+    this.recentOpponents = options.recentOpponents ?? [];
   }
 
   static deserialize(data) {
