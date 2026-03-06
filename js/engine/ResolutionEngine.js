@@ -8,10 +8,10 @@
  * Outcome types for resolution
  */
 export const OUTCOME = {
-  CRITICAL_SUCCESS: 'CRITICAL_SUCCESS',
-  SUCCESS: 'SUCCESS',
-  FAILURE: 'FAILURE',
-  CRITICAL_FAILURE: 'CRITICAL_FAILURE'
+  CRITICAL_SUCCESS: "CRITICAL_SUCCESS",
+  SUCCESS: "SUCCESS",
+  FAILURE: "FAILURE",
+  CRITICAL_FAILURE: "CRITICAL_FAILURE",
 };
 
 /**
@@ -28,9 +28,9 @@ export class ResolutionEngine {
     if (!entity || !entity.getComponent) return 50;
 
     const statValue = this._getStatValue(entity, stat);
-    const popularity = entity.getComponent('popularity');
-    const condition = entity.getComponent('condition');
-    const lifestyle = entity.getComponent('lifestyle');
+    const popularity = entity.getComponent("popularity");
+    const condition = entity.getComponent("condition");
+    const lifestyle = entity.getComponent("lifestyle");
 
     // Base from stat (normalized: stat/2, so stat 100 = 50)
     const statScore = statValue / 2;
@@ -42,16 +42,26 @@ export class ResolutionEngine {
     const momentumScore = Math.min(20, (popularity?.momentum || 0) / 5);
 
     // Burnout penalty (0-15)
-    const burnoutPenalty = lifestyle?.burnout ? Math.min(15, lifestyle.burnout / 6.67) : 0;
+    const burnoutPenalty = lifestyle?.burnout
+      ? Math.min(15, lifestyle.burnout / 6.67)
+      : 0;
 
     // Injury penalty (0-10)
     let injuryPenalty = 0;
     if (condition?.injuries && condition.injuries.length > 0) {
-      injuryPenalty = Math.min(10, condition.injuries.reduce((sum, i) => sum + i.severity, 0) * 2);
+      injuryPenalty = Math.min(
+        10,
+        condition.injuries.reduce((sum, i) => sum + i.severity, 0) * 2,
+      );
     }
 
     // Calculate total
-    const eliteScore = statScore + overnessScore + momentumScore - burnoutPenalty - injuryPenalty;
+    const eliteScore =
+      statScore +
+      overnessScore +
+      momentumScore -
+      burnoutPenalty -
+      injuryPenalty;
 
     // Clamp to 0-100
     return Math.max(0, Math.min(100, eliteScore));
@@ -64,7 +74,7 @@ export class ResolutionEngine {
    */
   static getSuccessRate(eliteScore) {
     // 0 → 40%, 100 → 95%
-    return 40 + (eliteScore * 0.55);
+    return 40 + eliteScore * 0.55;
   }
 
   /**
@@ -74,49 +84,85 @@ export class ResolutionEngine {
    * @param {string} params.action - Action label
    * @param {Entity} [params.target] - Optional target entity
    * @param {string} params.stat - Primary stat name
-   * @param {number} params.dc - Difficulty Class (kept for compatibility, not used)
+   * @param {number} params.dc - Difficulty Class baseline is 10
    * @param {object} [params.context] - Context with bonuses/penalties
    * @returns {ResolutionResult} The resolution result
    */
   static resolve({ actor, action, target, stat, dc, context = {} }) {
-    const { bonuses = [], penalties = [] } = context;
+    const {
+      bonuses = [],
+      penalties = [],
+      hasAdvantage = false,
+      hasDisadvantage = false,
+    } = context;
 
     // Calculate elite score
-    let eliteScore = this.calculateEliteScore(actor, stat);
+    const baseEliteScore = this.calculateEliteScore(actor, stat);
+    let eliteScore = baseEliteScore;
 
     // Apply bonuses/penalties to elite score
     const bonusSum = bonuses.reduce((sum, b) => sum + b, 0);
     const penaltySum = penalties.reduce((sum, p) => sum + p, 0);
-    eliteScore = Math.max(0, Math.min(100, eliteScore + bonusSum - penaltySum));
+    const advantageModifier =
+      hasAdvantage === hasDisadvantage ? 0 : hasAdvantage ? 8 : -8;
+    eliteScore = Math.max(
+      0,
+      Math.min(100, eliteScore + bonusSum - penaltySum + advantageModifier),
+    );
 
     // Tag-based modifiers
-    if (actor.hasTag && actor.hasTag('[Hot_Streak]')) {
+    if (actor.hasTag && actor.hasTag("[Hot_Streak]")) {
       eliteScore = Math.min(100, eliteScore + 10);
     }
-    if (actor.hasTag && actor.hasTag('[Burned_Out]')) {
+    if (actor.hasTag && actor.hasTag("[Burned_Out]")) {
       eliteScore = Math.max(0, eliteScore - 10);
     }
 
-    // Calculate success rate
-    const successRate = this.getSuccessRate(eliteScore);
+    // Difficulty class penalty: every +1 DC above 10 lowers success chance.
+    const effectiveDc = Number.isFinite(dc) ? dc : 10;
+    const difficultyPenalty = (effectiveDc - 10) * 3.5;
+
+    // Calculate success rate after DC adjustment.
+    const successRate = Math.max(
+      2,
+      Math.min(98, this.getSuccessRate(eliteScore) - difficultyPenalty),
+    );
 
     // Roll for outcome (0-100)
     const roll = Math.random() * 100;
 
+    // Determine critical bands from chance profile.
+    const critSuccessRate = Math.max(
+      1,
+      Math.min(20, 2 + (successRate - 50) * 0.12),
+    );
+    const critFailureRate = Math.max(
+      1,
+      Math.min(20, 2 + (50 - successRate) * 0.12),
+    );
+
     // Determine outcome
     let outcome;
     if (roll < successRate) {
-      outcome = OUTCOME.SUCCESS;
+      outcome =
+        roll < critSuccessRate ? OUTCOME.CRITICAL_SUCCESS : OUTCOME.SUCCESS;
     } else {
-      outcome = OUTCOME.FAILURE;
+      outcome =
+        roll >= 100 - critFailureRate
+          ? OUTCOME.CRITICAL_FAILURE
+          : OUTCOME.FAILURE;
     }
 
     return {
       outcome,
+      baseEliteScore,
       eliteScore,
       successRate,
       roll,
-      dc
+      dc: effectiveDc,
+      modifier: bonusSum - penaltySum + advantageModifier,
+      difficultyPenalty,
+      total: roll,
     };
   }
 
@@ -130,12 +176,22 @@ export class ResolutionEngine {
    * @param {object} [params.context] - Context with modifiers
    * @returns {ContestedResult} The contested result
    */
-  static resolveContested({ actor, actorStat, target, targetStat, context = {} }) {
+  static resolveContested({
+    actor,
+    actorStat,
+    target,
+    targetStat,
+    context = {},
+  }) {
     const { actorModifiers = [], targetModifiers = [] } = context;
 
     // Calculate elite scores
-    let actorElite = this.calculateEliteScore(actor, actorStat) + actorModifiers.reduce((sum, m) => sum + m, 0);
-    let targetElite = this.calculateEliteScore(target, targetStat) + targetModifiers.reduce((sum, m) => sum + m, 0);
+    let actorElite =
+      this.calculateEliteScore(actor, actorStat) +
+      actorModifiers.reduce((sum, m) => sum + m, 0);
+    let targetElite =
+      this.calculateEliteScore(target, targetStat) +
+      targetModifiers.reduce((sum, m) => sum + m, 0);
 
     // Clamp to 0-100
     actorElite = Math.max(0, Math.min(100, actorElite));
@@ -149,14 +205,13 @@ export class ResolutionEngine {
     const actorRoll = Math.random() * 100;
     const targetRoll = Math.random() * 100;
 
-    // Roll for both
-    const actorRoll = Math.random() * 100;
-    const targetRoll = Math.random() * 100;
+    const actorSuccess = actorRoll < actorSuccessRate;
+    const targetSuccess = targetRoll < targetSuccessRate;
 
     // Compare distance into success zone (higher = better outcome)
     const actorScore = actorSuccessRate - actorRoll;
     const targetScore = targetSuccessRate - targetRoll;
-    const winner = actorScore > targetScore ? 'actor' : 'target';
+    const winner = actorScore > targetScore ? "actor" : "target";
 
     return {
       winner,
@@ -167,7 +222,7 @@ export class ResolutionEngine {
       actorSuccessRate,
       targetSuccessRate,
       actorSuccess,
-      targetSuccess
+      targetSuccess,
     };
   }
 
@@ -179,25 +234,25 @@ export class ResolutionEngine {
     if (!entity || !entity.getComponent) return 10;
 
     // Physical stats
-    const physicalStats = entity.getComponent('physicalStats');
+    const physicalStats = entity.getComponent("physicalStats");
     if (physicalStats && statName in physicalStats) {
       return physicalStats[statName];
     }
 
     // In-ring stats
-    const inRingStats = entity.getComponent('inRingStats');
+    const inRingStats = entity.getComponent("inRingStats");
     if (inRingStats && statName in inRingStats) {
       return inRingStats[statName];
     }
 
     // Entertainment stats
-    const entertainmentStats = entity.getComponent('entertainmentStats');
+    const entertainmentStats = entity.getComponent("entertainmentStats");
     if (entertainmentStats && statName in entertainmentStats) {
       return entertainmentStats[statName];
     }
 
     // Booker stats
-    const bookerStats = entity.getComponent('bookerStats');
+    const bookerStats = entity.getComponent("bookerStats");
     if (bookerStats && statName in bookerStats) {
       return bookerStats[statName];
     }

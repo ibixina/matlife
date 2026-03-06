@@ -4,53 +4,56 @@
  * Promo battle resolution
  */
 
-import ResolutionEngine from './ResolutionEngine.js';
-import RelationshipManager from './RelationshipManager.js';
+import ResolutionEngine from "./ResolutionEngine.js";
+import RelationshipManager from "./RelationshipManager.js";
 
 /**
  * Promo tones and their mechanics
  */
 const PROMO_TONES = {
   aggressive: {
-    name: 'Aggressive',
-    stat: 'charisma',
-    secondaryStat: 'brawling',
+    name: "Aggressive",
+    stat: "charisma",
+    secondaryStat: "brawling",
     dc: 12,
-    risk: 'high',
-    description: 'High risk, high reward. Uses intimidation. Can escalate to brawl.'
+    risk: "high",
+    description:
+      "High risk, high reward. Uses intimidation. Can escalate to brawl.",
   },
   comedic: {
-    name: 'Comedic',
-    stat: 'charisma',
-    secondaryStat: 'acting',
+    name: "Comedic",
+    stat: "charisma",
+    secondaryStat: "acting",
     dc: 10,
-    risk: 'medium',
-    description: 'Uses humor. Great for Faces. Falls flat if Acting is low.'
+    risk: "medium",
+    description: "Uses humor. Great for Faces. Falls flat if Acting is low.",
   },
   philosophical: {
-    name: 'Philosophical',
-    stat: 'micSkills',
-    secondaryStat: 'psychology',
+    name: "Philosophical",
+    stat: "micSkills",
+    secondaryStat: "psychology",
     dc: 14,
-    risk: 'medium',
-    description: 'Emotional/philosophical. The "worked shoot" option. Best for feuds.'
+    risk: "medium",
+    description:
+      'Emotional/philosophical. The "worked shoot" option. Best for feuds.',
   },
   pandering: {
-    name: 'Pandering',
-    stat: 'charisma',
+    name: "Pandering",
+    stat: "charisma",
     dc: 8,
-    risk: 'low',
-    description: 'Safe. Cheap pop. Low ceiling but low risk.'
+    risk: "low",
+    description: "Safe. Cheap pop. Low ceiling but low risk.",
   },
   pipebomb: {
-    name: 'Pipebomb',
-    stat: 'micSkills',
-    secondaryStat: 'charisma',
+    name: "Pipebomb",
+    stat: "micSkills",
+    secondaryStat: "charisma",
     dc: 18,
-    risk: 'extreme',
-    requiresPerk: '[Promo_God]',
-    description: 'Extreme risk/reward. Legendary moment or career-damaging failure.'
-  }
+    risk: "extreme",
+    requiresPerk: "[Promo_God]",
+    description:
+      "Extreme risk/reward. Legendary moment or career-damaging failure.",
+  },
 };
 
 /**
@@ -74,41 +77,55 @@ export class PromoEngine {
     if (toneConfig.requiresPerk && !actor.hasTag(toneConfig.requiresPerk)) {
       return {
         error: `Requires ${toneConfig.requiresPerk} perk`,
-        allowed: false
+        allowed: false,
       };
     }
 
     // Get stats
-    const stats = actor.getComponent('entertainmentStats');
+    const stats = actor.getComponent("entertainmentStats");
+    if (!stats) {
+      return { error: "Missing entertainmentStats component" };
+    }
+    const inRingStats = actor.getComponent("inRingStats") || {};
+    const condition = actor.getComponent("condition");
     const primaryStat = stats[toneConfig.stat] || 10;
-    const secondaryStat = toneConfig.secondaryStat ?
-      (actor.getComponent('inRingStats')[toneConfig.secondaryStat] || stats[toneConfig.secondaryStat] || 10) : 0;
+    const secondaryStat = toneConfig.secondaryStat
+      ? inRingStats[toneConfig.secondaryStat] ||
+        stats[toneConfig.secondaryStat] ||
+        10
+      : 0;
 
     // Calculate effective stat
-    const effectiveStat = Math.floor((primaryStat * 0.7) + (secondaryStat * 0.3));
+    const effectiveStat = Math.floor(primaryStat * 0.7 + secondaryStat * 0.3);
 
     // Determine advantage/disadvantage
     const promoContext = {
-      hasAdvantage: context.hometown || actor.hasTag('[Hot_Streak]'),
-      hasDisadvantage: actor.hasTag('[Burned_Out]') || actor.getComponent('condition').mentalHealth < 50
+      // Keep hometown/mental state here; streak tags are already applied in ResolutionEngine.
+      hasAdvantage: context.hometown === true,
+      hasDisadvantage: (condition?.mentalHealth ?? 100) < 50,
     };
 
     // Resolve
     const resolution = ResolutionEngine.resolve({
       actor,
-      action: 'Cut Promo',
+      action: "Cut Promo",
       stat: toneConfig.stat,
       dc: toneConfig.dc,
-      context: promoContext
+      context: promoContext,
     });
 
     // Calculate effects
-    const result = this.calculatePromoEffects(resolution, toneConfig, actor, context);
+    const result = this.calculatePromoEffects(
+      resolution,
+      toneConfig,
+      actor,
+      context,
+    );
 
     return {
       tone,
       resolution,
-      ...result
+      ...result,
     };
   }
 
@@ -129,7 +146,7 @@ export class PromoEngine {
       return {
         error: actorPromo.error || targetPromo.error,
         actorPromo,
-        targetPromo
+        targetPromo,
       };
     }
 
@@ -150,29 +167,39 @@ export class PromoEngine {
     } else {
       // Draw
       return {
-        result: 'draw',
+        result: "draw",
         actorPromo,
         targetPromo,
-        narrative: 'Both wrestlers delivered equally compelling promos. The feud heats up!'
+        narrative:
+          "Both wrestlers delivered equally compelling promos. The feud heats up!",
       };
     }
 
     // Apply effects
-    const winnerPop = winner.getComponent('popularity');
-    const loserPop = loser.getComponent('popularity');
+    const winnerPop = winner.getComponent("popularity");
+    const loserPop = loser.getComponent("popularity");
 
     if (winnerPop) {
-      winnerPop.momentum += margin;
-      winnerPop.overness += Math.floor(margin / 2);
+      winnerPop.momentum = Math.max(
+        0,
+        Math.min(100, (winnerPop.momentum || 0) + margin),
+      );
+      winnerPop.overness = Math.max(
+        0,
+        Math.min(100, (winnerPop.overness || 0) + Math.floor(margin / 2)),
+      );
     }
 
     if (loserPop) {
-      loserPop.momentum -= Math.floor(margin / 2);
+      loserPop.momentum = Math.max(
+        0,
+        Math.min(100, (loserPop.momentum || 0) - Math.floor(margin / 2)),
+      );
     }
 
     // Generate narrative
-    const winnerName = winner.getComponent('identity').name;
-    const loserName = loser.getComponent('identity').name;
+    const winnerName = winner.getComponent("identity").name;
+    const loserName = loser.getComponent("identity").name;
 
     let narrative;
     if (margin > 10) {
@@ -184,13 +211,13 @@ export class PromoEngine {
     }
 
     return {
-      result: 'victory',
+      result: "victory",
       winner,
       loser,
       margin,
       actorPromo,
       targetPromo,
-      narrative
+      narrative,
     };
   }
 
@@ -199,86 +226,107 @@ export class PromoEngine {
    * @private
    */
   static calculatePromoEffects(resolution, toneConfig, actor, context) {
-    const identity = actor.getComponent('identity');
-    const popularity = actor.getComponent('popularity');
+    const identity = actor.getComponent("identity");
+    const popularity = actor.getComponent("popularity");
 
     let momentumGained = 0;
     let overnessGained = 0;
-    let narrative = '';
+    let narrative = "";
     let consequences = [];
 
-    const name = identity?.name || 'Wrestler';
+    const name = identity?.name || "Wrestler";
 
     switch (resolution.outcome) {
-      case 'CRITICAL_SUCCESS':
+      case "CRITICAL_SUCCESS":
         momentumGained = 20;
         overnessGained = 10;
 
-        if (toneConfig.risk === 'extreme') {
+        if (toneConfig.risk === "extreme") {
           narrative = `${name} just cut the promo of a lifetime! The entire industry is talking about it!`;
           // Pipebomb special effect
-          consequences.push({ type: 'viral', value: true });
+          consequences.push({ type: "viral", value: true });
         } else {
           narrative = `${name} delivers an incredible ${toneConfig.name.toLowerCase()} promo! The crowd is eating out of their hand!`;
         }
         break;
 
-      case 'SUCCESS':
+      case "SUCCESS":
         momentumGained = 10;
         overnessGained = 5;
         narrative = `${name}'s ${toneConfig.name.toLowerCase()} promo connects with the audience.`;
         break;
 
-      case 'FAILURE':
+      case "FAILURE":
         momentumGained = 0;
         overnessGained = -2;
         narrative = `${name}'s promo falls a bit flat. The crowd isn't feeling it.`;
 
         // Comedic failure is worse
-        if (toneConfig.name === 'Comedic') {
+        if (toneConfig.name === "Comedic") {
           narrative = `${name} tries to be funny... awkward silence. The bit bombs.`;
           overnessGained = -5;
         }
         break;
 
-      case 'CRITICAL_FAILURE':
+      case "CRITICAL_FAILURE":
         momentumGained = -10;
         overnessGained = -5;
         narrative = `${name} completely botches the promo. It's painful to watch.`;
 
-        if (toneConfig.risk === 'extreme') {
+        if (toneConfig.risk === "extreme") {
           narrative = `${name}'s pipebomb goes horribly wrong. This could hurt their career.`;
           overnessGained = -15;
-          consequences.push({ type: 'backstage_heat', value: 20 });
+          consequences.push({ type: "backstage_heat", value: 20 });
         }
         break;
     }
 
     // Check for escalation (aggressive promos)
-    if (toneConfig.name === 'Aggressive' && resolution.outcome === 'SUCCESS') {
+    if (toneConfig.name === "Aggressive" && resolution.outcome === "SUCCESS") {
       if (Math.random() < 0.3) {
-        consequences.push({ type: 'brawl', value: true });
-        narrative += ' The promo gets heated and erupts into a brawl!';
+        consequences.push({ type: "brawl", value: true });
+        narrative += " The promo gets heated and erupts into a brawl!";
       }
     }
 
     // Apply changes
     if (popularity) {
-      popularity.momentum = Math.max(0, Math.min(100, popularity.momentum + momentumGained));
-      popularity.overness = Math.max(0, Math.min(100, popularity.overness + overnessGained));
+      popularity.momentum = Math.max(
+        0,
+        Math.min(100, popularity.momentum + momentumGained),
+      );
+      popularity.overness = Math.max(
+        0,
+        Math.min(100, popularity.overness + overnessGained),
+      );
+    }
+
+    // Track promo milestones for perk progression.
+    const careerStats = actor.getComponent("careerStats");
+    if (careerStats) {
+      careerStats.promosCut = (careerStats.promosCut || 0) + 1;
     }
 
     // Grant charisma XP for successful promos
-    const entertainmentStats = actor.getComponent('entertainmentStats');
-    if (entertainmentStats && (resolution.outcome === 'SUCCESS' || resolution.outcome === 'CRITICAL_SUCCESS')) {
-      const charismaGain = resolution.outcome === 'CRITICAL_SUCCESS' ? 0.5 : 0.2;
-      entertainmentStats.charisma = Math.min(20, entertainmentStats.charisma + charismaGain);
+    const entertainmentStats = actor.getComponent("entertainmentStats");
+    if (
+      entertainmentStats &&
+      (resolution.outcome === "SUCCESS" ||
+        resolution.outcome === "CRITICAL_SUCCESS")
+    ) {
+      const charismaGain =
+        resolution.outcome === "CRITICAL_SUCCESS" ? 0.5 : 0.2;
+      entertainmentStats.charisma = Math.min(
+        100,
+        entertainmentStats.charisma + charismaGain,
+      );
     }
 
     // Burnout cost for promos
-    const lifestyle = actor.getComponent('lifestyle');
+    const lifestyle = actor.getComponent("lifestyle");
     if (lifestyle) {
-      const burnoutCost = toneConfig.risk === 'extreme' ? 5 : toneConfig.risk === 'high' ? 3 : 2;
+      const burnoutCost =
+        toneConfig.risk === "extreme" ? 5 : toneConfig.risk === "high" ? 3 : 2;
       lifestyle.burnout = Math.min(100, (lifestyle.burnout || 0) + burnoutCost);
     }
 
@@ -286,9 +334,14 @@ export class PromoEngine {
       narrative,
       momentumGained,
       overnessGained,
-      charismaGained: (resolution.outcome === 'SUCCESS' || resolution.outcome === 'CRITICAL_SUCCESS') ?
-        (resolution.outcome === 'CRITICAL_SUCCESS' ? 0.5 : 0.2) : 0,
-      consequences
+      charismaGained:
+        resolution.outcome === "SUCCESS" ||
+        resolution.outcome === "CRITICAL_SUCCESS"
+          ? resolution.outcome === "CRITICAL_SUCCESS"
+            ? 0.5
+            : 0.2
+          : 0,
+      consequences,
     };
   }
 
@@ -298,13 +351,13 @@ export class PromoEngine {
    * @returns {object[]} Available tones
    */
   static getAvailableTones(wrestler) {
-    if (!wrestler || typeof wrestler.hasTag !== 'function') {
+    if (!wrestler || typeof wrestler.hasTag !== "function") {
       return [];
     }
     return Object.entries(PROMO_TONES).map(([key, config]) => ({
       key,
       ...config,
-      available: !config.requiresPerk || wrestler.hasTag(config.requiresPerk)
+      available: !config.requiresPerk || wrestler.hasTag(config.requiresPerk),
     }));
   }
 
@@ -321,45 +374,48 @@ export class PromoEngine {
         "You want to step in the ring with me? You're gonna regret it!",
         "I'm the best there is, the best there was, and the best there ever will be!",
         "You think you can take me? I'll show you why they call me the {gimmick}!",
-        "This Sunday, I'm going to END you!"
+        "This Sunday, I'm going to END you!",
       ],
       comedic: [
         "I'm not saying I'm the best, but have you seen these abs?",
         "My opponent is so slow, they make dial-up internet look fast!",
         "I walked into a bar... and the bar moved out of my way!",
-        "They say wrestling is fake, but my opponent's talent is faker!"
+        "They say wrestling is fake, but my opponent's talent is faker!",
       ],
       philosophical: [
         "In this business, you either adapt or you perish. I've chosen to evolve.",
         "This isn't just about titles. It's about legacy, about what we leave behind.",
         "Every match is a story. This Sunday, I write the final chapter.",
-        "The ring is my canvas, and violence is my art."
+        "The ring is my canvas, and violence is my art.",
       ],
       pandering: [
         "I love this city! You fans are the best in the world!",
         "Give me a hell yeah!",
         "Let's hear it for {city}!",
-        "I couldn't do this without each and every one of you!"
+        "I couldn't do this without each and every one of you!",
       ],
       pipebomb: [
         "I'm not here to play by your rules. I'm here to break the system.",
         "You people in the back, you think you control us? Watch me.",
         "This is real life, not your scripted nonsense. I'm taking over.",
-        "I see the politics, the games. And I'm done playing."
-      ]
+        "I see the politics, the games. And I'm done playing.",
+      ],
     };
 
     const toneTemplates = templates[tone] || templates.pandering;
     let text = toneTemplates[Math.floor(Math.random() * toneTemplates.length)];
 
     // Replace placeholders
-    const identity = wrestler.getComponent('identity');
-    text = text.replace('{gimmick}', identity?.gimmick || 'Wrestler');
-    text = text.replace('{city}', identity?.hometown?.split(',')[0] || 'this town');
+    const identity = wrestler.getComponent("identity");
+    text = text.replace("{gimmick}", identity?.gimmick || "Wrestler");
+    text = text.replace(
+      "{city}",
+      identity?.hometown?.split(",")[0] || "this town",
+    );
 
     if (target) {
-      const targetName = target.getComponent('identity').name;
-      text = text.replace('{opponent}', targetName);
+      const targetName = target.getComponent("identity").name;
+      text = text.replace("{opponent}", targetName);
     }
 
     return text;
