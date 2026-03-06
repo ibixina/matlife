@@ -364,6 +364,8 @@ export class ActionPanel {
     const player = gameStateManager.getPlayerEntity();
     if (!player) return;
 
+    this._renderPriorityAlerts(state);
+
     const contract = player.getComponent("contract");
 
     if (contract && contract.promotionId) {
@@ -373,7 +375,7 @@ export class ActionPanel {
       // Show info panel about next show
       if (nextShow) {
         const infoDiv = document.createElement("div");
-        infoDiv.className = "panel mb-md";
+        infoDiv.className = "panel panel-info mb-md";
         infoDiv.innerHTML = `
           <p style="font-size: 0.9rem;">📺 Next show: <strong>${nextShow.day}</strong> (${nextShow.days} day${nextShow.days !== 1 ? "s" : ""} away)</p>
         `;
@@ -620,6 +622,7 @@ export class ActionPanel {
             `vs ${feud.opponent}`,
             `${feud.phaseName} Phase | Heat: ${feud.heat}/100 | ${feud.cause}`,
             () => this.renderFeudDetails(feud),
+            { costsAction: false },
           );
           card.style.borderLeft = "3px solid #e94560";
           this.container.appendChild(card);
@@ -657,17 +660,22 @@ export class ActionPanel {
     ];
 
     actions.forEach((action) => {
-      const card = this.createActionCard(action.name, action.desc, () => {
-        if (action.action === "dirt") {
-          this.renderDirtSheets();
-        } else if (action.action === "relationships") {
-          this.renderRelationships(player);
-        } else if (action.action === "booker") {
-          this.renderBookerOffice(player);
-        } else if (action.action === "locker") {
-          this.renderLockerRoom(player);
-        }
-      });
+      const card = this.createActionCard(
+        action.name,
+        action.desc,
+        () => {
+          if (action.action === "dirt") {
+            this.renderDirtSheets();
+          } else if (action.action === "relationships") {
+            this.renderRelationships(player);
+          } else if (action.action === "booker") {
+            this.renderBookerOffice(player);
+          } else if (action.action === "locker") {
+            this.renderLockerRoom(player);
+          }
+        },
+        { costsAction: false },
+      );
       this.container.appendChild(card);
     });
   }
@@ -1074,7 +1082,7 @@ export class ActionPanel {
     // Show available match types for this feud - now clickable!
     const matchTypes = DynamicFeudSystem.getFeudMatchTypes(feud.id);
     const matchTitle = document.createElement("h5");
-    matchTitle.textContent = "Available Match Types (Click to Book):";
+    matchTitle.textContent = "Available Match Types (Schedule for Next Show):";
     matchTitle.style.margin = "1rem 0 0.5rem";
     this.container.appendChild(matchTitle);
 
@@ -1085,7 +1093,7 @@ export class ActionPanel {
     matchTypes.forEach((type) => {
       const card = this.createActionCard(
         type,
-        "Click to book this match type",
+        "Schedule this feud match for the upcoming show",
         () => {
           if (player && opponent) {
             this._bookMatchWithType(player, opponent, type);
@@ -1192,9 +1200,8 @@ export class ActionPanel {
       }
 
       const card = document.createElement("div");
-      card.className = "panel mb-md";
+      card.className = "panel panel-clickable mb-md";
       card.style.borderLeft = `3px solid ${color}`;
-      card.style.cursor = "pointer";
       const romanceLevel = relationship.romanceLevel || 0;
       const trust = relationship.trust ?? 50;
       const romanticStatus =
@@ -2066,9 +2073,77 @@ export class ActionPanel {
     const remaining = Math.max(0, budget.limit - budget.used);
 
     const panel = document.createElement("div");
-    panel.className = "panel mb-md";
+    panel.className = "panel panel-info mb-md";
     panel.innerHTML = `<p><strong>Action Points Today:</strong> ${remaining}/${budget.limit} remaining</p>`;
     this.container.appendChild(panel);
+  }
+
+  _renderPriorityAlerts(state) {
+    const player = gameStateManager.getPlayerEntity();
+    if (!player || !this.container) return;
+
+    const alerts = [];
+    const contract = player.getComponent("contract");
+    const condition = player.getComponent("condition");
+
+    if ((contract?.renewalWindowWeeks || 0) > 0) {
+      alerts.push({
+        level: "critical",
+        title: "Contract Renewal Deadline",
+        description: `${contract.renewalWindowWeeks} week(s) left to renew before free agency.`,
+      });
+    } else if (contract?.promotionId && (contract.remainingWeeks || 0) <= 0) {
+      alerts.push({
+        level: "critical",
+        title: "Contract Expiring",
+        description: `Your deal expires in ${contract.remainingWeeks} week(s).`,
+      });
+    } else if (contract?.promotionId && (contract.remainingWeeks || 0) <= 2) {
+      alerts.push({
+        level: "warning",
+        title: "Contract Expiring Soon",
+        description: `${contract.remainingWeeks} weeks remaining on your current deal.`,
+      });
+    }
+
+    if (
+      contract?.noCompeteActive &&
+      (contract.noCompeteWeeksRemaining || 0) > 0
+    ) {
+      alerts.push({
+        level: "warning",
+        title: "No-Compete Active",
+        description: `${contract.noCompeteWeeksRemaining} week(s) remaining before you can sign elsewhere.`,
+      });
+    }
+
+    const seriousInjuries = (condition?.injuries || []).filter(
+      (injury) => injury.severity >= 3,
+    );
+    if (seriousInjuries.length > 0) {
+      alerts.push({
+        level: "critical",
+        title: "Severe Injury",
+        description: `${seriousInjuries.length} serious injury issue(s) may block matches until recovered.`,
+      });
+    }
+
+    if (alerts.length === 0) return;
+
+    const stack = document.createElement("div");
+    stack.className = "priority-alerts";
+
+    alerts.forEach((alert) => {
+      const card = document.createElement("div");
+      card.className = `panel panel-alert panel-alert-${alert.level} mb-sm`;
+      card.innerHTML = `
+        <h4>${alert.title}</h4>
+        <p>${alert.description}</p>
+      `;
+      stack.appendChild(card);
+    });
+
+    this.container.appendChild(stack);
   }
 
   /**
@@ -2900,7 +2975,7 @@ export class ActionPanel {
   }
 
   /**
-   * Creates a player-requested match and opens match prep
+   * Creates a player-requested match and schedules it for the next show
    * @private
    * @param {Entity} player
    * @param {Entity} opponent
@@ -2967,44 +3042,39 @@ export class ActionPanel {
     const opponentName =
       opponent.getComponent("identity")?.name || "your opponent";
     const info = document.createElement("p");
-    info.textContent = `Booker approved your match vs ${opponentName}. Choose the stipulation:`;
+    info.textContent = `Booker approved your match vs ${opponentName}. Choose the stipulation for the next show:`;
     info.style.marginBottom = "1rem";
     this.container.appendChild(info);
 
     matchTypes.forEach((type) => {
-      const card = this.createActionCard(type, "Select this match type", () => {
-        this._bookMatchWithType(player, opponent, type);
-      });
+      const card = this.createActionCard(
+        type,
+        "Select this match type",
+        () => {
+          this._bookMatchWithType(player, opponent, type);
+        },
+        { costsAction: false },
+      );
       this.container.appendChild(card);
     });
   }
 
   /**
-   * Books a match with the selected type
+   * Schedules a match with the selected type for the upcoming show
    * @private
    */
   _bookMatchWithType(player, opponent, matchType) {
-    const playerOverness = player.getComponent("popularity")?.overness || 0;
-    const opponentOverness = opponent.getComponent("popularity")?.overness || 0;
-    const playerFavored = playerOverness >= opponentOverness - 8;
-    const bookedWinner = playerFavored
-      ? Math.random() < 0.65
-        ? "wrestler1"
-        : "wrestler2"
-      : Math.random() < 0.7
-        ? "wrestler2"
-        : "wrestler1";
-
     // Check if this is part of an active feud
     const activeFeud = this._getActiveFeud(player.id, opponent.id);
     const feudId = activeFeud ? activeFeud.id : null;
 
-    this.currentMatchAction = {
-      type: "match",
-      player,
-      opponent,
+    const state = gameStateManager.getStateRef();
+    if (!state.eventFlags) state.eventFlags = {};
+    const contract = player.getComponent("contract");
+    state.eventFlags.__scheduledPlayerMatch = {
+      promotionId: contract?.promotionId || null,
+      opponentId: opponent.id,
       matchType,
-      bookedWinner,
       feudId,
     };
 
@@ -3014,12 +3084,12 @@ export class ActionPanel {
     gameStateManager.dispatch("ADD_LOG_ENTRY", {
       entry: {
         category: "backstage",
-        text: `📋 Match booked: You vs ${opponentName} (${matchType})${feudText}.`,
+        text: `📋 Match scheduled for next show: You vs ${opponentName} (${matchType})${feudText}.`,
         type: "booker",
       },
     });
 
-    this.renderMatchPreparation(this.currentMatchAction);
+    this.render(gameStateManager.getStateRef(), "match");
   }
 
   /**
@@ -4883,6 +4953,7 @@ export class ActionPanel {
               this.render(gameStateManager.getStateRef(), "career");
             }
           },
+          { costsAction: false },
         );
         this.container.appendChild(renewalOfferCard);
 
@@ -4902,6 +4973,7 @@ export class ActionPanel {
             });
             this.render(gameStateManager.getStateRef(), "career");
           },
+          { costsAction: false },
         );
         declineRenewalCard.style.borderLeft = "3px solid #f44336";
         this.container.appendChild(declineRenewalCard);
@@ -4931,6 +5003,7 @@ export class ActionPanel {
           }
           this.render(gameStateManager.getStateRef(), "career");
         },
+        { costsAction: false },
       );
       leaveCard.style.borderLeft = "3px solid #ff9800";
       this.container.appendChild(leaveCard);
@@ -5238,6 +5311,7 @@ export class ActionPanel {
         }
         this.render(gameStateManager.getStateRef(), "career");
       },
+      { costsAction: false },
     );
     acceptCard.style.borderLeft = "3px solid #4caf50";
     this.container.appendChild(acceptCard);
@@ -5264,6 +5338,7 @@ export class ActionPanel {
         });
         this.renderContractOffer(player, promotion, this.currentOffer);
       },
+      { costsAction: false },
     );
     this.container.appendChild(negotiateCard);
 
@@ -5288,6 +5363,7 @@ export class ActionPanel {
         });
         this.renderContractOffer(player, promotion, this.currentOffer);
       },
+      { costsAction: false },
     );
     this.container.appendChild(negotiateLengthCard);
 
@@ -5312,6 +5388,7 @@ export class ActionPanel {
         });
         this.renderContractOffer(player, promotion, this.currentOffer);
       },
+      { costsAction: false },
     );
     this.container.appendChild(negotiateMerchCard);
 
@@ -5335,6 +5412,7 @@ export class ActionPanel {
         });
         this.renderContractOffer(player, promotion, this.currentOffer);
       },
+      { costsAction: false },
     );
     this.container.appendChild(negotiateCreativeCard);
 
@@ -5362,6 +5440,7 @@ export class ActionPanel {
         });
         this.renderContractOffer(player, promotion, this.currentOffer);
       },
+      { costsAction: false },
     );
     this.container.appendChild(negotiateInjuryCard);
 
@@ -5386,6 +5465,7 @@ export class ActionPanel {
         });
         this.renderContractOffer(player, promotion, this.currentOffer);
       },
+      { costsAction: false },
     );
     this.container.appendChild(negotiateDatesCard);
 
@@ -5427,6 +5507,7 @@ export class ActionPanel {
         }
         this.renderContractOffer(player, promotion, this.currentOffer);
       },
+      { costsAction: false },
     );
     this.container.appendChild(negotiateTitleRunCard);
 
@@ -5449,6 +5530,7 @@ export class ActionPanel {
         this.careerView = "browser";
         this.renderPromotionBrowser(player);
       },
+      { costsAction: false },
     );
     declineCard.style.borderLeft = "3px solid #f44336";
     this.container.appendChild(declineCard);

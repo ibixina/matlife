@@ -51,18 +51,22 @@ export class MatchResultProcessor {
 
     // 7. Handle Feud Escalation if this is a feud match
     if (matchResult.feudId) {
-      DynamicFeudSystem.escalateAfterMatch(
-        matchResult.feudId,
-        matchRating,
-        matchResult,
-      );
+      DynamicFeudSystem.escalateAfterMatch(matchResult.feudId, matchRating, {
+        ...matchResult,
+        winnerId: winner.id,
+        loserId: loser.id,
+      });
     } else {
       // Check if there's an active feud between these wrestlers
       const feudId = [winner.id, loser.id].sort().join("_");
       const state = gameStateManager.getStateRef();
       const feud = state.feuds.get(feudId);
       if (feud && !feud.resolved) {
-        DynamicFeudSystem.escalateAfterMatch(feudId, matchRating, matchResult);
+        DynamicFeudSystem.escalateAfterMatch(feudId, matchRating, {
+          ...matchResult,
+          winnerId: winner.id,
+          loserId: loser.id,
+        });
       }
     }
 

@@ -4,27 +4,27 @@
  * Background world tick processing
  */
 
-import { gameStateManager } from '../core/GameStateManager.js';
-import { gameCalendar } from '../core/GameCalendar.js';
-import TagEngine from './TagEngine.js';
-import InjuryEngine from './InjuryEngine.js';
-import FinancialEngine from './FinancialEngine.js';
-import RelationshipManager from './RelationshipManager.js';
-import ResolutionEngine from './ResolutionEngine.js';
-import SocialMediaSystem from './SocialMediaSystem.js';
-import LifestyleEngine from './LifestyleEngine.js';
-import WellnessEngine from './WellnessEngine.js';
-import ContractEngine from './ContractEngine.js';
-import TrainingSystem from './TrainingSystem.js';
-import AIPromotionSystem from './AIPromotionSystem.js';
-import DynamicFeudSystem from './DynamicFeudSystem.js';
-import CardPositionSystem from './CardPositionSystem.js';
-import ChampionshipSystem from './ChampionshipSystem.js';
-import StorylineManager from './StorylineManager.js';
-import PerkSystem from './PerkSystem.js';
-import AgingEngine from './AgingEngine.js';
-import EntityFactory from '../core/EntityFactory.js';
-import { rollD20, randomInt } from '../core/Utils.js';
+import { gameStateManager } from "../core/GameStateManager.js";
+import { gameCalendar } from "../core/GameCalendar.js";
+import TagEngine from "./TagEngine.js";
+import InjuryEngine from "./InjuryEngine.js";
+import FinancialEngine from "./FinancialEngine.js";
+import RelationshipManager from "./RelationshipManager.js";
+import ResolutionEngine from "./ResolutionEngine.js";
+import SocialMediaSystem from "./SocialMediaSystem.js";
+import LifestyleEngine from "./LifestyleEngine.js";
+import WellnessEngine from "./WellnessEngine.js";
+import ContractEngine from "./ContractEngine.js";
+import TrainingSystem from "./TrainingSystem.js";
+import AIPromotionSystem from "./AIPromotionSystem.js";
+import DynamicFeudSystem from "./DynamicFeudSystem.js";
+import CardPositionSystem from "./CardPositionSystem.js";
+import ChampionshipSystem from "./ChampionshipSystem.js";
+import StorylineManager from "./StorylineManager.js";
+import PerkSystem from "./PerkSystem.js";
+import AgingEngine from "./AgingEngine.js";
+import EntityFactory from "../core/EntityFactory.js";
+import { rollD20, randomInt } from "../core/Utils.js";
 
 /**
  * WorldSimulator - The master "advance the world" function
@@ -60,20 +60,25 @@ export class WorldSimulator {
         // Process finances for player
         const player = gameStateManager.getPlayerEntity();
         if (player) {
-          const financialReport = FinancialEngine.processWeeklyFinances(player, state);
+          const financialReport = FinancialEngine.processWeeklyFinances(
+            player,
+            state,
+          );
 
           // Log financial summary
           if (financialReport) {
-            const netChangeText = financialReport.netChange >= 0 ?
-              `+$${financialReport.netChange}` : `-$${Math.abs(financialReport.netChange)}`;
+            const netChangeText =
+              financialReport.netChange >= 0
+                ? `+$${financialReport.netChange}`
+                : `-$${Math.abs(financialReport.netChange)}`;
 
-            gameStateManager.dispatch('ADD_LOG_ENTRY', {
+            gameStateManager.dispatch("ADD_LOG_ENTRY", {
               entry: {
-                category: 'system',
+                category: "system",
                 text: `Weekly Financial Summary: Income $${financialReport.totalIncome}, Expenses $${financialReport.totalExpenses}, Net ${netChangeText}. Balance: $${financialReport.newBalance}`,
-                type: 'financial',
-                financialReport
-              }
+                type: "financial",
+                financialReport,
+              },
             });
           }
         }
@@ -107,7 +112,7 @@ export class WorldSimulator {
           TrainingSystem.resetWeeklyCounter(entity);
 
           // Random wellness test if under contract
-          const contract = entity.getComponent('contract');
+          const contract = entity.getComponent("contract");
           if (contract?.promotionId) {
             const promotion = state.promotions.get(contract.promotionId);
             if (promotion) {
@@ -119,15 +124,18 @@ export class WorldSimulator {
           PerkSystem.checkAndUnlockPerks(entity);
 
           // Reset weekly match counter
-          const careerStats = entity.getComponent('careerStats');
+          const careerStats = entity.getComponent("careerStats");
           if (careerStats) {
             careerStats.matchesThisWeek = 0;
           }
 
           // Weekly stamina recovery max restoration (restore 20 points each week)
-          const physicalStats = entity.getComponent('physicalStats');
+          const physicalStats = entity.getComponent("physicalStats");
           if (physicalStats && physicalStats.staminaRecoveryMax !== undefined) {
-            physicalStats.staminaRecoveryMax = Math.min(100, physicalStats.staminaRecoveryMax + 20);
+            physicalStats.staminaRecoveryMax = Math.min(
+              100,
+              physicalStats.staminaRecoveryMax + 20,
+            );
           }
         }
 
@@ -158,7 +166,7 @@ export class WorldSimulator {
       // 5. Check for show days and queue matches/promos
       const player = gameStateManager.getPlayerEntity();
       if (player) {
-        const playerContract = player.getComponent('contract');
+        const playerContract = player.getComponent("contract");
         if (playerContract && playerContract.promotionId) {
           const promotion = state.promotions.get(playerContract.promotionId);
           if (promotion && gameCalendar.isShowDay(promotion)) {
@@ -172,12 +180,12 @@ export class WorldSimulator {
       }
 
       // 6. Log the day passage
-      gameStateManager.dispatch('ADD_LOG_ENTRY', {
+      gameStateManager.dispatch("ADD_LOG_ENTRY", {
         entry: {
-          category: 'system',
+          category: "system",
           text: `Advanced to ${gameCalendar.getCurrentDate()}`,
-          type: 'time'
-        }
+          type: "time",
+        },
       });
     } finally {
       gameStateManager.endBatch();
@@ -193,16 +201,20 @@ export class WorldSimulator {
    * @param {string} matchType - Type of match
    * @returns {object} Match result
    */
-  static simulateNPCMatch(wrestler1, wrestler2, matchType = 'Standard Singles') {
+  static simulateNPCMatch(
+    wrestler1,
+    wrestler2,
+    matchType = "Standard Singles",
+  ) {
     // Get highest relevant stat for each wrestler
     const getHighestStat = (wrestler) => {
-      const inRingStats = wrestler.getComponent('inRingStats');
+      const inRingStats = wrestler.getComponent("inRingStats");
       if (!inRingStats) return 10;
 
       return Math.max(
         inRingStats.brawling,
         inRingStats.technical,
-        inRingStats.aerial
+        inRingStats.aerial,
       );
     };
 
@@ -212,12 +224,12 @@ export class WorldSimulator {
     // Contested roll
     const contestedResult = ResolutionEngine.resolveContested({
       actor: wrestler1,
-      actorStat: 'brawling',
+      actorStat: "brawling",
       target: wrestler2,
-      targetStat: 'brawling'
+      targetStat: "brawling",
     });
 
-    const winner = contestedResult.winner === 'actor' ? wrestler1 : wrestler2;
+    const winner = contestedResult.winner === "actor" ? wrestler1 : wrestler2;
     const loser = winner === wrestler1 ? wrestler2 : wrestler1;
 
     // Update records
@@ -233,7 +245,7 @@ export class WorldSimulator {
       loser,
       matchRating,
       duration: randomInt(5, 25),
-      contestedResult
+      contestedResult,
     };
   }
 
@@ -248,13 +260,13 @@ export class WorldSimulator {
 
       // Log healed injuries
       for (const bodyPart of healedParts) {
-        const identity = entity.getComponent('identity');
-        gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        const identity = entity.getComponent("identity");
+        gameStateManager.dispatch("ADD_LOG_ENTRY", {
           entry: {
-            category: 'injury',
-            text: `${identity?.name || 'Unknown'} has recovered from their ${bodyPart} injury`,
-            entityId: entity.id
-          }
+            category: "injury",
+            text: `${identity?.name || "Unknown"} has recovered from their ${bodyPart} injury`,
+            entityId: entity.id,
+          },
         });
       }
     }
@@ -280,7 +292,7 @@ export class WorldSimulator {
    */
   static _processDailyStaminaRecovery(state) {
     for (const entity of state.entities.values()) {
-      const physicalStats = entity.getComponent('physicalStats');
+      const physicalStats = entity.getComponent("physicalStats");
       if (!physicalStats) continue;
 
       // Initialize recovery tracking if not present
@@ -302,7 +314,7 @@ export class WorldSimulator {
       } else if (currentStamina >= recoveryMax - 5) {
         // If stamina is near the recovery max, count as a rest day
         physicalStats.daysSinceFullRest++;
-        
+
         // After 2 days of rest, start restoring recovery max
         if (physicalStats.daysSinceFullRest >= 2) {
           physicalStats.staminaRecoveryMax = Math.min(100, recoveryMax + 10);
@@ -317,7 +329,7 @@ export class WorldSimulator {
       let recoveryAmount;
       const targetStamina = physicalStats.staminaRecoveryMax;
       const staminaDeficit = targetStamina - currentStamina;
-      
+
       if (staminaDeficit > 50) {
         // Large deficit: recover 40% of the way to target
         recoveryAmount = Math.floor(staminaDeficit * 0.4);
@@ -330,7 +342,10 @@ export class WorldSimulator {
       }
 
       // Apply recovery
-      physicalStats.stamina = Math.min(targetStamina, currentStamina + recoveryAmount);
+      physicalStats.stamina = Math.min(
+        targetStamina,
+        currentStamina + recoveryAmount,
+      );
     }
   }
 
@@ -346,7 +361,7 @@ export class WorldSimulator {
 
     // Re-add contracted wrestlers
     for (const entity of state.entities.values()) {
-      const contract = entity.getComponent('contract');
+      const contract = entity.getComponent("contract");
       if (!contract?.promotionId) continue;
       const promotion = state.promotions.get(contract.promotionId);
       if (promotion) {
@@ -385,8 +400,9 @@ export class WorldSimulator {
       return null;
     }
 
-    const contract = player.getComponent('contract');
+    const contract = player.getComponent("contract");
     if (!contract) return null;
+    const isBigShow = this._isBigShowWeek(promotion, state);
 
     // Enforce per-month dates from contract terms
     const monthKey = `${state.calendar.year}-${state.calendar.month}`;
@@ -394,16 +410,36 @@ export class WorldSimulator {
       contract.bookedDatesMonthKey = monthKey;
       contract.bookedDatesThisMonth = 0;
       contract.datesCapNotifiedMonthKey = null;
+      contract.bigShowReserveNotifiedMonthKey = null;
     }
     const maxDates = Math.max(1, contract.datesPerMonth || 4);
+    const reserveBigShowDate = maxDates < 4;
+    const reservedDates = reserveBigShowDate ? 1 : 0;
+    const nonBigShowCap = Math.max(0, maxDates - reservedDates);
+    const bookedDates = contract.bookedDatesThisMonth || 0;
+
+    if (reserveBigShowDate && !isBigShow && bookedDates >= nonBigShowCap) {
+      if (contract.bigShowReserveNotifiedMonthKey !== monthKey) {
+        gameStateManager.dispatch("ADD_LOG_ENTRY", {
+          entry: {
+            category: "contract",
+            text: `📅 Contract schedule reserved 1 date for this month's big show (${maxDates} dates/month).`,
+            type: "contract",
+          },
+        });
+        contract.bigShowReserveNotifiedMonthKey = monthKey;
+      }
+      return null;
+    }
+
     if ((contract.bookedDatesThisMonth || 0) >= maxDates) {
       if (contract.datesCapNotifiedMonthKey !== monthKey) {
-        gameStateManager.dispatch('ADD_LOG_ENTRY', {
+        gameStateManager.dispatch("ADD_LOG_ENTRY", {
           entry: {
-            category: 'contract',
+            category: "contract",
             text: `📅 Contract date limit reached (${maxDates}/${maxDates}) for this month. You're off this show.`,
-            type: 'contract'
-          }
+            type: "contract",
+          },
         });
         contract.datesCapNotifiedMonthKey = monthKey;
       }
@@ -412,15 +448,15 @@ export class WorldSimulator {
 
     // Find opponents from roster
     let opponents = rosterIds
-      .filter(id => id !== player.id)
-      .map(id => state.entities.get(id))
-      .filter(e => e);
+      .filter((id) => id !== player.id)
+      .map((id) => state.entities.get(id))
+      .filter((e) => e);
 
     // If no opponents on roster, generate one
     if (opponents.length === 0) {
-      const npc = EntityFactory.generateRandomIndie(promotion.region || 'USA');
-      gameStateManager.dispatch('ADD_ENTITY', { entity: npc });
-      const npcContract = npc.getComponent('contract');
+      const npc = EntityFactory.generateRandomIndie(promotion.region || "USA");
+      gameStateManager.dispatch("ADD_ENTITY", { entity: npc });
+      const npcContract = npc.getComponent("contract");
       if (npcContract) {
         npcContract.promotionId = promotion.id;
         npcContract.weeklySalary = 100;
@@ -432,27 +468,94 @@ export class WorldSimulator {
     }
 
     let opponent = opponents[randomInt(0, opponents.length - 1)];
+    let feudId = null;
 
     // Pick match type based on card position and randomness
-    const matchTypes = ['Standard Singles', 'No DQ', 'Submission Match', 'Falls Count Anywhere', 'Iron Man'];
-    const matchType = matchTypes[randomInt(0, Math.min(1, matchTypes.length - 1))]; // mostly standard
+    const matchTypes = [
+      "Standard Singles",
+      "No DQ",
+      "Submission Match",
+      "Falls Count Anywhere",
+      "Iron Man",
+    ];
+    let matchType =
+      matchTypes[randomInt(0, Math.min(1, matchTypes.length - 1))]; // mostly standard
 
     // Determine booked winner (Scripted outcome)
-    const playerOverness = player.getComponent('popularity')?.overness || 0;
-    const opponentOverness = opponent.getComponent('popularity')?.overness || 0;
-    const winChance = 0.5 + (playerOverness - opponentOverness) / 200;
-    let bookedWinnerId = Math.random() < winChance ? player.id : opponent.id;
+    let bookedWinnerId = null;
     let isTitleMatch = false;
     let titleId = null;
 
-    if (contract?.pendingTitleShot) {
+    // If player has an active feud in this promotion, feud matches take priority.
+    const activeFeudOpponentId = DynamicFeudSystem.getActiveFeudOpponent(
+      player.id,
+    );
+    if (activeFeudOpponentId && rosterIds.includes(activeFeudOpponentId)) {
+      const feudOpponent = state.entities.get(activeFeudOpponentId);
+      if (feudOpponent) {
+        opponent = feudOpponent;
+        feudId = [player.id, activeFeudOpponentId].sort().join("_");
+        const feudTypes = DynamicFeudSystem.getFeudMatchTypes(feudId);
+        if (feudTypes?.length) {
+          matchType = feudTypes[randomInt(0, feudTypes.length - 1)];
+        }
+      }
+    }
+
+    // Allow manual booking from feud/match selector to schedule next show.
+    const scheduledMatch = state.eventFlags?.__scheduledPlayerMatch;
+    if (scheduledMatch && scheduledMatch.promotionId === promotion.id) {
+      const scheduledOpponentId = scheduledMatch.opponentId;
+      const scheduledOpponent = state.entities.get(scheduledOpponentId);
+      const activeFeudLocked =
+        !!activeFeudOpponentId && activeFeudOpponentId !== scheduledOpponentId;
+
+      if (
+        !activeFeudLocked &&
+        scheduledOpponent &&
+        rosterIds.includes(scheduledOpponentId)
+      ) {
+        opponent = scheduledOpponent;
+        matchType = scheduledMatch.matchType || matchType;
+        feudId = scheduledMatch.feudId || feudId;
+      }
+      delete state.eventFlags.__scheduledPlayerMatch;
+    }
+
+    // Big-show title feud rule:
+    // If this is a championship-related feud in blowoff/bloodfeud phase,
+    // book it as a title match only on big shows.
+    if (feudId) {
+      const feud = state.feuds.get(feudId);
+      const isBigFeudPhase =
+        feud?.phase === "blowoff" || feud?.phase === "bloodfeud";
+      if (isBigFeudPhase && isBigShow) {
+        const feudTitle = this._findFeudChampionship(
+          state,
+          promotion.id,
+          player.id,
+          opponent.id,
+        );
+        if (feudTitle) {
+          isTitleMatch = true;
+          titleId = feudTitle.id || feudTitle._id || null;
+        }
+      }
+    }
+
+    if (!feudId && contract?.pendingTitleShot) {
       // Find a championship to contest
-      const championships = ChampionshipSystem.getPromotionChampionships(promotion.id);
+      const championships = ChampionshipSystem.getPromotionChampionships(
+        promotion.id,
+      );
       if (championships.length > 0) {
         // Find best championship (most prestigious) where current champion is not player
         const stateRef = gameStateManager.getStateRef();
         const availableTitles = championships
-          .filter(c => c && (!c.currentChampionId || c.currentChampionId !== player.id))
+          .filter(
+            (c) =>
+              c && (!c.currentChampionId || c.currentChampionId !== player.id),
+          )
           .sort((a, b) => b.prestige - a.prestige);
 
         if (availableTitles.length > 0) {
@@ -465,9 +568,9 @@ export class WorldSimulator {
 
           if (!champ) {
             const rosterOpponents = (promotion.roster || [])
-              .filter(id => id !== player.id)
-              .map(id => stateRef.entities.get(id))
-              .filter(e => e);
+              .filter((id) => id !== player.id)
+              .map((id) => stateRef.entities.get(id))
+              .filter((e) => e);
 
             if (rosterOpponents.length > 0) {
               champ = rosterOpponents[randomInt(0, rosterOpponents.length - 1)];
@@ -486,55 +589,71 @@ export class WorldSimulator {
     }
 
     // If player is champion, proactively book defenses sometimes.
-    if (!isTitleMatch) {
+    if (!isTitleMatch && !feudId) {
       const playerTitles = [];
-      for (const [championshipId, championship] of state.championships.entries()) {
+      for (const [
+        championshipId,
+        championship,
+      ] of state.championships.entries()) {
         if (championship.promotionId !== promotion.id) continue;
         if (championship.currentChampion !== player.id) continue;
-        playerTitles.push({ id: championship.id || championshipId, ...championship });
+        playerTitles.push({
+          id: championship.id || championshipId,
+          ...championship,
+        });
       }
 
       if (playerTitles.length > 0) {
-        const hasUndefendedTitle = playerTitles.some(t => {
+        const hasUndefendedTitle = playerTitles.some((t) => {
           const reign = t.reigns?.[t.reigns.length - 1];
           return !reign || (reign.defenses || 0) === 0;
         });
         const defenseChance = hasUndefendedTitle ? 0.85 : 0.45;
 
         if (Math.random() < defenseChance) {
-          const sortedTitles = [...playerTitles].sort((a, b) => (b.prestige || 0) - (a.prestige || 0));
+          const sortedTitles = [...playerTitles].sort(
+            (a, b) => (b.prestige || 0) - (a.prestige || 0),
+          );
           const title = sortedTitles[0];
 
           // Pick strongest available contender (avoid recently faced opponents)
           const contenders = (promotion.roster || [])
-            .filter(id => id !== player.id)
-            .map(id => state.entities.get(id))
-            .filter(e => e);
+            .filter((id) => id !== player.id)
+            .map((id) => state.entities.get(id))
+            .filter((e) => e);
 
           // Get recent opponents from contract history
           const recentOpponents = contract.recentOpponents || [];
 
           if (contenders.length > 0) {
             // Filter out recent opponents, prioritize those not recently faced
-            let availableContenders = contenders.filter(c => !recentOpponents.includes(c.id));
-            
+            let availableContenders = contenders.filter(
+              (c) => !recentOpponents.includes(c.id),
+            );
+
             // If all have been faced recently, allow repeats but shuffle for variety
             if (availableContenders.length === 0) {
               availableContenders = contenders;
             }
-            
+
             availableContenders.sort((a, b) => {
-              const popA = a.getComponent('popularity')?.overness || 0;
-              const popB = b.getComponent('popularity')?.overness || 0;
+              const popA = a.getComponent("popularity")?.overness || 0;
+              const popB = b.getComponent("popularity")?.overness || 0;
               return popB - popA;
             });
-            
+
             // Pick random from top 3 to add variety
-            const topContenders = availableContenders.slice(0, Math.min(3, availableContenders.length));
+            const topContenders = availableContenders.slice(
+              0,
+              Math.min(3, availableContenders.length),
+            );
             opponent = topContenders[randomInt(0, topContenders.length - 1)];
-            
+
             // Track this opponent
-            contract.recentOpponents = [...(contract.recentOpponents || []), opponent.id].slice(-10);
+            contract.recentOpponents = [
+              ...(contract.recentOpponents || []),
+              opponent.id,
+            ].slice(-10);
           }
 
           isTitleMatch = true;
@@ -545,18 +664,184 @@ export class WorldSimulator {
       }
     }
 
+    // Final scripted outcome should use the final selected opponent.
+    if (bookedWinnerId == null) {
+      const playerOverness = player.getComponent("popularity")?.overness || 0;
+      const opponentOverness =
+        opponent.getComponent("popularity")?.overness || 0;
+      const winChance = 0.5 + (playerOverness - opponentOverness) / 200;
+      bookedWinnerId = Math.random() < winChance ? player.id : opponent.id;
+    }
+
     contract.bookedDatesThisMonth = (contract.bookedDatesThisMonth || 0) + 1;
 
     return {
-      type: 'match',
+      type: "match",
       player,
       opponent,
       promotion,
       matchType,
-      bookedWinner: bookedWinnerId === player.id ? 'wrestler1' : 'wrestler2',
+      bookedWinner: bookedWinnerId === player.id ? "wrestler1" : "wrestler2",
       isTitleMatch,
-      titleId
+      titleId,
+      feudId,
+      isBigShow,
     };
+  }
+
+  static _isBigShowWeek(promotion, state) {
+    if (gameCalendar.isPLEWeek(promotion)) return true;
+    return state?.calendar?.week === 4;
+  }
+
+  static _findFeudChampionship(state, promotionId, playerId, opponentId) {
+    const feudTitles = [];
+    for (const [
+      championshipId,
+      championship,
+    ] of state.championships.entries()) {
+      if (championship.promotionId !== promotionId) continue;
+      const champId = championship.currentChampion;
+      if (champId !== playerId && champId !== opponentId) continue;
+      feudTitles.push({ ...championship, _id: championshipId });
+    }
+
+    if (feudTitles.length === 0) return null;
+    feudTitles.sort((a, b) => (b.prestige || 0) - (a.prestige || 0));
+    return feudTitles[0];
+  }
+
+  static _getChampionSetForPromotion(state, promotionId) {
+    const champions = new Set();
+    for (const championship of state.championships.values()) {
+      if (championship.promotionId !== promotionId) continue;
+      if (!championship.currentChampion) continue;
+      champions.add(championship.currentChampion);
+    }
+    return champions;
+  }
+
+  static _estimateProjectedMatchQuality(player, opponent, affinity = 0) {
+    const statsA = player.getComponent("inRingStats");
+    const statsB = opponent.getComponent("inRingStats");
+    const popA = player.getComponent("popularity");
+    const popB = opponent.getComponent("popularity");
+
+    const avgRingA = statsA
+      ? (statsA.brawling +
+          statsA.technical +
+          statsA.aerial +
+          statsA.psychology) /
+        4
+      : 40;
+    const avgRingB = statsB
+      ? (statsB.brawling +
+          statsB.technical +
+          statsB.aerial +
+          statsB.psychology) /
+        4
+      : 40;
+    const overA = popA?.overness || 0;
+    const overB = popB?.overness || 0;
+    const inRingBlend = avgRingA * 0.5 + avgRingB * 0.5;
+    const overnessBlend = overA * 0.5 + overB * 0.5;
+
+    // Closer skill levels generally produce better back-and-forth matches.
+    const parityPenalty = Math.abs(avgRingA - avgRingB) * 0.35;
+    const chemistryBoost = Math.min(
+      15,
+      Math.max(0, 10 - Math.abs(affinity) / 10),
+    );
+
+    const raw =
+      inRingBlend * 0.7 + overnessBlend * 0.3 - parityPenalty + chemistryBoost;
+    return Math.max(0, Math.min(100, raw));
+  }
+
+  static _estimateRingChemistry(player, opponent) {
+    const statsA = player.getComponent("inRingStats");
+    const statsB = opponent.getComponent("inRingStats");
+    if (!statsA || !statsB) return 35;
+
+    const deltas = [
+      Math.abs((statsA.brawling || 0) - (statsB.brawling || 0)),
+      Math.abs((statsA.technical || 0) - (statsB.technical || 0)),
+      Math.abs((statsA.aerial || 0) - (statsB.aerial || 0)),
+      Math.abs((statsA.psychology || 0) - (statsB.psychology || 0)),
+      Math.abs((statsA.selling || 0) - (statsB.selling || 0)),
+    ];
+    const avgDelta = deltas.reduce((sum, d) => sum + d, 0) / deltas.length;
+    return Math.max(0, Math.min(100, 100 - avgDelta));
+  }
+
+  static _scorePlayerFeudCandidate(
+    player,
+    opponent,
+    relationship,
+    championSet,
+    recentFeudOpponents,
+  ) {
+    const affinity = relationship?.affinity ?? 0;
+    const projectedQuality = this._estimateProjectedMatchQuality(
+      player,
+      opponent,
+      affinity,
+    );
+    const chemistry = this._estimateRingChemistry(player, opponent);
+    const heatPotential = Math.max(0, -affinity);
+
+    const playerIsChampion = championSet.has(player.id);
+    const opponentIsChampion = championSet.has(opponent.id);
+    const championshipOpportunity =
+      playerIsChampion || opponentIsChampion
+        ? 100
+        : projectedQuality >= 65
+          ? 35
+          : 10;
+
+    const repeatPenalty = recentFeudOpponents.includes(opponent.id) ? 40 : 0;
+
+    const score =
+      projectedQuality * 0.45 +
+      championshipOpportunity * 0.3 +
+      chemistry * 0.2 +
+      heatPotential * 0.15 -
+      repeatPenalty;
+
+    return {
+      opponent,
+      affinity,
+      projectedQuality,
+      chemistry,
+      championshipOpportunity,
+      score,
+    };
+  }
+
+  static _pickWeightedFeudCandidate(scoredCandidates) {
+    if (!scoredCandidates.length) return null;
+    const top = [...scoredCandidates]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, Math.min(4, scoredCandidates.length));
+    const totalWeight = top.reduce((sum, c) => sum + Math.max(1, c.score), 0);
+    let roll = Math.random() * totalWeight;
+    for (const candidate of top) {
+      roll -= Math.max(1, candidate.score);
+      if (roll <= 0) return candidate;
+    }
+    return top[0];
+  }
+
+  static _buildFeudCause(candidate) {
+    if (candidate.championshipOpportunity >= 95) {
+      return "championship collision course";
+    }
+    if (candidate.affinity <= -45) return "intense rivalry";
+    if (candidate.affinity <= -25) return "building tension";
+    if (candidate.projectedQuality >= 75 && candidate.chemistry >= 70) {
+      return "high-stakes dream match rivalry";
+    }
+    return "competitive rivalry";
   }
 
   /**
@@ -569,7 +854,7 @@ export class WorldSimulator {
       // Skip player's promotion
       const player = gameStateManager.getPlayerEntity();
       if (player) {
-        const playerContract = player.getComponent('contract');
+        const playerContract = player.getComponent("contract");
         if (playerContract?.promotionId === promotion.id) continue;
       }
 
@@ -587,55 +872,96 @@ export class WorldSimulator {
     const player = gameStateManager.getPlayerEntity();
     if (!player) return;
 
-    const playerContract = player.getComponent('contract');
+    const playerContract = player.getComponent("contract");
     if (!playerContract?.promotionId) return;
 
     const promotion = state.promotions.get(playerContract.promotionId);
     if (!promotion?.roster || promotion.roster.length < 4) return;
 
-    // 30% chance to generate a new feud each month
-    if (Math.random() > 0.3) return;
-
     const roster = promotion.roster
-      .map(id => state.entities.get(id))
-      .filter(e => e && e.id !== player.id);
+      .map((id) => state.entities.get(id))
+      .filter((e) => e && e.id !== player.id);
 
-    if (roster.length < 3) return;
+    if (roster.length < 1) return;
+
+    const recentFeudOpponents = (
+      playerContract.recentFeudOpponents || []
+    ).slice(-4);
+    const championSet = this._getChampionSetForPromotion(state, promotion.id);
+
+    // Prioritize ensuring the player is in an active feud.
+    if (!DynamicFeudSystem.hasActiveFeud(player.id)) {
+      const playerCandidates = roster
+        .filter((wrestler) => !DynamicFeudSystem.hasActiveFeud(wrestler.id))
+        .map((wrestler) => {
+          const relationship = RelationshipManager.getRelationship(
+            player.id,
+            wrestler.id,
+          );
+          return this._scorePlayerFeudCandidate(
+            player,
+            wrestler,
+            relationship,
+            championSet,
+            recentFeudOpponents,
+          );
+        });
+
+      if (playerCandidates.length > 0) {
+        const freshCandidates = playerCandidates.filter(
+          (candidate) => !recentFeudOpponents.includes(candidate.opponent.id),
+        );
+        const selectionPool =
+          freshCandidates.length > 0 ? freshCandidates : playerCandidates;
+        const selected = this._pickWeightedFeudCandidate(selectionPool);
+
+        if (selected) {
+          const cause = this._buildFeudCause(selected);
+          DynamicFeudSystem.startFeud(player, selected.opponent, cause);
+          playerContract.recentFeudOpponents = [
+            ...(playerContract.recentFeudOpponents || []),
+            selected.opponent.id,
+          ].slice(-6);
+          return;
+        }
+      }
+    }
+
+    // 30% chance to generate a non-player feud each month
+    if (Math.random() > 0.3 || roster.length < 3) return;
 
     // Find pairs with extreme affinity or create rivalry from exciting matches
     const candidates = [];
 
     for (let i = 0; i < roster.length; i++) {
       for (let j = i + 1; j < roster.length; j++) {
-        const relationship = RelationshipManager.getRelationship(roster[i].id, roster[j].id);
+        const relationship = RelationshipManager.getRelationship(
+          roster[i].id,
+          roster[j].id,
+        );
 
         // Start feud if affinity is very negative
         if (relationship && relationship.affinity <= -30) {
-          const feudId = [roster[i].id, roster[j].id].sort().join('_');
+          const feudId = [roster[i].id, roster[j].id].sort().join("_");
           if (!state.feuds.has(feudId)) {
-            candidates.push({ wrestlers: [roster[i], roster[j]], affinity: relationship.affinity });
+            candidates.push({
+              wrestlers: [roster[i], roster[j]],
+              affinity: relationship.affinity,
+            });
           }
-        }
-      }
-    }
-
-    // Also check player relationships - high heat can start feuds
-    for (const wrestler of roster) {
-      const playerRel = RelationshipManager.getRelationship(player.id, wrestler.id);
-      if (playerRel && playerRel.affinity <= -40) {
-        const feudId = [player.id, wrestler.id].sort().join('_');
-        if (!state.feuds.has(feudId)) {
-          candidates.push({ wrestlers: [player, wrestler], affinity: playerRel.affinity });
         }
       }
     }
 
     if (candidates.length > 0) {
       const selected = candidates[randomInt(0, candidates.length - 1)];
-      const cause = selected.affinity < -50 
-        ? ' intense rivalry' 
-        : 'building tension';
-      DynamicFeudSystem.startFeud(selected.wrestlers[0], selected.wrestlers[1], cause);
+      const cause =
+        selected.affinity < -50 ? "intense rivalry" : "building tension";
+      DynamicFeudSystem.startFeud(
+        selected.wrestlers[0],
+        selected.wrestlers[1],
+        cause,
+      );
     }
   }
 
@@ -647,14 +973,14 @@ export class WorldSimulator {
    */
   static _updateMatchRecords(winner, loser) {
     // Update winner
-    const winnerCareer = winner.getComponent('careerStats');
+    const winnerCareer = winner.getComponent("careerStats");
     if (winnerCareer) {
       winnerCareer.totalWins++;
       winnerCareer.consecutiveWins = (winnerCareer.consecutiveWins || 0) + 1;
     }
 
     // Update loser
-    const loserCareer = loser.getComponent('careerStats');
+    const loserCareer = loser.getComponent("careerStats");
     if (loserCareer) {
       loserCareer.totalLosses++;
       loserCareer.consecutiveWins = 0;

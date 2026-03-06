@@ -4,7 +4,7 @@
  * Implements all components from MASTER_PLAN §2.4
  */
 
-import { deepClone } from './Utils.js';
+import { deepClone } from "./Utils.js";
 
 // Base Component class
 export class Component {
@@ -23,7 +23,7 @@ export class Component {
   }
 
   static deserialize(data) {
-    throw new Error('deserialize() must be implemented by subclass');
+    throw new Error("deserialize() must be implemented by subclass");
   }
 }
 
@@ -31,14 +31,14 @@ export class Component {
 export class IdentityComponent extends Component {
   constructor(options = {}) {
     super();
-    this.name = options.name ?? 'Unknown';
+    this.name = options.name ?? "Unknown";
     this.age = options.age ?? 20;
-    this.hometown = options.hometown ?? 'Unknown';
-    this.gender = options.gender ?? 'Unknown';
-    this.gimmick = options.gimmick ?? '';
-    this.alignment = options.alignment ?? 'Face';
-    this.catchphrase = options.catchphrase ?? '';
-    this.entranceStyle = options.entranceStyle ?? 'Simple';
+    this.hometown = options.hometown ?? "Unknown";
+    this.gender = options.gender ?? "Unknown";
+    this.gimmick = options.gimmick ?? "";
+    this.alignment = options.alignment ?? "Face";
+    this.catchphrase = options.catchphrase ?? "";
+    this.entranceStyle = options.entranceStyle ?? "Simple";
   }
 
   static deserialize(data) {
@@ -153,7 +153,7 @@ export class PromotionRecordComponent extends Component {
 
   serialize() {
     return {
-      records: Array.from(this.records.entries())
+      records: Array.from(this.records.entries()),
     };
   }
 
@@ -176,11 +176,14 @@ export class ContractComponent extends Component {
     this.noCompeteWeeks = options.noCompeteWeeks ?? 0;
     this.injuryCoveragePct = options.injuryCoveragePct ?? 0;
     this.datesPerMonth = options.datesPerMonth ?? 4;
-    this.titleOpportunityGuaranteed = options.titleOpportunityGuaranteed ?? false;
-    this.championshipOpportunityWeeks = options.championshipOpportunityWeeks ?? 0;
+    this.titleOpportunityGuaranteed =
+      options.titleOpportunityGuaranteed ?? false;
+    this.championshipOpportunityWeeks =
+      options.championshipOpportunityWeeks ?? 0;
     this.position = options.position ?? null;
     this.negotiatedSalary = options.negotiatedSalary ?? null;
     this.recentOpponents = options.recentOpponents ?? [];
+    this.recentFeudOpponents = options.recentFeudOpponents ?? [];
   }
 
   static deserialize(data) {
@@ -220,7 +223,7 @@ export class PopularityComponent extends Component {
     return {
       overness: this.overness,
       momentum: this.momentum,
-      regionPop: Array.from(this.regionPop.entries())
+      regionPop: Array.from(this.regionPop.entries()),
     };
   }
 
@@ -228,7 +231,7 @@ export class PopularityComponent extends Component {
     return new PopularityComponent({
       overness: data.overness,
       momentum: data.momentum,
-      regionPop: data.regionPop
+      regionPop: data.regionPop,
     });
   }
 }
@@ -238,7 +241,7 @@ export class SocialMediaComponent extends Component {
   constructor(options = {}) {
     super();
     this.followers = options.followers ?? 0;
-    this.postFrequency = options.postFrequency ?? 'never';
+    this.postFrequency = options.postFrequency ?? "never";
     this.scandalRisk = options.scandalRisk ?? 0;
   }
 
@@ -291,7 +294,7 @@ export class BookerStatsComponent extends Component {
     return {
       creativity: this.creativity,
       strictness: this.strictness,
-      favoritism: Array.from(this.favoritism.entries())
+      favoritism: Array.from(this.favoritism.entries()),
     };
   }
 
@@ -299,7 +302,7 @@ export class BookerStatsComponent extends Component {
     return new BookerStatsComponent({
       creativity: data.creativity,
       strictness: data.strictness,
-      favoritism: data.favoritism
+      favoritism: data.favoritism,
     });
   }
 }
@@ -320,7 +323,7 @@ export const COMPONENT_REGISTRY = {
   socialMedia: SocialMediaComponent,
   lifestyle: LifestyleComponent,
   wellness: WellnessComponent,
-  bookerStats: BookerStatsComponent
+  bookerStats: BookerStatsComponent,
 };
 
 /**
