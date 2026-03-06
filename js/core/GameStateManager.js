@@ -4,7 +4,7 @@
  * Centralized state management with dispatch/subscribe pattern
  */
 
-import { deepClone } from './Utils.js';
+import { deepClone } from "./Utils.js";
 
 /**
  * GameStateManager - Singleton class for centralized state management
@@ -28,47 +28,92 @@ class GameStateManager {
    */
   _initializeActionHandlers() {
     // Entity management
-    this.actionHandlers.set('ADD_ENTITY', this._handleAddEntity.bind(this));
-    this.actionHandlers.set('REMOVE_ENTITY', this._handleRemoveEntity.bind(this));
-    this.actionHandlers.set('UPDATE_COMPONENT', this._handleUpdateComponent.bind(this));
+    this.actionHandlers.set("ADD_ENTITY", this._handleAddEntity.bind(this));
+    this.actionHandlers.set(
+      "REMOVE_ENTITY",
+      this._handleRemoveEntity.bind(this),
+    );
+    this.actionHandlers.set(
+      "UPDATE_COMPONENT",
+      this._handleUpdateComponent.bind(this),
+    );
 
     // Tag management
-    this.actionHandlers.set('ADD_TAG', this._handleAddTag.bind(this));
-    this.actionHandlers.set('REMOVE_TAG', this._handleRemoveTag.bind(this));
+    this.actionHandlers.set("ADD_TAG", this._handleAddTag.bind(this));
+    this.actionHandlers.set("REMOVE_TAG", this._handleRemoveTag.bind(this));
 
     // Time management
-    this.actionHandlers.set('ADVANCE_TIME', this._handleAdvanceTime.bind(this));
+    this.actionHandlers.set("ADVANCE_TIME", this._handleAdvanceTime.bind(this));
 
     // Logging
-    this.actionHandlers.set('ADD_LOG_ENTRY', this._handleAddLogEntry.bind(this));
+    this.actionHandlers.set(
+      "ADD_LOG_ENTRY",
+      this._handleAddLogEntry.bind(this),
+    );
 
     // Relationships
-    this.actionHandlers.set('SET_RELATIONSHIP', this._handleSetRelationship.bind(this));
+    this.actionHandlers.set(
+      "SET_RELATIONSHIP",
+      this._handleSetRelationship.bind(this),
+    );
 
     // Feuds
-    this.actionHandlers.set('ADD_FEUD', this._handleAddFeud.bind(this));
-    this.actionHandlers.set('UPDATE_FEUD', this._handleUpdateFeud.bind(this));
-    this.actionHandlers.set('REMOVE_FEUD', this._handleRemoveFeud.bind(this));
+    this.actionHandlers.set("ADD_FEUD", this._handleAddFeud.bind(this));
+    this.actionHandlers.set("UPDATE_FEUD", this._handleUpdateFeud.bind(this));
+    this.actionHandlers.set("REMOVE_FEUD", this._handleRemoveFeud.bind(this));
 
     // Contracts
-    this.actionHandlers.set('ADD_CONTRACT', this._handleAddContract.bind(this));
-    this.actionHandlers.set('UPDATE_CONTRACT', this._handleUpdateContract.bind(this));
-    this.actionHandlers.set('REMOVE_CONTRACT', this._handleRemoveContract.bind(this));
+    this.actionHandlers.set("ADD_CONTRACT", this._handleAddContract.bind(this));
+    this.actionHandlers.set(
+      "UPDATE_CONTRACT",
+      this._handleUpdateContract.bind(this),
+    );
+    this.actionHandlers.set(
+      "REMOVE_CONTRACT",
+      this._handleRemoveContract.bind(this),
+    );
 
     // Promotions
-    this.actionHandlers.set('ADD_PROMOTION', this._handleAddPromotion.bind(this));
-    this.actionHandlers.set('UPDATE_PROMOTION', this._handleUpdatePromotion.bind(this));
-    this.actionHandlers.set('REMOVE_PROMOTION', this._handleRemovePromotion.bind(this));
+    this.actionHandlers.set(
+      "ADD_PROMOTION",
+      this._handleAddPromotion.bind(this),
+    );
+    this.actionHandlers.set(
+      "UPDATE_PROMOTION",
+      this._handleUpdatePromotion.bind(this),
+    );
+    this.actionHandlers.set(
+      "REMOVE_PROMOTION",
+      this._handleRemovePromotion.bind(this),
+    );
 
     // Championships
-    this.actionHandlers.set('ADD_CHAMPIONSHIP', this._handleAddChampionship.bind(this));
-    this.actionHandlers.set('UPDATE_CHAMPIONSHIP', this._handleUpdateChampionship.bind(this));
-    this.actionHandlers.set('REMOVE_CHAMPIONSHIP', this._handleRemoveChampionship.bind(this));
+    this.actionHandlers.set(
+      "ADD_CHAMPIONSHIP",
+      this._handleAddChampionship.bind(this),
+    );
+    this.actionHandlers.set(
+      "UPDATE_CHAMPIONSHIP",
+      this._handleUpdateChampionship.bind(this),
+    );
+    this.actionHandlers.set(
+      "REMOVE_CHAMPIONSHIP",
+      this._handleRemoveChampionship.bind(this),
+    );
 
     // Storylines
-    this.actionHandlers.set('ADD_STORYLINE', this._handleAddStoryline.bind(this));
-    this.actionHandlers.set('UPDATE_STORYLINE', this._handleUpdateStoryline.bind(this));
-    this.actionHandlers.set('REMOVE_STORYLINE', this._handleRemoveStoryline.bind(this));
+    this.actionHandlers.set(
+      "ADD_STORYLINE",
+      this._handleAddStoryline.bind(this),
+    );
+    this.actionHandlers.set(
+      "UPDATE_STORYLINE",
+      this._handleUpdateStoryline.bind(this),
+    );
+    this.actionHandlers.set(
+      "REMOVE_STORYLINE",
+      this._handleRemoveStoryline.bind(this),
+    );
   }
 
   /**
@@ -128,7 +173,7 @@ class GameStateManager {
     if (this.pendingActions.length > 0) {
       const actions = this.pendingActions;
       this.pendingActions = [];
-      this._notifyListeners('BATCH', { actions });
+      this._notifyListeners("BATCH", { actions });
     }
   }
 
@@ -164,7 +209,7 @@ class GameStateManager {
       try {
         listener(actionType, payload, this.state);
       } catch (error) {
-        console.error('Error in state listener:', error);
+        console.error("Error in state listener:", error);
       }
     }
   }
@@ -182,11 +227,12 @@ class GameStateManager {
         month: config.startMonth ?? 1,
         week: config.startWeek ?? 1,
         day: config.startDay ?? 0, // 0 = Monday
-        absoluteWeek: 0
+        absoluteWeek: 0,
       },
       player: {
         entityId: playerId,
-        mode: config.mode ?? 'WRESTLER' // 'WRESTLER' or 'BOOKER'
+        mode: config.mode ?? "WRESTLER", // 'WRESTLER' or 'BOOKER'
+        promotionId: config.promotionId ?? null,
       },
       entities: new Map(),
       promotions: new Map(),
@@ -199,10 +245,10 @@ class GameStateManager {
       history: [],
       dirtSheets: [],
       settings: {
-        difficulty: config.difficulty ?? 'NORMAL',
+        difficulty: config.difficulty ?? "NORMAL",
         autoAdvance: config.autoAdvance ?? false,
-        nsfwContent: config.nsfwContent ?? true
-      }
+        nsfwContent: config.nsfwContent ?? true,
+      },
     };
 
     if (playerEntity) {
@@ -228,7 +274,9 @@ class GameStateManager {
 
     const component = entity.components.get(componentName);
     if (!component) {
-      throw new Error(`Component not found: ${componentName} on entity ${entityId}`);
+      throw new Error(
+        `Component not found: ${componentName} on entity ${entityId}`,
+      );
     }
 
     // Merge updates into component
@@ -260,7 +308,7 @@ class GameStateManager {
     const logEntry = {
       id: Date.now(),
       timestamp: { ...this.state.calendar },
-      ...entry
+      ...entry,
     };
     this.state.history.push(logEntry);
   }
@@ -276,9 +324,9 @@ class GameStateManager {
         entityA,
         entityB,
         affinity: 0,
-        type: 'professional',
+        type: "professional",
         history: [],
-        ...changes
+        ...changes,
       });
     }
   }
@@ -368,7 +416,7 @@ class GameStateManager {
    * @private
    */
   _getRelationshipKey(idA, idB) {
-    return [idA, idB].sort().join('|');
+    return [idA, idB].sort().join("|");
   }
 
   /**

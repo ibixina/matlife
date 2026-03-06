@@ -27,6 +27,7 @@ import EntityFactory from "../core/EntityFactory.js";
 import ResolutionEngine from "../engine/ResolutionEngine.js";
 import { randomInt } from "../core/Utils.js";
 import { dataManager } from "../core/DataManager.js";
+import BookerView from "./BookerView.js";
 
 /**
  * ActionPanel - Renders the action panel
@@ -46,6 +47,15 @@ export class ActionPanel {
     this.fastForwarding = false;
     this.previousTab = null; // Track previous tab for scroll restoration
     this.defaultDailyActionLimit = 3;
+    this.bookerView = new BookerView(this.container, this.titleEl, (tab) => {
+      const nextTab = tab || this.previousTab || "match";
+      document
+        .querySelectorAll("#nav-bar .nav-btn[data-tab]")
+        .forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.tab === nextTab);
+        });
+      this.render(gameStateManager.getStateRef(), nextTab);
+    });
   }
 
   /**
@@ -55,6 +65,15 @@ export class ActionPanel {
    */
   render(state, currentTab) {
     if (!this.container) {
+      return;
+    }
+
+    if (state?.player?.mode === "BOOKER") {
+      this.currentEvent = null;
+      this.currentMatchAction = null;
+      this.inMatch = false;
+      this.bookerView.render(state, currentTab);
+      this.previousTab = currentTab;
       return;
     }
 

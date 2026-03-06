@@ -25,6 +25,7 @@ import PerkSystem from "./PerkSystem.js";
 import AgingEngine from "./AgingEngine.js";
 import EntityFactory from "../core/EntityFactory.js";
 import { rollD20, randomInt } from "../core/Utils.js";
+import BookerModeEngine from "./BookerModeEngine.js";
 
 /**
  * WorldSimulator - The master "advance the world" function
@@ -161,19 +162,37 @@ export class WorldSimulator {
 
         // Process AI promotions (weekly, not every day)
         this._processAIPromotions(state);
+
+        if (state.player?.mode === "BOOKER") {
+          const playerPromotion = BookerModeEngine.getPlayerPromotion(state);
+          if (playerPromotion) {
+            BookerModeEngine.processWeekly(playerPromotion, state);
+          }
+        }
       }
 
       // 5. Check for show days and queue matches/promos
       const player = gameStateManager.getPlayerEntity();
       if (player) {
-        const playerContract = player.getComponent("contract");
-        if (playerContract && playerContract.promotionId) {
-          const promotion = state.promotions.get(playerContract.promotionId);
-          if (promotion && gameCalendar.isShowDay(promotion)) {
-            // Generate show card
-            const showAction = this._generateShowCard(promotion, player, state);
-            if (showAction) {
-              pendingActions.push(showAction);
+        if (state.player?.mode === "BOOKER") {
+          const playerPromotion = BookerModeEngine.getPlayerPromotion(state);
+          if (playerPromotion) {
+            BookerModeEngine.ensureCurrentShow(playerPromotion, state);
+          }
+        } else {
+          const playerContract = player.getComponent("contract");
+          if (playerContract && playerContract.promotionId) {
+            const promotion = state.promotions.get(playerContract.promotionId);
+            if (promotion && gameCalendar.isShowDay(promotion)) {
+              // Generate show card
+              const showAction = this._generateShowCard(
+                promotion,
+                player,
+                state,
+              );
+              if (showAction) {
+                pendingActions.push(showAction);
+              }
             }
           }
         }

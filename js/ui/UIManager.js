@@ -4,20 +4,21 @@
  * Master renderer and tab switching
  */
 
-import { gameStateManager } from '../core/GameStateManager.js';
-import { gameCalendar } from '../core/GameCalendar.js';
-import { saveLoadManager } from '../engine/SaveLoadManager.js';
-import PlayerInfoPanel from './PlayerInfoPanel.js';
-import EventLogPanel from './EventLogPanel.js';
-import ActionPanel from './ActionPanel.js';
-import NavigationBar from './NavigationBar.js';
+import { gameStateManager } from "../core/GameStateManager.js";
+import { gameCalendar } from "../core/GameCalendar.js";
+import { saveLoadManager } from "../engine/SaveLoadManager.js";
+import BookerModeEngine from "../engine/BookerModeEngine.js";
+import PlayerInfoPanel from "./PlayerInfoPanel.js";
+import EventLogPanel from "./EventLogPanel.js";
+import ActionPanel from "./ActionPanel.js";
+import NavigationBar from "./NavigationBar.js";
 
 /**
  * UIManager - Master UI controller
  */
 export class UIManager {
   constructor() {
-    this.currentTab = 'match';
+    this.currentTab = "match";
     this.unsubscribe = null;
     this.renderScheduled = false;
     this.lastRenderState = null;
@@ -27,7 +28,7 @@ export class UIManager {
       playerInfo: new PlayerInfoPanel(),
       eventLog: new EventLogPanel(),
       actionPanel: new ActionPanel(),
-      navigationBar: new NavigationBar()
+      navigationBar: new NavigationBar(),
     };
   }
 
@@ -36,19 +37,25 @@ export class UIManager {
    */
   init() {
     // Subscribe to state changes
-    this.unsubscribe = gameStateManager.subscribe((actionType, payload, state) => {
-      this.lastRenderState = state;
-      this.lastRenderAction = actionType;
-      this.lastRenderPayload = payload;
+    this.unsubscribe = gameStateManager.subscribe(
+      (actionType, payload, state) => {
+        this.lastRenderState = state;
+        this.lastRenderAction = actionType;
+        this.lastRenderPayload = payload;
 
-      if (!this.renderScheduled) {
-        this.renderScheduled = true;
-        requestAnimationFrame(() => {
-          this.renderScheduled = false;
-          this.render(this.lastRenderState, this.lastRenderAction, this.lastRenderPayload);
-        });
-      }
-    });
+        if (!this.renderScheduled) {
+          this.renderScheduled = true;
+          requestAnimationFrame(() => {
+            this.renderScheduled = false;
+            this.render(
+              this.lastRenderState,
+              this.lastRenderAction,
+              this.lastRenderPayload,
+            );
+          });
+        }
+      },
+    );
 
     // Initialize panels
     this.panels.navigationBar.init(this);
@@ -63,85 +70,96 @@ export class UIManager {
    */
   setupMenuControls() {
     // Menu button
-    const menuBtn = document.getElementById('menu-btn');
-    const menuModal = document.getElementById('menu-modal');
-    const closeMenuBtn = document.getElementById('close-menu');
+    const menuBtn = document.getElementById("menu-btn");
+    const menuModal = document.getElementById("menu-modal");
+    const closeMenuBtn = document.getElementById("close-menu");
 
     if (menuBtn && menuModal) {
-      menuBtn.addEventListener('click', () => {
-        menuModal.classList.remove('hidden');
+      menuBtn.addEventListener("click", () => {
+        menuModal.classList.remove("hidden");
         this.updateSaveStatus();
       });
 
-      closeMenuBtn?.addEventListener('click', () => {
-        menuModal.classList.add('hidden');
+      closeMenuBtn?.addEventListener("click", () => {
+        menuModal.classList.add("hidden");
       });
 
       // Close on backdrop click
-      menuModal.addEventListener('click', (e) => {
+      menuModal.addEventListener("click", (e) => {
         if (e.target === menuModal) {
-          menuModal.classList.add('hidden');
+          menuModal.classList.add("hidden");
         }
       });
     }
 
     // Save button
-    const saveBtn = document.getElementById('save-game-btn');
+    const saveBtn = document.getElementById("save-game-btn");
     if (saveBtn) {
-      saveBtn.addEventListener('click', async () => {
+      saveBtn.addEventListener("click", async () => {
         const success = await saveLoadManager.save();
-        this.showSaveStatus(success ? 'Game saved successfully!' : 'Failed to save game.', success);
+        this.showSaveStatus(
+          success ? "Game saved successfully!" : "Failed to save game.",
+          success,
+        );
       });
     }
 
-     // Load button
-     const loadBtn = document.getElementById('load-game-btn');
-     if (loadBtn) {
-       loadBtn.addEventListener('click', async () => {
-         const success = await saveLoadManager.load();
-         if (success) {
-           this.showSaveStatus('Game loaded successfully!', true);
-           this.showScreen('game-screen');
-           this.render(gameStateManager.getStateRef());
-           // Update NSFW toggle based on loaded settings
-           const nsfwToggle = document.getElementById('nsfw-toggle');
-           if (nsfwToggle) {
-             nsfwToggle.checked = gameStateManager.getStateRef()?.settings?.nsfwContent ?? true;
-           }
-         } else {
-           this.showSaveStatus('No save found or failed to load.', false);
-         }
-       });
-     }
+    // Load button
+    const loadBtn = document.getElementById("load-game-btn");
+    if (loadBtn) {
+      loadBtn.addEventListener("click", async () => {
+        const success = await saveLoadManager.load();
+        if (success) {
+          this.showSaveStatus("Game loaded successfully!", true);
+          this.showScreen("game-screen");
+          this.render(gameStateManager.getStateRef());
+          // Update NSFW toggle based on loaded settings
+          const nsfwToggle = document.getElementById("nsfw-toggle");
+          if (nsfwToggle) {
+            nsfwToggle.checked =
+              gameStateManager.getStateRef()?.settings?.nsfwContent ?? true;
+          }
+        } else {
+          this.showSaveStatus("No save found or failed to load.", false);
+        }
+      });
+    }
 
-     // Delete button
-     const deleteBtn = document.getElementById('delete-save-btn');
-     if (deleteBtn) {
-       deleteBtn.addEventListener('click', async () => {
-         if (confirm('Are you sure you want to delete your save? This cannot be undone.')) {
-           const success = await saveLoadManager.deleteSave();
-           this.showSaveStatus(success ? 'Save deleted.' : 'Failed to delete save.', success);
-         }
-       });
-     }
+    // Delete button
+    const deleteBtn = document.getElementById("delete-save-btn");
+    if (deleteBtn) {
+      deleteBtn.addEventListener("click", async () => {
+        if (
+          confirm(
+            "Are you sure you want to delete your save? This cannot be undone.",
+          )
+        ) {
+          const success = await saveLoadManager.deleteSave();
+          this.showSaveStatus(
+            success ? "Save deleted." : "Failed to delete save.",
+            success,
+          );
+        }
+      });
+    }
 
-     // NSFW toggle
-     const nsfwToggle = document.getElementById('nsfw-toggle');
-     if (nsfwToggle) {
-       // Set initial state based on game settings
-       const currentSettings = gameStateManager.getStateRef()?.settings;
-       nsfwToggle.checked = currentSettings?.nsfwContent ?? true;
+    // NSFW toggle
+    const nsfwToggle = document.getElementById("nsfw-toggle");
+    if (nsfwToggle) {
+      // Set initial state based on game settings
+      const currentSettings = gameStateManager.getStateRef()?.settings;
+      nsfwToggle.checked = currentSettings?.nsfwContent ?? true;
 
-       nsfwToggle.addEventListener('change', (e) => {
-         const isEnabled = e.target.checked;
-         const state = gameStateManager.getStateRef();
-         if (state) {
-           state.settings.nsfwContent = isEnabled;
-           // Re-render to update the action panel
-           this.render(state);
-         }
-       });
-     }
+      nsfwToggle.addEventListener("change", (e) => {
+        const isEnabled = e.target.checked;
+        const state = gameStateManager.getStateRef();
+        if (state) {
+          state.settings.nsfwContent = isEnabled;
+          // Re-render to update the action panel
+          this.render(state);
+        }
+      });
+    }
   }
 
   /**
@@ -150,7 +168,7 @@ export class UIManager {
    */
   async updateSaveStatus() {
     const saveInfo = await saveLoadManager.getSaveInfo();
-    const statusEl = document.getElementById('save-status');
+    const statusEl = document.getElementById("save-status");
 
     if (statusEl) {
       if (saveInfo) {
@@ -162,7 +180,7 @@ export class UIManager {
           </p>
         `;
       } else {
-        statusEl.innerHTML = '<p>No save found</p>';
+        statusEl.innerHTML = "<p>No save found</p>";
       }
     }
   }
@@ -172,9 +190,9 @@ export class UIManager {
    * @private
    */
   showSaveStatus(message, success) {
-    const statusEl = document.getElementById('save-status');
+    const statusEl = document.getElementById("save-status");
     if (statusEl) {
-      statusEl.innerHTML = `<p style="color: ${success ? 'var(--color-health)' : 'var(--color-injury)'}">${message}</p>`;
+      statusEl.innerHTML = `<p style="color: ${success ? "var(--color-health)" : "var(--color-injury)"}">${message}</p>`;
 
       // Update save info after a brief delay
       setTimeout(() => this.updateSaveStatus(), 1500);
@@ -187,6 +205,7 @@ export class UIManager {
    */
   render(state, actionType = null, payload = null) {
     if (!state) return;
+    this.panels.navigationBar.setMode(state.player?.mode || "WRESTLER");
     // Render player info panel
     this.panels.playerInfo.render(state);
 
@@ -220,18 +239,18 @@ export class UIManager {
    */
   showScreen(screenName) {
     // Hide all screens
-    document.querySelectorAll('.screen').forEach(screen => {
-      screen.classList.remove('active');
+    document.querySelectorAll(".screen").forEach((screen) => {
+      screen.classList.remove("active");
     });
 
     // Show requested screen
     const targetScreen = document.getElementById(screenName);
     if (targetScreen) {
-      targetScreen.classList.add('active');
+      targetScreen.classList.add("active");
     }
 
     // If showing game screen, trigger full render
-    if (screenName === 'game-screen') {
+    if (screenName === "game-screen") {
       this.render(gameStateManager.getStateRef());
     }
   }
@@ -241,10 +260,31 @@ export class UIManager {
    * @param {object} state - Current game state
    */
   updateDateDisplay(state) {
-    const dateDisplay = document.getElementById('current-date');
+    const dateDisplay = document.getElementById("current-date");
     if (dateDisplay && state.calendar) {
-      const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      const days = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+      ];
+      const months = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ];
 
       const day = days[state.calendar.day];
       const month = months[state.calendar.month - 1];
@@ -254,15 +294,30 @@ export class UIManager {
       // Check if it's a show day for the player
       const player = gameStateManager.getPlayerEntity();
       if (player) {
-        const contract = player.getComponent('contract');
-        if (contract?.promotionId) {
-          const promotion = state.promotions.get(contract.promotionId);
-          const isShowDay = promotion ? gameCalendar.isShowDay(promotion) : false;
+        if (state.player?.mode === "BOOKER") {
+          const promotion = BookerModeEngine.getPlayerPromotion(state);
+          const isShowDay = promotion
+            ? BookerModeEngine.isCurrentShowDay(promotion, state)
+            : false;
           if (isShowDay) {
-            dateText += ' 📺 SHOW DAY!';
-            dateDisplay.style.color = 'var(--accent-primary)';
+            dateText += " 📺 BOOKED SHOW TONIGHT!";
+            dateDisplay.style.color = "var(--accent-primary)";
           } else {
-            dateDisplay.style.color = '';
+            dateDisplay.style.color = "";
+          }
+        } else {
+          const contract = player.getComponent("contract");
+          if (contract?.promotionId) {
+            const promotion = state.promotions.get(contract.promotionId);
+            const isShowDay = promotion
+              ? gameCalendar.isShowDay(promotion)
+              : false;
+            if (isShowDay) {
+              dateText += " 📺 SHOW DAY!";
+              dateDisplay.style.color = "var(--accent-primary)";
+            } else {
+              dateDisplay.style.color = "";
+            }
           }
         }
       }

@@ -90,4 +90,4 @@ Booker Mode:
   - Booking log and history tracking
   - "What-if" scenarios and alternate timelines
 
-
+The ultimate goal of this is PLAYER FREEDOM and CHOICE AVAILABILITY. There should be nothing that the player wants to do that cannot be done in the game or the that the game doesn't give the option to do.
