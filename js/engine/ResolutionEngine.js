@@ -1,10 +1,8 @@
 /**
  * ResolutionEngine for Mat Life: Wrestling Simulator
  * Step 1.6 of Implementation Plan
- * D20 resolution system with advantage/disadvantage and contested checks
+ * Probability-based resolution system
  */
-
-import { rollD20 } from '../core/Utils.js';
 
 /**
  * Outcome types for resolution
@@ -17,88 +15,108 @@ export const OUTCOME = {
 };
 
 /**
- * ResolutionEngine - Stateless class for resolving D20 checks
+ * ResolutionEngine - Stateless class for resolving action checks
  */
 export class ResolutionEngine {
   /**
-   * Resolves a D20 check
+   * Calculates elite score from an entity's relevant stats
+   * @param {Entity} entity - The entity
+   * @param {string} stat - Primary stat being used
+   * @returns {number} Elite score (0-100)
+   */
+  static calculateEliteScore(entity, stat) {
+    if (!entity || !entity.getComponent) return 50;
+
+    const statValue = this._getStatValue(entity, stat);
+    const popularity = entity.getComponent('popularity');
+    const condition = entity.getComponent('condition');
+    const lifestyle = entity.getComponent('lifestyle');
+
+    // Base from stat (normalized: stat/2, so stat 100 = 50)
+    const statScore = statValue / 2;
+
+    // Overness contribution (0-30)
+    const overnessScore = Math.min(30, (popularity?.overness || 5) / 3.33);
+
+    // Momentum contribution (0-20)
+    const momentumScore = Math.min(20, (popularity?.momentum || 0) / 5);
+
+    // Burnout penalty (0-15)
+    const burnoutPenalty = lifestyle?.burnout ? Math.min(15, lifestyle.burnout / 6.67) : 0;
+
+    // Injury penalty (0-10)
+    let injuryPenalty = 0;
+    if (condition?.injuries && condition.injuries.length > 0) {
+      injuryPenalty = Math.min(10, condition.injuries.reduce((sum, i) => sum + i.severity, 0) * 2);
+    }
+
+    // Calculate total
+    const eliteScore = statScore + overnessScore + momentumScore - burnoutPenalty - injuryPenalty;
+
+    // Clamp to 0-100
+    return Math.max(0, Math.min(100, eliteScore));
+  }
+
+  /**
+   * Calculates success rate from elite score
+   * @param {number} eliteScore - Elite score (0-100)
+   * @returns {number} Success probability (0-100)
+   */
+  static getSuccessRate(eliteScore) {
+    // 0 → 40%, 100 → 95%
+    return 40 + (eliteScore * 0.55);
+  }
+
+  /**
+   * Resolves an action check
    * @param {object} params - Resolution parameters
    * @param {Entity} params.actor - The entity performing the action
-   * @param {string} params.action - Action label (e.g., "Aerial Move", "Cut Promo")
+   * @param {string} params.action - Action label
    * @param {Entity} [params.target] - Optional target entity
-   * @param {string} params.stat - Primary stat name (e.g., "aerial", "micSkills")
-   * @param {number} params.dc - Difficulty Class
-   * @param {object} [params.context] - Context with advantage/disadvantage flags
+   * @param {string} params.stat - Primary stat name
+   * @param {number} params.dc - Difficulty Class (kept for compatibility, not used)
+   * @param {object} [params.context] - Context with bonuses/penalties
    * @returns {ResolutionResult} The resolution result
    */
   static resolve({ actor, action, target, stat, dc, context = {} }) {
-    const { hasAdvantage = false, hasDisadvantage = false, bonuses = [], penalties = [] } = context;
+    const { bonuses = [], penalties = [] } = context;
 
-    // Get stat value from actor
-    const statValue = this._getStatValue(actor, stat);
+    // Calculate elite score
+    let eliteScore = this.calculateEliteScore(actor, stat);
 
-    // Calculate total modifier
+    // Apply bonuses/penalties to elite score
     const bonusSum = bonuses.reduce((sum, b) => sum + b, 0);
     const penaltySum = penalties.reduce((sum, p) => sum + p, 0);
-    const modifier = statValue + bonusSum - penaltySum;
+    eliteScore = Math.max(0, Math.min(100, eliteScore + bonusSum - penaltySum));
 
-    // Check for tag-based advantage/disadvantage
-    let effectiveAdvantage = hasAdvantage;
-    let effectiveDisadvantage = hasDisadvantage;
-
+    // Tag-based modifiers
     if (actor.hasTag && actor.hasTag('[Hot_Streak]')) {
-      effectiveAdvantage = true;
+      eliteScore = Math.min(100, eliteScore + 10);
     }
     if (actor.hasTag && actor.hasTag('[Burned_Out]')) {
-      effectiveDisadvantage = true;
+      eliteScore = Math.max(0, eliteScore - 10);
     }
 
-    // Check for injuries that affect this stat
-    if (actor.hasComponent && actor.hasComponent('condition')) {
-      const condition = actor.getComponent('condition');
-      if (condition.injuries && condition.injuries.length > 0) {
-        const injuryPenalty = this._getInjuryPenalty(actor, stat);
-        if (injuryPenalty > 0) {
-          effectiveDisadvantage = true;
-        }
-      }
-    }
+    // Calculate success rate
+    const successRate = this.getSuccessRate(eliteScore);
 
-    // Cancel out if both advantage and disadvantage
-    if (effectiveAdvantage && effectiveDisadvantage) {
-      effectiveAdvantage = false;
-      effectiveDisadvantage = false;
-    }
-
-    // Roll the die
-    let roll;
-    if (effectiveAdvantage) {
-      roll = Math.max(rollD20(), rollD20());
-    } else if (effectiveDisadvantage) {
-      roll = Math.min(rollD20(), rollD20());
-    } else {
-      roll = rollD20();
-    }
+    // Roll for outcome (0-100)
+    const roll = Math.random() * 100;
 
     // Determine outcome
     let outcome;
-    if (roll === 1) {
-      outcome = OUTCOME.CRITICAL_FAILURE;
-    } else if (roll === 20) {
-      outcome = OUTCOME.CRITICAL_SUCCESS;
+    if (roll < successRate) {
+      outcome = OUTCOME.SUCCESS;
     } else {
-      const total = roll + modifier;
-      outcome = total >= dc ? OUTCOME.SUCCESS : OUTCOME.FAILURE;
+      outcome = OUTCOME.FAILURE;
     }
 
     return {
       outcome,
+      eliteScore,
+      successRate,
       roll,
-      modifier,
-      total: roll + modifier,
-      dc,
-      hadAdvantage: effectiveAdvantage,
-      hadDisadvantage: effectiveDisadvantage
+      dc
     };
   }
 
@@ -115,150 +133,77 @@ export class ResolutionEngine {
   static resolveContested({ actor, actorStat, target, targetStat, context = {} }) {
     const { actorModifiers = [], targetModifiers = [] } = context;
 
-    // Get stat values
-    const actorStatValue = this._getStatValue(actor, actorStat);
-    const targetStatValue = this._getStatValue(target, targetStat);
+    // Calculate elite scores
+    let actorElite = this.calculateEliteScore(actor, actorStat) + actorModifiers.reduce((sum, m) => sum + m, 0);
+    let targetElite = this.calculateEliteScore(target, targetStat) + targetModifiers.reduce((sum, m) => sum + m, 0);
 
-    // Calculate modifiers
-    const actorMod = actorModifiers.reduce((sum, m) => sum + m, 0);
-    const targetMod = targetModifiers.reduce((sum, m) => sum + m, 0);
+    // Clamp to 0-100
+    actorElite = Math.max(0, Math.min(100, actorElite));
+    targetElite = Math.max(0, Math.min(100, targetElite));
 
-    // Roll for both sides
-    const actorRoll = rollD20();
-    const targetRoll = rollD20();
+    // Get success rates
+    const actorSuccessRate = this.getSuccessRate(actorElite);
+    const targetSuccessRate = this.getSuccessRate(targetElite);
 
-    // Calculate totals
-    const actorTotal = actorRoll + actorStatValue + actorMod;
-    const targetTotal = targetRoll + targetStatValue + targetMod;
+    // Roll for both
+    const actorRoll = Math.random() * 100;
+    const targetRoll = Math.random() * 100;
 
-    // Determine winner
-    const winner = actorTotal >= targetTotal ? 'actor' : 'target';
-    const margin = Math.abs(actorTotal - targetTotal);
+    // Roll for both
+    const actorRoll = Math.random() * 100;
+    const targetRoll = Math.random() * 100;
 
-    // Determine margin category
-    let marginCategory;
-    if (margin <= 3) {
-      marginCategory = 'narrow';
-    } else if (margin <= 7) {
-      marginCategory = 'clear';
-    } else {
-      marginCategory = 'dominant';
-    }
+    // Compare distance into success zone (higher = better outcome)
+    const actorScore = actorSuccessRate - actorRoll;
+    const targetScore = targetSuccessRate - targetRoll;
+    const winner = actorScore > targetScore ? 'actor' : 'target';
 
     return {
       winner,
-      margin,
-      marginCategory,
-      actorTotal,
-      targetTotal,
       actorRoll,
-      targetRoll
+      targetRoll,
+      actorElite,
+      targetElite,
+      actorSuccessRate,
+      targetSuccessRate,
+      actorSuccess,
+      targetSuccess
     };
   }
 
   /**
    * Gets a stat value from an entity
    * @private
-   * @param {Entity} entity - The entity
-   * @param {string} statName - Stat name
-   * @returns {number} Stat value
    */
   static _getStatValue(entity, statName) {
-    if (!entity || !entity.getComponent) return 10; // Default stat value
+    if (!entity || !entity.getComponent) return 10;
 
-    // Map stat names to components
-    const statMappings = {
-      // Physical stats
-      stamina: 'physicalStats',
-      strength: 'physicalStats',
-      resilience: 'physicalStats',
-      speed: 'physicalStats',
-      
-      // In-ring stats
-      brawling: 'inRingStats',
-      technical: 'inRingStats',
-      aerial: 'inRingStats',
-      selling: 'inRingStats',
-      psychology: 'inRingStats',
-      
-      // Entertainment stats
-      charisma: 'entertainmentStats',
-      micSkills: 'entertainmentStats',
-      acting: 'entertainmentStats',
-      
-      // Booker stats
-      creativity: 'bookerStats',
-      strictness: 'bookerStats'
-    };
-
-    const componentName = statMappings[statName];
-    if (!componentName) return 10;
-
-    const component = entity.getComponent(componentName);
-    if (!component) return 10;
-
-    return component[statName] ?? 10;
-  }
-
-  /**
-   * Gets injury penalty for a specific stat
-   * @private
-   * @param {Entity} entity - The entity
-   * @param {string} statName - Stat name
-   * @returns {number} Penalty value
-   */
-  static _getInjuryPenalty(entity, statName) {
-    const condition = entity.getComponent('condition');
-    if (!condition || !condition.injuries) return 0;
-
-    // Map body parts to affected stats
-    const injuryStatMap = {
-      Knee_L: ['aerial', 'speed'],
-      Knee_R: ['aerial', 'speed'],
-      Ankle_L: ['aerial', 'speed'],
-      Ankle_R: ['aerial', 'speed'],
-      Back: ['strength', 'resilience'],
-      Neck: ['brawling', 'resilience'],
-      Shoulder_L: ['strength', 'aerial'],
-      Shoulder_R: ['strength', 'aerial'],
-      Arm_L: ['strength'],
-      Arm_R: ['strength'],
-      Head: ['psychology', 'micSkills'],
-      Ribs: ['stamina', 'resilience']
-    };
-
-    let penalty = 0;
-    for (const injury of condition.injuries) {
-      const affectedStats = injuryStatMap[injury.bodyPart] || [];
-      if (affectedStats.includes(statName)) {
-        penalty += injury.severity; // Severity 1-5 adds penalty
-      }
+    // Physical stats
+    const physicalStats = entity.getComponent('physicalStats');
+    if (physicalStats && statName in physicalStats) {
+      return physicalStats[statName];
     }
 
-    return penalty;
+    // In-ring stats
+    const inRingStats = entity.getComponent('inRingStats');
+    if (inRingStats && statName in inRingStats) {
+      return inRingStats[statName];
+    }
+
+    // Entertainment stats
+    const entertainmentStats = entity.getComponent('entertainmentStats');
+    if (entertainmentStats && statName in entertainmentStats) {
+      return entertainmentStats[statName];
+    }
+
+    // Booker stats
+    const bookerStats = entity.getComponent('bookerStats');
+    if (bookerStats && statName in bookerStats) {
+      return bookerStats[statName];
+    }
+
+    return 10;
   }
 }
-
-/**
- * @typedef {object} ResolutionResult
- * @property {string} outcome - One of OUTCOME values
- * @property {number} roll - The D20 roll
- * @property {number} modifier - Total modifier applied
- * @property {number} total - Roll + modifier
- * @property {number} dc - Difficulty class
- * @property {boolean} hadAdvantage - Whether advantage was applied
- * @property {boolean} hadDisadvantage - Whether disadvantage was applied
- */
-
-/**
- * @typedef {object} ContestedResult
- * @property {string} winner - 'actor' or 'target'
- * @property {number} margin - Difference in totals
- * @property {string} marginCategory - 'narrow', 'clear', or 'dominant'
- * @property {number} actorTotal - Actor's final total
- * @property {number} targetTotal - Target's final total
- * @property {number} actorRoll - Actor's D20 roll
- * @property {number} targetRoll - Target's D20 roll
- */
 
 export default ResolutionEngine;
