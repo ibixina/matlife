@@ -10,14 +10,18 @@ import { deepClone } from '../core/Utils.js';
 import { dataManager } from '../core/DataManager.js';
 import { EntityFactory } from '../core/EntityFactory.js';
 
+const SAVE_SLOTS_KEY = 'mat_life_save_slots';
+const LEGACY_SAVE_KEY = 'mat_life_save';
+const MAX_SAVE_SLOTS = 10;
+
 /**
  * SaveLoadManager - Handles game persistence
  */
 export class SaveLoadManager {
   constructor() {
-    this.storageKey = 'mat_life_save';
     this.autoSaveEnabled = false;
     this.lastSaveTime = null;
+    this.currentSaveSlot = null;
   }
 
   /**
@@ -241,6 +245,261 @@ export class SaveLoadManager {
   }
 
   /**
+   * Gets all save slots
+   * @returns {Promise<Array>} Array of save metadata
+   */
+  async getAllSaves() {
+    try {
+      if (typeof localforage === 'undefined') {
+        return [];
+      }
+      
+      // Check for legacy save and migrate if needed
+      await this._migrateLegacySave();
+
+      const slots = await localforage.getItem(SAVE_SLOTS_KEY);
+      return slots || [];
+    } catch (error) {
+      console.error('Error getting save slots:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Migrates legacy single save to new slot system
+   * @private
+   */
+  async _migrateLegacySave() {
+    try {
+      const legacySave = await localforage.getItem(LEGACY_SAVE_KEY);
+      if (!legacySave) return;
+
+      const existingSlots = await localforage.getItem(SAVE_SLOTS_KEY) || [];
+      
+      // Check if already migrated
+      const alreadyMigrated = existingSlots.some(s => s.isLegacy);
+      if (alreadyMigrated) {
+        await localforage.removeItem(LEGACY_SAVE_KEY);
+        return;
+      }
+
+      const gameMode = legacySave.player?.mode || 'WRESTLER';
+      const playerName = legacySave.entities?.find(e => e.id === legacySave.player?.entityId)?.components?.identity?.name || 'Unknown';
+
+      const slotData = {
+        id: `legacy_${Date.now()}`,
+        name: 'Main Save',
+        data: legacySave,
+        saveDate: legacySave.saveDate || new Date().toISOString(),
+        timestamp: legacySave.timestamp || Date.now(),
+        gameMode: gameMode,
+        playerName: playerName,
+        inGameDate: legacySave.calendar ? 
+          `Week ${legacySave.calendar.week}, ${this._getMonthName(legacySave.calendar.month)} Year ${legacySave.calendar.year}` :
+          'Week 1, January Year 1',
+        isLegacy: true
+      };
+
+      await localforage.setItem(`mat_life_save_${slotData.id}`, slotData);
+      
+      existingSlots.push({
+        id: slotData.id,
+        name: slotData.name,
+        saveDate: slotData.saveDate,
+        timestamp: slotData.timestamp,
+        gameMode: slotData.gameMode,
+        playerName: slotData.playerName,
+        inGameDate: slotData.inGameDate,
+        isLegacy: true
+      });
+
+      await localforage.setItem(SAVE_SLOTS_KEY, existingSlots);
+      await localforage.removeItem(LEGACY_SAVE_KEY);
+      
+      console.log('Legacy save migrated to new slot system');
+    } catch (error) {
+      console.error('Error migrating legacy save:', error);
+    }
+  }
+
+  /**
+   * Saves to a specific slot
+   * @param {string} slotId - Unique slot ID
+   * @param {string} slotName - Display name for the save
+   * @returns {Promise<boolean>} True if successful
+   */
+  async saveToSlot(slotId, slotName) {
+    try {
+      if (typeof localforage === 'undefined') {
+        console.warn('localforage not available; skipping save');
+        return false;
+      }
+      const saveData = this.serializeState();
+      if (!saveData) {
+        console.warn('No state to save');
+        return false;
+      }
+
+      const state = gameStateManager.getStateRef();
+      const gameMode = state?.player?.mode || 'WRESTLER';
+      const playerName = state?.player?.name || 'Unknown';
+
+      const slotData = {
+        id: slotId,
+        name: slotName,
+        data: saveData,
+        saveDate: new Date().toISOString(),
+        timestamp: Date.now(),
+        gameMode: gameMode,
+        playerName: playerName,
+        inGameDate: state?.calendar ? 
+          `Week ${state.calendar.week}, ${this._getMonthName(state.calendar.month)} Year ${state.calendar.year}` :
+          'Week 1, January Year 1'
+      };
+
+      await localforage.setItem(`mat_life_save_${slotId}`, slotData);
+      this.lastSaveTime = Date.now();
+      this.currentSaveSlot = slotId;
+
+      await this._updateSlotMetadata(slotId, slotData);
+
+      console.log(`Game saved to slot: ${slotName}`);
+      return true;
+    } catch (error) {
+      console.error('Error saving to slot:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Loads from a specific slot
+   * @param {string} slotId - Slot ID to load
+   * @returns {Promise<boolean>} True if successful
+   */
+  async loadFromSlot(slotId) {
+    try {
+      if (typeof localforage === 'undefined') {
+        console.warn('localforage not available; skipping load');
+        return false;
+      }
+      const slotData = await localforage.getItem(`mat_life_save_${slotId}`);
+      if (!slotData || !slotData.data) {
+        console.log('No save found in slot');
+        return false;
+      }
+
+      const success = this.deserializeState(slotData.data);
+      if (success) {
+        console.log(`Game loaded from slot: ${slotData.name}`);
+        this.currentSaveSlot = slotId;
+        await this.checkAndUpdateRosters();
+      }
+      return success;
+    } catch (error) {
+      console.error('Error loading from slot:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Deletes a save slot
+   * @param {string} slotId - Slot ID to delete
+   * @returns {Promise<boolean>} True if successful
+   */
+  async deleteSlot(slotId) {
+    try {
+      if (typeof localforage === 'undefined') {
+        return false;
+      }
+      await localforage.removeItem(`mat_life_save_${slotId}`);
+      await this._removeSlotMetadata(slotId);
+      console.log(`Save slot deleted: ${slotId}`);
+      return true;
+    } catch (error) {
+      console.error('Error deleting slot:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Gets save info for a specific slot
+   * @param {string} slotId - Slot ID
+   * @returns {Promise<object|null>}
+   */
+  async getSlotInfo(slotId) {
+    try {
+      if (typeof localforage === 'undefined') {
+        return null;
+      }
+      const slotData = await localforage.getItem(`mat_life_save_${slotId}`);
+      if (!slotData) return null;
+
+      return {
+        id: slotData.id,
+        name: slotData.name,
+        saveDate: slotData.saveDate,
+        timestamp: slotData.timestamp,
+        gameMode: slotData.gameMode,
+        playerName: slotData.playerName,
+        inGameDate: slotData.inGameDate
+      };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Gets the current save slot ID
+   * @returns {string|null}
+   */
+  getCurrentSaveSlot() {
+    return this.currentSaveSlot;
+  }
+
+  /**
+   * Updates slot metadata in the slots list
+   * @private
+   */
+  async _updateSlotMetadata(slotId, slotData) {
+    const slots = await this.getAllSaves();
+    const existingIndex = slots.findIndex(s => s.id === slotId);
+    
+    const metadata = {
+      id: slotId,
+      name: slotData.name,
+      saveDate: slotData.saveDate,
+      timestamp: slotData.timestamp,
+      gameMode: slotData.gameMode,
+      playerName: slotData.playerName,
+      inGameDate: slotData.inGameDate
+    };
+
+    if (existingIndex >= 0) {
+      slots[existingIndex] = metadata;
+    } else {
+      if (slots.length >= MAX_SAVE_SLOTS) {
+        const oldest = slots.reduce((a, b) => a.timestamp < b.timestamp ? a : b);
+        await this.deleteSlot(oldest.id);
+        const idx = slots.indexOf(oldest);
+        if (idx >= 0) slots.splice(idx, 1);
+      }
+      slots.push(metadata);
+    }
+
+    await localforage.setItem(SAVE_SLOTS_KEY, slots);
+  }
+
+  /**
+   * Removes slot from metadata
+   * @private
+   */
+  async _removeSlotMetadata(slotId) {
+    const slots = await this.getAllSaves();
+    const filtered = slots.filter(s => s.id !== slotId);
+    await localforage.setItem(SAVE_SLOTS_KEY, filtered);
+  }
+
+  /**
    * Checks for and adds new roster members from updated real_life.json
    * @returns {Promise<number>} Number of new wrestlers added
    */
@@ -333,30 +592,13 @@ export class SaveLoadManager {
   }
 
   /**
-   * Saves the game to localforage
+   * Saves the game to localforage (legacy single save)
    * @returns {Promise<boolean>} True if successful
    */
   async save() {
-    try {
-      if (typeof localforage === 'undefined') {
-        console.warn('localforage not available; skipping save');
-        return false;
-      }
-      const saveData = this.serializeState();
-      if (!saveData) {
-        console.warn('No state to save');
-        return false;
-      }
-
-      await localforage.setItem(this.storageKey, saveData);
-      this.lastSaveTime = Date.now();
-
-      console.log('Game saved successfully');
-      return true;
-    } catch (error) {
-      console.error('Error saving game:', error);
-      return false;
-    }
+    const slotId = this.currentSaveSlot || `save_${Date.now()}`;
+    const slotName = this.currentSaveSlot ? (await this.getSlotInfo(slotId))?.name : 'Main Save';
+    return this.saveToSlot(slotId, slotName || 'Main Save');
   }
 
   /**
@@ -404,92 +646,56 @@ export class SaveLoadManager {
   }
 
   /**
-   * Loads the game from localforage
+   * Loads the game from localforage (legacy single save)
    * @returns {Promise<boolean>} True if successful
    */
   async load() {
-    try {
-      if (typeof localforage === 'undefined') {
-        console.warn('localforage not available; skipping load');
-        return false;
-      }
-      const saveData = await localforage.getItem(this.storageKey);
-      if (!saveData) {
-        console.log('No save found');
-        return false;
-      }
-
-      const success = this.deserializeState(saveData);
-      if (success) {
-        console.log('Game loaded successfully');
-        // Check for and add any new roster members from updated data files
-        await this.checkAndUpdateRosters();
-      }
-      return success;
-    } catch (error) {
-      console.error('Error loading game:', error);
-      return false;
+    const slots = await this.getAllSaves();
+    if (slots.length > 0) {
+      const latestSlot = slots.reduce((a, b) => a.timestamp > b.timestamp ? a : b);
+      return this.loadFromSlot(latestSlot.id);
     }
+    return false;
   }
 
   /**
-   * Checks if a save exists
+   * Checks if any save exists
    * @returns {Promise<boolean>}
    */
   async hasSave() {
-    try {
-      if (typeof localforage === 'undefined') {
-        return false;
-      }
-      const saveData = await localforage.getItem(this.storageKey);
-      return !!saveData;
-    } catch (error) {
-      return false;
-    }
+    const slots = await this.getAllSaves();
+    return slots.length > 0;
   }
 
   /**
-   * Deletes the save
+   * Deletes the current save
    * @returns {Promise<boolean>}
    */
   async deleteSave() {
-    try {
-      if (typeof localforage === 'undefined') {
-        return false;
-      }
-      await localforage.removeItem(this.storageKey);
-      console.log('Save deleted');
-      return true;
-    } catch (error) {
-      console.error('Error deleting save:', error);
-      return false;
+    if (this.currentSaveSlot) {
+      return this.deleteSlot(this.currentSaveSlot);
     }
+    return false;
   }
 
   /**
-   * Gets save metadata
+   * Gets save metadata (legacy)
    * @returns {Promise<object|null>}
    */
   async getSaveInfo() {
-    try {
-      if (typeof localforage === 'undefined') {
-        return null;
-      }
-      const saveData = await localforage.getItem(this.storageKey);
-      if (!saveData) return null;
-
+    const slots = await this.getAllSaves();
+    if (slots.length > 0) {
+      const latestSlot = slots.reduce((a, b) => a.timestamp > b.timestamp ? a : b);
       return {
-        version: saveData.version,
-        saveDate: saveData.saveDate,
-        timestamp: saveData.timestamp,
-        playerName: saveData.entities?.find(e => e.id === saveData.player?.entityId)?.components?.identity?.name || 'Unknown',
-        inGameDate: saveData.calendar ?
-          `Week ${saveData.calendar.week}, ${this._getMonthName(saveData.calendar.month)} Year ${saveData.calendar.year}` :
-          'Unknown'
+        version: '1.0.0',
+        saveDate: latestSlot.saveDate,
+        timestamp: latestSlot.timestamp,
+        playerName: latestSlot.playerName || 'Unknown',
+        inGameDate: latestSlot.inGameDate || 'Unknown',
+        gameMode: latestSlot.gameMode
       };
-    } catch (error) {
-      return null;
     }
+    return null;
   }
 
   /**

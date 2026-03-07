@@ -11,8 +11,9 @@ import BookerModeEngine from "../engine/BookerModeEngine.js";
 import { dataManager } from "../core/DataManager.js";
 
 export class CharacterCreation {
-  constructor(uiManager) {
+  constructor(uiManager, onCareerStart) {
     this.uiManager = uiManager;
+    this.onCareerStart = onCareerStart;
     this.currentStep = 1;
     this.totalSteps = 6;
     this.formData = {
@@ -284,7 +285,7 @@ export class CharacterCreation {
             this.formData.bookerStart;
           if (startType !== "established") {
             const promotionName = document
-              .getElementById("promotion-name")
+              .getElementById("booker-promotion-name")
               ?.value?.trim();
             if (!promotionName) {
               alert("Please name your promotion.");
@@ -647,7 +648,11 @@ export class CharacterCreation {
       },
     });
 
-    this.uiManager?.showScreen("game-screen");
+    if (this.onCareerStart) {
+      this.onCareerStart();
+    } else {
+      this.uiManager?.showScreen("game-screen");
+    }
   }
 
   createWrestlingWorld(player) {
