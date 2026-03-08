@@ -638,7 +638,10 @@ export class SaveLoadManager {
       }
       const saveData = await localforage.getItem(customKey);
       if (!saveData) return false;
-      return this.deserializeState(saveData);
+      
+      // Handle both raw saves (dev snapshots) and wrapped saves (slots)
+      const actualData = saveData.data || saveData;
+      return this.deserializeState(actualData);
     } catch (error) {
       console.error('Error loading snapshot:', error);
       return false;

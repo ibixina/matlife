@@ -206,6 +206,7 @@ export class UIManager {
   render(state, actionType = null, payload = null) {
     if (!state) return;
     this.panels.navigationBar.setMode(state.player?.mode || "WRESTLER");
+
     // Render player info panel
     this.panels.playerInfo.render(state);
 

@@ -715,7 +715,8 @@ export class DevPanel {
         const key = e.currentTarget.getAttribute('data-dev-load');
         const success = await saveLoadManager.loadAs(key);
         if (success) {
-          this.populateForm();
+          uiManager.showScreen('game-screen');
+          uiManager.render(gameStateManager.getStateRef());
           this.showStatus(`Loaded save: ${key.replace('mat_life_save_', '').replace('mat_life_save_dev_', '')}`, true);
         } else {
           this.showStatus('Failed to load save.', false);
