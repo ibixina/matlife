@@ -308,6 +308,133 @@ input[type="range"] {
     font-size: var(--text-xs);
 }
 
+.dev-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    font-size: var(--text-xs);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    margin-left: var(--space-xs);
+    color: var(--text-muted);
+}
+
+.dev-save-actions {
+    display: flex;
+    gap: var(--space-xs);
+}
+
+.dev-editor-status {
+    margin-top: var(--space-sm);
+    padding: var(--space-sm);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+}
+
+.dev-json-container {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background: var(--bg-tertiary);
+    overflow: hidden;
+    height: calc(100vh - 300px);
+    min-height: 400px;
+}
+
+.dev-json-toolbar {
+    display: flex;
+    gap: var(--space-xs);
+    padding: var(--space-sm);
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.dev-json-view {
+    height: calc(100% - 50px);
+    overflow: auto;
+    padding: var(--space-sm);
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: var(--text-sm);
+    line-height: 1.6;
+    white-space: pre;
+}
+
+#dev-save-editor {
+    height: calc(100vh - 360px);
+    min-height: 300px;
+}
+
+.dev-json-node {
+    padding: 2px 0;
+}
+
+.dev-json-toggle {
+    cursor: pointer;
+    color: var(--text-muted);
+    user-select: none;
+    margin-right: 4px;
+}
+
+.dev-json-toggle:hover {
+    color: var(--text-primary);
+}
+
+.dev-json-key {
+    color: var(--color-accent);
+}
+
+.dev-json-string {
+    color: var(--color-success);
+}
+
+.dev-json-number {
+    color: var(--color-warning);
+}
+
+.dev-json-boolean {
+    color: var(--color-injury);
+}
+
+.dev-json-null {
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.dev-json-close {
+    color: var(--text-muted);
+}
+
+.dev-json-children {
+    border-left: 1px solid var(--border-color);
+    margin-left: 4px;
+}
+
+.dev-json-editable {
+    cursor: pointer;
+    padding: 1px 4px;
+    border-radius: 3px;
+    transition: background 0.2s;
+}
+
+.dev-json-editable:hover {
+    background: var(--bg-elevated);
+}
+
+.dev-json-input {
+    background: var(--bg-primary);
+    border: 1px solid var(--color-accent);
+    color: var(--text-primary);
+    padding: 1px 4px;
+    font-family: inherit;
+    font-size: inherit;
+    border-radius: 3px;
+    width: 150px;
+}
+
+.btn-small {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-xs);
+}
+
 @media (max-width: 900px) {
     .dev-header {
         flex-direction: column;

@@ -15,6 +15,12 @@ export class DevPanel {
   constructor() {
     this.container = document.getElementById('dev-screen');
     this.statusEl = null;
+    this.selectedSaveKey = null;
+    this.selectedSaveData = null;
+    this.jsonEditorMode = 'view';
+    this.collapsedNodes = new Set();
+    this.entityEditorMode = 'view';
+    this.selectedEntityData = null;
   }
 
   init() {
@@ -23,7 +29,7 @@ export class DevPanel {
     this.ensureDevState();
     this.populateForm();
     this.refreshEntityList();
-    this.refreshSaveList();
+    this.refreshAllSaves();
   }
 
   buildUI() {
@@ -35,6 +41,7 @@ export class DevPanel {
             <p class="dev-subtitle">Set custom state and create test saves.</p>
           </div>
           <div class="dev-actions">
+            <label>Snapshot Name <input id="dev-save-name" type="text" placeholder="my-save" style="width: 100px;"></label>
             <button id="dev-apply-btn" class="btn btn-primary">Apply State</button>
             <button id="dev-apply-play-btn" class="btn btn-secondary">Apply + Play</button>
             <button id="dev-save-btn" class="btn btn-secondary">Save Snapshot</button>
@@ -125,12 +132,37 @@ export class DevPanel {
         </section>
 
         <section class="dev-section">
-          <h2>Dev Saves</h2>
+          <h2>Game Saves</h2>
+          <p class="dev-muted">View, edit, and create new saves from existing save files.</p>
           <div class="dev-grid">
-            <label>Snapshot Name <input id="dev-save-name" type="text" placeholder="my-test-save"></label>
-            <button id="dev-refresh-saves" class="btn">Refresh List</button>
+            <button id="dev-refresh-all-saves" class="btn">Refresh All Saves</button>
           </div>
-          <div id="dev-saves-list" class="dev-saves-list"></div>
+          <div id="dev-all-saves-list" class="dev-saves-list"></div>
+        </section>
+
+        <section class="dev-section">
+          <h2>Save File Editor</h2>
+          <p class="dev-muted">Select a save above to edit. Changes will be saved as a NEW file.</p>
+          <div class="dev-grid">
+            <label>Selected Save <span id="dev-edit-save-name" class="dev-muted">None</span></label>
+            <label>New Save Name <input id="dev-new-save-name" type="text" placeholder="my-edited-save"></label>
+          </div>
+          <div id="dev-json-editor-container" class="dev-json-container">
+            <div class="dev-json-toolbar">
+              <button id="dev-editor-format" class="btn btn-small">Format</button>
+              <button id="dev-editor-collapse" class="btn btn-small">Collapse All</button>
+              <button id="dev-editor-expand" class="btn btn-small">Expand All</button>
+              <button id="dev-editor-switch" class="btn btn-small">Switch to Raw</button>
+            </div>
+            <div id="dev-json-view" class="dev-json-view"></div>
+            <textarea id="dev-save-editor" class="dev-textarea" rows="14" placeholder="Select a save to view its contents..." style="display: none;"></textarea>
+          </div>
+          <div class="dev-actions" style="margin-top: var(--space-sm);">
+            <button id="dev-editor-refresh" class="btn">Reload from Save</button>
+            <button id="dev-editor-validate" class="btn">Validate JSON</button>
+            <button id="dev-editor-save-as" class="btn btn-primary">Save as New</button>
+          </div>
+          <div id="dev-editor-status" class="dev-editor-status"></div>
         </section>
 
         <section class="dev-section">
@@ -143,8 +175,16 @@ export class DevPanel {
               <input id="dev-entity-tags" type="text" placeholder="[Rookie], [Hot_Streak]">
             </label>
           </div>
-          <label style="display:block; margin-top: var(--space-sm);">Components JSON</label>
-          <textarea id="dev-entity-components" class="dev-textarea" rows="10" placeholder="{&quot;physicalStats&quot;:{...}}"></textarea>
+          <div id="dev-entity-json-container" class="dev-json-container">
+            <div class="dev-json-toolbar">
+              <button id="dev-entity-format" class="btn btn-small">Format</button>
+              <button id="dev-entity-collapse" class="btn btn-small">Collapse All</button>
+              <button id="dev-entity-expand" class="btn btn-small">Expand All</button>
+              <button id="dev-entity-switch" class="btn btn-small">Switch to Raw</button>
+            </div>
+            <div id="dev-entity-json-view" class="dev-json-view"></div>
+            <textarea id="dev-entity-components" class="dev-textarea" rows="10" placeholder="{&quot;physicalStats&quot;:{...}}" style="display: none;"></textarea>
+          </div>
           <div class="dev-actions" style="margin-top: var(--space-sm);">
             <button id="dev-entity-refresh" class="btn">Load Entity</button>
             <button id="dev-entity-apply" class="btn btn-primary">Apply Entity</button>
@@ -167,11 +207,24 @@ export class DevPanel {
     document.getElementById('dev-apply-btn')?.addEventListener('click', () => this.applyForm());
     document.getElementById('dev-apply-play-btn')?.addEventListener('click', () => this.applyAndPlay());
     document.getElementById('dev-save-btn')?.addEventListener('click', () => this.saveSnapshot());
-    document.getElementById('dev-refresh-saves')?.addEventListener('click', () => this.refreshSaveList());
+    document.getElementById('dev-refresh-all-saves')?.addEventListener('click', () => this.refreshAllSaves());
     document.getElementById('dev-entity-refresh')?.addEventListener('click', () => this.loadSelectedEntity());
     document.getElementById('dev-entity-apply')?.addEventListener('click', () => this.applyEntity());
     document.getElementById('dev-state-refresh')?.addEventListener('click', () => this.loadRawState());
     document.getElementById('dev-state-apply')?.addEventListener('click', () => this.applyRawState());
+    document.getElementById('dev-editor-refresh')?.addEventListener('click', () => this.reloadSaveToEditor());
+    document.getElementById('dev-editor-validate')?.addEventListener('click', () => this.validateSaveJSON());
+    document.getElementById('dev-editor-save-as')?.addEventListener('click', () => this.saveAsNew());
+    document.getElementById('dev-editor-format')?.addEventListener('click', () => this.formatJSON());
+    document.getElementById('dev-editor-collapse')?.addEventListener('click', () => this.collapseAllJSON());
+    document.getElementById('dev-editor-expand')?.addEventListener('click', () => this.expandAllJSON());
+    document.getElementById('dev-editor-switch')?.addEventListener('click', () => this.switchEditorMode());
+    document.getElementById('dev-entity-refresh')?.addEventListener('click', () => this.loadSelectedEntity());
+    document.getElementById('dev-entity-apply')?.addEventListener('click', () => this.applyEntity());
+    document.getElementById('dev-entity-format')?.addEventListener('click', () => this.formatEntityJSON());
+    document.getElementById('dev-entity-collapse')?.addEventListener('click', () => this.collapseAllEntityJSON());
+    document.getElementById('dev-entity-expand')?.addEventListener('click', () => this.expandAllEntityJSON());
+    document.getElementById('dev-entity-switch')?.addEventListener('click', () => this.switchEntityEditorMode());
   }
 
   ensureDevState() {
@@ -475,52 +528,8 @@ export class DevPanel {
     const success = await saveLoadManager.saveAs(key);
     this.showStatus(success ? `Saved snapshot: ${keySuffix}` : 'Failed to save snapshot.', success);
     if (success) {
-      this.refreshSaveList();
+      this.refreshAllSaves();
     }
-  }
-
-  async refreshSaveList() {
-    const list = document.getElementById('dev-saves-list');
-    if (!list || typeof localforage === 'undefined') return;
-
-    const keys = (await localforage.keys()).filter(k => k.startsWith('mat_life_save_dev_'));
-    if (keys.length === 0) {
-      list.innerHTML = '<p class="dev-muted">No dev saves found.</p>';
-      return;
-    }
-
-    const items = await Promise.all(keys.map(async key => {
-      const data = await localforage.getItem(key);
-      return { key, data };
-    }));
-
-    list.innerHTML = items.map(item => {
-      const label = item.data?.player?.name || 'Unknown';
-      const date = item.data?.saveDate ? new Date(item.data.saveDate).toLocaleString() : 'Unknown date';
-      const shortKey = item.key.replace('mat_life_save_dev_', '');
-      return `
-        <div class="dev-save-item">
-          <div>
-            <strong>${shortKey}</strong>
-            <div class="dev-muted">${label} · ${date}</div>
-          </div>
-          <button class="btn btn-small" data-dev-load="${item.key}">Load</button>
-        </div>
-      `;
-    }).join('');
-
-    list.querySelectorAll('[data-dev-load]').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        const key = e.currentTarget.getAttribute('data-dev-load');
-        const success = await saveLoadManager.loadAs(key);
-        if (success) {
-          this.populateForm();
-          this.showStatus(`Loaded snapshot: ${key.replace('mat_life_save_dev_', '')}`, true);
-        } else {
-          this.showStatus('Failed to load snapshot.', false);
-        }
-      });
-    });
   }
 
   refreshEntityList() {
@@ -557,10 +566,23 @@ export class DevPanel {
     }
 
     const componentsEl = document.getElementById('dev-entity-components');
+    const components = this.serializeComponents(entity.components);
+    this.selectedEntityData = components;
+    
     if (componentsEl) {
-      const components = this.serializeComponents(entity.components);
       componentsEl.value = JSON.stringify(components, null, 2);
     }
+
+    this.entityEditorMode = 'view';
+    const viewEl = document.getElementById('dev-entity-json-view');
+    const switchBtn = document.getElementById('dev-entity-switch');
+    if (viewEl) {
+      viewEl.style.display = 'block';
+      if (componentsEl) componentsEl.style.display = 'none';
+      if (switchBtn) switchBtn.textContent = 'Switch to Raw';
+    }
+    
+    this.renderEntityJSONView(components);
   }
 
   applyEntity() {
@@ -571,28 +593,36 @@ export class DevPanel {
     const entity = state.entities.get(select.value);
     if (!entity) return;
 
-    const componentsEl = document.getElementById('dev-entity-components');
     const tagsEl = document.getElementById('dev-entity-tags');
 
-    if (componentsEl?.value?.trim()) {
+    let data;
+    if (this.entityEditorMode === 'view' && this.selectedEntityData) {
+      data = this.selectedEntityData;
+    } else {
+      const componentsEl = document.getElementById('dev-entity-components');
+      if (!componentsEl?.value?.trim()) {
+        this.showStatus('No components data to apply.', false);
+        return;
+      }
       try {
-        const data = JSON.parse(componentsEl.value);
-        for (const [name, payload] of Object.entries(data)) {
-          try {
-            const component = deserializeComponent(name, payload);
-            entity.components.set(name, component);
-          } catch (error) {
-            const existing = entity.components.get(name);
-            if (existing && typeof existing === 'object') {
-              Object.assign(existing, payload);
-            } else {
-              entity.components.set(name, payload);
-            }
-          }
-        }
+        data = JSON.parse(componentsEl.value);
       } catch (error) {
         this.showStatus('Invalid JSON in components editor.', false);
         return;
+      }
+    }
+
+    for (const [name, payload] of Object.entries(data)) {
+      try {
+        const component = deserializeComponent(name, payload);
+        entity.components.set(name, component);
+      } catch (error) {
+        const existing = entity.components.get(name);
+        if (existing && typeof existing === 'object') {
+          Object.assign(existing, payload);
+        } else {
+          entity.components.set(name, payload);
+        }
       }
     }
 
@@ -629,6 +659,619 @@ export class DevPanel {
     } catch (error) {
       this.showStatus('Invalid JSON in state editor.', false);
     }
+  }
+
+  async refreshAllSaves() {
+    const list = document.getElementById('dev-all-saves-list');
+    if (!list || typeof localforage === 'undefined') return;
+
+    const allKeys = await localforage.keys();
+    const gameSaveKeys = allKeys.filter(k => 
+      k.startsWith('mat_life_save_') && k !== 'mat_life_save_slots'
+    );
+
+    if (gameSaveKeys.length === 0) {
+      list.innerHTML = '<p class="dev-muted">No game saves found.</p>';
+      return;
+    }
+
+    const items = await Promise.all(gameSaveKeys.map(async key => {
+      const data = await localforage.getItem(key);
+      return { key, data };
+    }));
+
+    list.innerHTML = items.map(item => {
+      const isDev = item.key.startsWith('mat_life_save_dev_');
+      const label = item.data?.player?.name || item.data?.playerName || 'Unknown';
+      const date = item.data?.saveDate ? new Date(item.data.saveDate).toLocaleString() : 'Unknown date';
+      const shortKey = item.key.replace('mat_life_save_', '').replace('mat_life_save_dev_', '');
+      const year = item.data?.calendar?.year || '?';
+      const week = item.data?.calendar?.week || '?';
+      const month = item.data?.calendar?.month || '?';
+      return `
+        <div class="dev-save-item">
+          <div>
+            <strong>${shortKey}</strong>
+            <span class="dev-badge">${isDev ? 'Dev' : 'Save'}</span>
+            <div class="dev-muted">${label} · Week ${week}, Month ${month}, Year ${year} · ${date}</div>
+          </div>
+          <div class="dev-save-actions">
+            <button class="btn btn-small" data-dev-edit="${item.key}">Edit</button>
+            <button class="btn btn-small" data-dev-load="${item.key}">Load</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    list.querySelectorAll('[data-dev-edit]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const key = e.currentTarget.getAttribute('data-dev-edit');
+        await this.loadSaveForEditing(key);
+      });
+    });
+
+    list.querySelectorAll('[data-dev-load]').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const key = e.currentTarget.getAttribute('data-dev-load');
+        const success = await saveLoadManager.loadAs(key);
+        if (success) {
+          this.populateForm();
+          this.showStatus(`Loaded save: ${key.replace('mat_life_save_', '').replace('mat_life_save_dev_', '')}`, true);
+        } else {
+          this.showStatus('Failed to load save.', false);
+        }
+      });
+    });
+  }
+
+  async loadSaveForEditing(key) {
+    if (typeof localforage === 'undefined') return;
+    
+    const data = await localforage.getItem(key);
+    if (!data) {
+      this.showEditorStatus('Save not found.', false);
+      return;
+    }
+
+    this.selectedSaveKey = key;
+    this.selectedSaveData = data;
+    
+    const nameEl = document.getElementById('dev-edit-save-name');
+    const editorEl = document.getElementById('dev-save-editor');
+    const newNameEl = document.getElementById('dev-new-save-name');
+    
+    if (nameEl) {
+      const shortName = key.replace('mat_life_save_', '').replace('mat_life_save_dev_', '');
+      nameEl.textContent = shortName;
+    }
+    
+    if (editorEl) {
+      editorEl.value = JSON.stringify(data, null, 2);
+    }
+    
+    if (newNameEl) {
+      newNameEl.value = '';
+    }
+
+    this.jsonEditorMode = 'view';
+    const viewEl = document.getElementById('dev-json-view');
+    const switchBtn = document.getElementById('dev-editor-switch');
+    if (viewEl) {
+      viewEl.style.display = 'block';
+      if (editorEl) editorEl.style.display = 'none';
+      if (switchBtn) switchBtn.textContent = 'Switch to Raw';
+    }
+    
+    this.renderJSONView(data);
+    this.showEditorStatus('Loaded save for editing. Edit JSON below and save as new.', true);
+  }
+
+  async reloadSaveToEditor() {
+    if (!this.selectedSaveKey) {
+      this.showEditorStatus('No save selected.', false);
+      return;
+    }
+    await this.loadSaveForEditing(this.selectedSaveKey);
+  }
+
+  validateSaveJSON() {
+    let data;
+    
+    if (this.jsonEditorMode === 'view' && this.selectedSaveData) {
+      data = this.selectedSaveData;
+    } else {
+      const editorEl = document.getElementById('dev-save-editor');
+      if (!editorEl || !editorEl.value.trim()) {
+        this.showEditorStatus('Editor is empty.', false);
+        return;
+      }
+      try {
+        data = JSON.parse(editorEl.value);
+      } catch (error) {
+        this.showEditorStatus(`Invalid JSON: ${error.message}`, false);
+        return;
+      }
+    }
+
+    const validation = this.validateSaveData(data);
+    if (validation.valid) {
+      this.showEditorStatus(`Valid save file! ${validation.message}`, true);
+    } else {
+      this.showEditorStatus(`Warning: ${validation.message}`, false);
+    }
+  }
+
+  validateSaveData(data) {
+    const errors = [];
+    const warnings = [];
+
+    if (!data) {
+      return { valid: false, message: 'Save data is null or undefined' };
+    }
+
+    if (!data.version) {
+      errors.push('Missing version field');
+    }
+
+    if (!data.calendar) {
+      errors.push('Missing calendar data');
+    } else {
+      const cal = data.calendar;
+      if (typeof cal.year !== 'number' || cal.year < 1) {
+        errors.push('Invalid calendar year');
+      }
+      if (typeof cal.month !== 'number' || cal.month < 1 || cal.month > 12) {
+        warnings.push('Invalid calendar month (should be 1-12)');
+      }
+      if (typeof cal.week !== 'number' || cal.week < 1) {
+        warnings.push('Invalid calendar week');
+      }
+    }
+
+    if (!data.player) {
+      errors.push('Missing player data');
+    }
+
+    if (!data.entities || !Array.isArray(data.entities)) {
+      warnings.push('Entities not found or not an array');
+    }
+
+    if (!data.promotions || !Array.isArray(data.promotions)) {
+      warnings.push('Promotions not found or not an array');
+    }
+
+    if (errors.length > 0) {
+      return { valid: false, message: errors.join(', ') };
+    }
+
+    if (warnings.length > 0) {
+      return { valid: true, message: `Valid with warnings: ${warnings.join(', ')}` };
+    }
+
+    const entityCount = data.entities?.length || 0;
+    const promoCount = data.promotions?.length || 0;
+    return { valid: true, message: `Valid save with ${entityCount} entities, ${promoCount} promotions` };
+  }
+
+  async saveAsNew() {
+    const newNameEl = document.getElementById('dev-new-save-name');
+    
+    const newName = newNameEl?.value?.trim();
+    if (!newName) {
+      this.showEditorStatus('Please enter a name for the new save.', false);
+      return;
+    }
+
+    if (!/^[a-zA-Z0-9_-]+$/.test(newName)) {
+      this.showEditorStatus('Save name can only contain letters, numbers, underscores, and hyphens.', false);
+      return;
+    }
+
+    let data;
+    
+    if (this.jsonEditorMode === 'view' && this.selectedSaveData) {
+      data = this.selectedSaveData;
+    } else {
+      const editorEl = document.getElementById('dev-save-editor');
+      if (!editorEl || !editorEl.value.trim()) {
+        this.showEditorStatus('Editor is empty. Nothing to save.', false);
+        return;
+      }
+      try {
+        data = JSON.parse(editorEl.value);
+      } catch (error) {
+        this.showEditorStatus(`Invalid JSON: ${error.message}`, false);
+        return;
+      }
+    }
+
+    const validation = this.validateSaveData(data);
+    if (!validation.valid) {
+      this.showEditorStatus(`Cannot save: ${validation.message}`, false);
+      return;
+    }
+
+    const key = `mat_life_save_dev_${newName}_${Date.now()}`;
+    
+    try {
+      await localforage.setItem(key, data);
+      this.showEditorStatus(`Saved as new file: ${newName}`, true);
+      this.refreshAllSaves();
+    } catch (error) {
+      this.showEditorStatus(`Failed to save: ${error.message}`, false);
+    }
+  }
+
+  showEditorStatus(message, success) {
+    const statusEl = document.getElementById('dev-editor-status');
+    if (!statusEl) return;
+    statusEl.textContent = message;
+    statusEl.className = `dev-editor-status ${success ? 'dev-status-success' : 'dev-status-error'}`;
+  }
+
+  formatJSON() {
+    const editorEl = document.getElementById('dev-save-editor');
+    if (!editorEl?.value.trim()) {
+      this.showEditorStatus('No JSON to format.', false);
+      return;
+    }
+    try {
+      const data = JSON.parse(editorEl.value);
+      editorEl.value = JSON.stringify(data, null, 2);
+      this.renderJSONView(data);
+      this.showEditorStatus('JSON formatted.', true);
+    } catch (error) {
+      this.showEditorStatus(`Invalid JSON: ${error.message}`, false);
+    }
+  }
+
+  switchEditorMode() {
+    const viewEl = document.getElementById('dev-json-view');
+    const editorEl = document.getElementById('dev-save-editor');
+    const switchBtn = document.getElementById('dev-editor-switch');
+    
+    if (this.jsonEditorMode === 'view') {
+      this.jsonEditorMode = 'raw';
+      viewEl.style.display = 'none';
+      editorEl.style.display = 'block';
+      switchBtn.textContent = 'Switch to Viewer';
+      if (this.selectedSaveData) {
+        editorEl.value = JSON.stringify(this.selectedSaveData, null, 2);
+      }
+    } else {
+      this.jsonEditorMode = 'view';
+      viewEl.style.display = 'block';
+      editorEl.style.display = 'none';
+      switchBtn.textContent = 'Switch to Raw';
+      if (editorEl.value.trim()) {
+        try {
+          const data = JSON.parse(editorEl.value);
+          this.selectedSaveData = data;
+          this.renderJSONView(data);
+        } catch (e) {
+          this.showEditorStatus('Cannot switch: Invalid JSON in editor.', false);
+          return;
+        }
+      }
+    }
+  }
+
+  renderJSONView(data, indent = 0) {
+    const viewEl = document.getElementById('dev-json-view');
+    if (!viewEl) return;
+    
+    viewEl.innerHTML = '';
+    viewEl.appendChild(this.createEditableJSONNode(data, 'root', indent, 'save'));
+  }
+
+  createJSONNode(data, key, indent) {
+    const container = document.createElement('div');
+    container.className = 'dev-json-node';
+    container.style.paddingLeft = `${indent * 20}px`;
+
+    if (data === null) {
+      container.innerHTML = `<span class="dev-json-key">${key}:</span> <span class="dev-json-null">null</span>`;
+      return container;
+    }
+
+    if (typeof data !== 'object') {
+      const type = typeof data;
+      let valueClass = 'dev-json-string';
+      if (type === 'number') valueClass = 'dev-json-number';
+      else if (type === 'boolean') valueClass = 'dev-json-boolean';
+      
+      const displayKey = key !== 'root' ? `<span class="dev-json-key">${key}:</span> ` : '';
+      container.innerHTML = `${displayKey}<span class="${valueClass}">${JSON.stringify(data)}</span>`;
+      return container;
+    }
+
+    const isArray = Array.isArray(data);
+    const isEmpty = Object.keys(data).length === 0;
+    const nodeId = `json_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const toggleBtn = document.createElement('span');
+    toggleBtn.className = 'dev-json-toggle';
+    toggleBtn.textContent = isEmpty ? (isArray ? '[]' : '{}') : (isArray ? '[' : '{');
+    toggleBtn.dataset.nodeId = nodeId;
+    toggleBtn.dataset.collapsed = 'false';
+    
+    if (!isEmpty) {
+      toggleBtn.addEventListener('click', (e) => {
+        const id = e.target.dataset.nodeId;
+        const isCollapsed = e.target.dataset.collapsed === 'true';
+        const children = document.getElementById(id);
+        if (children) {
+          children.style.display = isCollapsed ? 'block' : 'none';
+          e.target.dataset.collapsed = (!isCollapsed).toString();
+          e.target.textContent = isCollapsed ? (isArray ? '[' : '{') : (isArray ? '[...]' : '{...}');
+        }
+      });
+    }
+
+    const keySpan = key !== 'root' ? `<span class="dev-json-key">${key}:</span> ` : '';
+    container.innerHTML = `${keySpan}`;
+    container.insertBefore(toggleBtn, container.firstChild);
+
+    if (!isEmpty) {
+      const children = document.createElement('div');
+      children.id = nodeId;
+      children.className = 'dev-json-children';
+      
+      const entries = isArray ? data.map((v, i) => [i, v]) : Object.entries(data);
+      for (const [k, v] of entries) {
+        children.appendChild(this.createJSONNode(v, isArray ? '' : k, indent + 1));
+      }
+      
+      const closeBracket = document.createElement('div');
+      closeBracket.style.paddingLeft = `${indent * 20}px`;
+      closeBracket.textContent = isArray ? ']' : '}';
+      closeBracket.className = 'dev-json-close';
+      children.appendChild(closeBracket);
+      
+      container.appendChild(children);
+    } else {
+      const closeBracket = document.createElement('span');
+      closeBracket.textContent = isArray ? ']' : '}';
+      closeBracket.className = 'dev-json-close';
+      container.appendChild(closeBracket);
+    }
+
+    return container;
+  }
+
+  collapseAllJSON() {
+    document.querySelectorAll('.dev-json-toggle').forEach(btn => {
+      if (btn.textContent === '[' || btn.textContent === '{') {
+        btn.click();
+      }
+    });
+  }
+
+  expandAllJSON() {
+    document.querySelectorAll('.dev-json-toggle[data-collapsed="true"]').forEach(btn => {
+      btn.click();
+    });
+  }
+
+  formatEntityJSON() {
+    const editorEl = document.getElementById('dev-entity-components');
+    if (!editorEl?.value.trim()) {
+      this.showStatus('No JSON to format.', false);
+      return;
+    }
+    try {
+      const data = JSON.parse(editorEl.value);
+      editorEl.value = JSON.stringify(data, null, 2);
+      this.renderEntityJSONView(data);
+      this.showStatus('JSON formatted.', true);
+    } catch (error) {
+      this.showStatus(`Invalid JSON: ${error.message}`, false);
+    }
+  }
+
+  switchEntityEditorMode() {
+    const viewEl = document.getElementById('dev-entity-json-view');
+    const editorEl = document.getElementById('dev-entity-components');
+    const switchBtn = document.getElementById('dev-entity-switch');
+    
+    if (this.entityEditorMode === 'view') {
+      this.entityEditorMode = 'raw';
+      viewEl.style.display = 'none';
+      editorEl.style.display = 'block';
+      switchBtn.textContent = 'Switch to Viewer';
+      if (this.selectedEntityData) {
+        editorEl.value = JSON.stringify(this.selectedEntityData, null, 2);
+      }
+    } else {
+      this.entityEditorMode = 'view';
+      viewEl.style.display = 'block';
+      editorEl.style.display = 'none';
+      switchBtn.textContent = 'Switch to Raw';
+      if (editorEl.value.trim()) {
+        try {
+          const data = JSON.parse(editorEl.value);
+          this.selectedEntityData = data;
+          this.renderEntityJSONView(data);
+        } catch (e) {
+          this.showStatus('Cannot switch: Invalid JSON in editor.', false);
+          return;
+        }
+      }
+    }
+  }
+
+  renderEntityJSONView(data) {
+    const viewEl = document.getElementById('dev-entity-json-view');
+    if (!viewEl) return;
+    
+    viewEl.innerHTML = '';
+    viewEl.appendChild(this.createEditableJSONNode(data, 'root', 0, 'entity'));
+  }
+
+  createEditableJSONNode(data, key, indent, editorType) {
+    const container = document.createElement('div');
+    container.className = 'dev-json-node';
+    container.style.paddingLeft = `${indent * 20}px`;
+
+    if (data === null) {
+      container.innerHTML = `<span class="dev-json-key">${key}:</span> <span class="dev-json-null dev-json-editable" data-key="${key}" data-editor="${editorType}">null</span>`;
+      this.addEditableListener(container.querySelector('.dev-json-editable'), key, null, editorType);
+      return container;
+    }
+
+    if (typeof data !== 'object') {
+      const type = typeof data;
+      let valueClass = 'dev-json-string';
+      if (type === 'number') valueClass = 'dev-json-number';
+      else if (type === 'boolean') valueClass = 'dev-json-boolean';
+      
+      const displayKey = key !== 'root' ? `<span class="dev-json-key">${key}:</span> ` : '';
+      container.innerHTML = `${displayKey}<span class="${valueClass} dev-json-editable" data-key="${key}" data-editor="${editorType}">${JSON.stringify(data)}</span>`;
+      this.addEditableListener(container.querySelector('.dev-json-editable'), key, data, editorType);
+      return container;
+    }
+
+    const isArray = Array.isArray(data);
+    const isEmpty = Object.keys(data).length === 0;
+    const nodeId = `json_${Math.random().toString(36).substr(2, 9)}`;
+    
+    const toggleBtn = document.createElement('span');
+    toggleBtn.className = 'dev-json-toggle';
+    toggleBtn.textContent = isEmpty ? (isArray ? '[]' : '{}') : (isArray ? '[' : '{');
+    toggleBtn.dataset.nodeId = nodeId;
+    toggleBtn.dataset.collapsed = 'false';
+    
+    if (!isEmpty) {
+      toggleBtn.addEventListener('click', (e) => {
+        const id = e.target.dataset.nodeId;
+        const isCollapsed = e.target.dataset.collapsed === 'true';
+        const children = document.getElementById(id);
+        if (children) {
+          children.style.display = isCollapsed ? 'block' : 'none';
+          e.target.dataset.collapsed = (!isCollapsed).toString();
+          e.target.textContent = isCollapsed ? (isArray ? '[' : '{') : (isArray ? '[...]' : '{...}');
+        }
+      });
+    }
+
+    const keySpan = key !== 'root' ? `<span class="dev-json-key">${key}:</span> ` : '';
+    container.innerHTML = `${keySpan}`;
+    container.insertBefore(toggleBtn, container.firstChild);
+
+    if (!isEmpty) {
+      const children = document.createElement('div');
+      children.id = nodeId;
+      children.className = 'dev-json-children';
+      
+      const entries = isArray ? data.map((v, i) => [i, v]) : Object.entries(data);
+      for (const [k, v] of entries) {
+        children.appendChild(this.createEditableJSONNode(v, isArray ? '' : k, indent + 1, editorType));
+      }
+      
+      const closeBracket = document.createElement('div');
+      closeBracket.style.paddingLeft = `${indent * 20}px`;
+      closeBracket.textContent = isArray ? ']' : '}';
+      closeBracket.className = 'dev-json-close';
+      children.appendChild(closeBracket);
+      
+      container.appendChild(children);
+    } else {
+      const closeBracket = document.createElement('span');
+      closeBracket.textContent = isArray ? ']' : '}';
+      closeBracket.className = 'dev-json-close';
+      container.appendChild(closeBracket);
+    }
+
+    return container;
+  }
+
+  addEditableListener(el, key, value, editorType) {
+    el.addEventListener('click', (e) => {
+      if (el.querySelector('input')) return;
+      
+      const currentValue = value === null ? 'null' : JSON.stringify(value).slice(1, -1);
+      el.innerHTML = `<input type="text" class="dev-json-input" value="${currentValue}" data-original='${JSON.stringify(value)}'>`;
+      const input = el.querySelector('input');
+      input.focus();
+      input.select();
+
+      const finishEdit = (save) => {
+        const newVal = input.value;
+        const original = JSON.parse(input.dataset.original);
+        
+        if (save && newVal !== currentValue) {
+          let parsed;
+          try {
+            if (newVal === 'null') parsed = null;
+            else if (newVal === 'true') parsed = true;
+            else if (newVal === 'false') parsed = false;
+            else if (/^-?\d+$/.test(newVal)) parsed = parseInt(newVal, 10);
+            else if (/^-?\d+\.\d+$/.test(newVal)) parsed = parseFloat(newVal);
+            else if ((newVal.startsWith('"') && newVal.endsWith('"')) || (newVal.startsWith("'") && newVal.endsWith("'"))) {
+              parsed = newVal.slice(1, -1);
+            } else {
+              parsed = newVal;
+            }
+            
+            this.updateJSONData(editorType, key, parsed);
+            
+            if (parsed === null) {
+              el.innerHTML = `<span class="dev-json-null">null</span>`;
+            } else if (typeof parsed === 'string') {
+              el.innerHTML = `<span class="dev-json-string">"${parsed}"</span>`;
+            } else if (typeof parsed === 'number') {
+              el.innerHTML = `<span class="dev-json-number">${parsed}</span>`;
+            } else if (typeof parsed === 'boolean') {
+              el.innerHTML = `<span class="dev-json-boolean">${parsed}</span>`;
+            }
+          } catch (err) {
+            this.restoreDisplay(el, original);
+          }
+        } else {
+          this.restoreDisplay(el, original);
+        }
+      };
+
+      input.addEventListener('blur', () => finishEdit(true));
+      input.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter') finishEdit(true);
+        if (ev.key === 'Escape') finishEdit(false);
+      });
+    });
+  }
+
+  restoreDisplay(el, value) {
+    if (value === null) {
+      el.innerHTML = '<span class="dev-json-null">null</span>';
+    } else if (typeof value === 'string') {
+      el.innerHTML = `<span class="dev-json-string">"${value}"</span>`;
+    } else if (typeof value === 'number') {
+      el.innerHTML = `<span class="dev-json-number">${value}</span>`;
+    } else if (typeof value === 'boolean') {
+      el.innerHTML = `<span class="dev-json-boolean">${value}</span>`;
+    }
+  }
+
+  updateJSONData(editorType, key, newValue) {
+    if (editorType === 'save') {
+      this.selectedSaveData[key] = newValue;
+    } else if (editorType === 'entity') {
+      this.selectedEntityData[key] = newValue;
+    }
+  }
+
+  collapseAllEntityJSON() {
+    document.querySelectorAll('#dev-entity-json-view .dev-json-toggle').forEach(btn => {
+      if (btn.textContent === '[' || btn.textContent === '{') {
+        btn.click();
+      }
+    });
+  }
+
+  expandAllEntityJSON() {
+    document.querySelectorAll('#dev-entity-json-view .dev-json-toggle[data-collapsed="true"]').forEach(btn => {
+      btn.click();
+    });
   }
 
   serializeComponents(components) {
