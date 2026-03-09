@@ -5191,6 +5191,25 @@ export class ActionPanel {
               ? "Regional"
               : "Indie";
 
+      // Get champions for this promotion
+      const championships = ChampionshipSystem.getPromotionChampionships(promo.id);
+      
+      // Sort by prestige: World > Secondary (National) > Tag > Others
+      const typePriority = { world: 1, secondary: 2, tag: 3 };
+      championships.sort((a, b) => {
+        const priorityA = typePriority[a.type] || 99;
+        const priorityB = typePriority[b.type] || 99;
+        return priorityA - priorityB;
+      });
+
+      const championHtml = championships
+        .filter((c) => c.currentChampion?.name)
+        .map(
+          (c) =>
+            `<div style="font-size: 0.8rem; color: var(--accent-gold);"><span class="belt-badge belt-${c.type || "generic"}" style="display: inline-block; vertical-align: middle; margin-right: 4px;" title="${c.name}"></span>${c.currentChampion.name}</div>`,
+        )
+        .join("");
+
       // Can the player realistically get signed here?
       const minOverness =
         promo.prestige >= 71
@@ -5217,6 +5236,7 @@ export class ActionPanel {
           <div>
             <strong>${promo.name}</strong> ${isCurrent ? "(Current)" : ""}
             <br/><span style="font-size: 0.85rem; color: var(--text-secondary);">${tierLabel} | ${promo.region} | ${promo.stylePreference}</span>
+            ${championHtml ? `<div style="margin-top: 0.25rem;">${championHtml}</div>` : ""}
           </div>
           <span style="font-weight: 600;">⭐ ${promo.prestige}</span>
         </div>

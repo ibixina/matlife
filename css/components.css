@@ -641,6 +641,7 @@ input[type="range"] {
     --belt-plate-edge: #8c6a17;
     --belt-gem: #b02020;
     position: relative;
+    display: inline-block;
     width: 34px;
     height: 12px;
     background: linear-gradient(
