@@ -166,8 +166,15 @@ export class MatchResultProcessor {
    * @private
    */
   static updateCareerStats(winner, loser, matchRating, matchResult = {}) {
+    const state = gameStateManager.getStateRef();
     const winnerCareer = winner.getComponent("careerStats");
     const loserCareer = loser.getComponent("careerStats");
+    const winnerIdentity = winner.getComponent("identity");
+    const loserIdentity = loser.getComponent("identity");
+    const winnerContract = winner.getComponent("contract");
+    const loserContract = loser.getComponent("contract");
+    const winnerPromotion = winnerContract?.promotionId ? state.promotions.get(winnerContract.promotionId)?.name : null;
+    const loserPromotion = loserContract?.promotionId ? state.promotions.get(loserContract.promotionId)?.name : null;
     const isMainEvent =
       matchResult?.isMainEvent === true ||
       matchResult?.bookedPosition === "main_event" ||
@@ -175,6 +182,9 @@ export class MatchResultProcessor {
         /main event/i.test(matchResult.matchType)) ||
       winner.getComponent("contract")?.position === "main_event" ||
       loser.getComponent("contract")?.position === "main_event";
+    
+    const calendar = gameStateManager.getStateRef().calendar;
+    const matchDate = calendar ? `Week ${calendar.week}, ${calendar.year}` : "Unknown";
 
     if (winnerCareer) {
       winnerCareer.totalWins++;
@@ -185,6 +195,7 @@ export class MatchResultProcessor {
         winnerCareer,
         matchRating,
         isMainEvent,
+        loser,
       );
 
       // Track star ratings
@@ -197,13 +208,27 @@ export class MatchResultProcessor {
       winnerCareer.averageRating =
         winnerCareer.starRatings.reduce((a, b) => a + b, 0) /
         winnerCareer.starRatings.length;
+      
+      // Track match history
+      if (!winnerCareer.matchHistory) winnerCareer.matchHistory = [];
+      winnerCareer.matchHistory.push({
+        rating: matchRating,
+        opponent: loserIdentity?.name || "Unknown",
+        opponentId: loser.id,
+        result: "win",
+        date: matchDate,
+        isMainEvent,
+        promotion: winnerPromotion,
+      });
+      if (winnerCareer.matchHistory.length > 50)
+        winnerCareer.matchHistory.shift();
     }
 
     if (loserCareer) {
       loserCareer.totalLosses++;
       loserCareer.consecutiveWins = 0;
       loserCareer.totalMatches = (loserCareer.totalMatches || 0) + 1;
-      this._applyCareerMilestones(loser, loserCareer, matchRating, isMainEvent);
+      this._applyCareerMilestones(loser, loserCareer, matchRating, isMainEvent, winner);
 
       // Track star ratings
       if (!loserCareer.starRatings) loserCareer.starRatings = [];
@@ -214,6 +239,20 @@ export class MatchResultProcessor {
       loserCareer.averageRating =
         loserCareer.starRatings.reduce((a, b) => a + b, 0) /
         loserCareer.starRatings.length;
+      
+      // Track match history
+      if (!loserCareer.matchHistory) loserCareer.matchHistory = [];
+      loserCareer.matchHistory.push({
+        rating: matchRating,
+        opponent: winnerIdentity?.name || "Unknown",
+        opponentId: winner.id,
+        result: "loss",
+        date: matchDate,
+        isMainEvent,
+        promotion: loserPromotion,
+      });
+      if (loserCareer.matchHistory.length > 50)
+        loserCareer.matchHistory.shift();
     }
   }
 
@@ -222,6 +261,7 @@ export class MatchResultProcessor {
     careerStats,
     matchRating,
     isMainEvent,
+    opponent,
   ) {
     if (matchRating >= 5) {
       careerStats.fiveStarMatches = (careerStats.fiveStarMatches || 0) + 1;
@@ -229,6 +269,18 @@ export class MatchResultProcessor {
 
     if (isMainEvent) {
       careerStats.mainEvents = (careerStats.mainEvents || 0) + 1;
+    }
+
+    // Track best match rating with match details
+    if (matchRating > (careerStats.bestMatchRating || 0)) {
+      careerStats.bestMatchRating = matchRating;
+      const opponentIdentity = opponent?.getComponent("identity");
+      const calendar = gameStateManager.getStateRef().calendar;
+      careerStats.bestMatchDetails = {
+        rating: matchRating,
+        opponent: opponentIdentity?.name || "Unknown",
+        date: calendar ? `Week ${calendar.week}, ${calendar.year}` : "Unknown",
+      };
     }
 
     const activeInjuries = wrestler

@@ -205,8 +205,40 @@ export class DynamicFeudSystem {
     const state = gameStateManager.getStateRef();
     const feudId = [entityA.id, entityB.id].sort().join("_");
 
-    // Check if feud already exists
-    if (state.feuds.has(feudId)) {
+    // Get names for error messages
+    const identityA = entityA.getComponent("identity");
+    const identityB = entityB.getComponent("identity");
+    const nameA = identityA?.name || "Wrestler A";
+    const nameB = identityB?.name || "Wrestler B";
+
+    // Check if either wrestler is already in an active feud (with someone else)
+    const entityAInFeud = this.hasActiveFeud(entityA.id);
+    if (entityAInFeud) {
+      const existingFeud = state.feuds.get(entityAInFeud);
+      const isWithEntityB = existingFeud?.entityA === entityB.id || existingFeud?.entityB === entityB.id;
+      if (!isWithEntityB) {
+        const otherId = existingFeud.entityA === entityA.id ? existingFeud.entityB : existingFeud.entityA;
+        const otherEntity = state.entities.get(otherId);
+        const otherName = otherEntity?.getComponent("identity")?.name || "someone";
+        return { error: `${nameA} is already in a feud with ${otherName}` };
+      }
+    }
+
+    const entityBInFeud = this.hasActiveFeud(entityB.id);
+    if (entityBInFeud) {
+      const existingFeud = state.feuds.get(entityBInFeud);
+      const isWithEntityA = existingFeud?.entityA === entityA.id || existingFeud?.entityB === entityA.id;
+      if (!isWithEntityA) {
+        const otherId = existingFeud.entityA === entityB.id ? existingFeud.entityB : existingFeud.entityA;
+        const otherEntity = state.entities.get(otherId);
+        const otherName = otherEntity?.getComponent("identity")?.name || "someone";
+        return { error: `${nameB} is already in a feud with ${otherName}` };
+      }
+    }
+
+    // Check if feud already exists between these two (resolved feuds shouldn't block new ones)
+    const existingFeud = state.feuds.get(feudId);
+    if (existingFeud && !existingFeud.resolved) {
       return { error: "Feud already exists between these wrestlers" };
     }
 
@@ -231,12 +263,10 @@ export class DynamicFeudSystem {
     RelationshipManager.setRelationshipType(entityA.id, entityB.id, "rival");
 
     // Log
-    const identityA = entityA.getComponent("identity");
-    const identityB = entityB.getComponent("identity");
     gameStateManager.dispatch("ADD_LOG_ENTRY", {
       entry: {
         category: "backstage",
-        text: `🥊 NEW FEUD: ${identityA?.name} vs ${identityB?.name} - ${cause}`,
+        text: `🥊 NEW FEUD: ${nameA} vs ${nameB} - ${cause}`,
         type: "feud",
       },
     });
