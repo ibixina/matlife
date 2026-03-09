@@ -256,6 +256,7 @@ export class MatchSimulator {
   static _determineStyle(entity) {
     const identity = entity.getComponent("identity") || {};
     const gimmick = (identity.gimmick || "").toString().trim();
+    const archetype = (identity.archetype || "").toString().trim();
 
     const archetypeToStyle = {
       "High-Flyer": "Aerial",
@@ -268,6 +269,10 @@ export class MatchSimulator {
 
     if (gimmick && archetypeToStyle[gimmick]) {
       return archetypeToStyle[gimmick];
+    }
+
+    if (archetype && archetypeToStyle[archetype]) {
+      return archetypeToStyle[archetype];
     }
 
     const inRing = entity.getComponent("inRingStats") || {};

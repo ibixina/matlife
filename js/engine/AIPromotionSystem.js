@@ -108,6 +108,9 @@ export class AIPromotionSystem {
 
       // Quick-simulate match
       const result = this.quickSimMatch(wrestler1, wrestler2);
+      result.week = state.calendar.absoluteWeek;
+      result.promotionId = promotion.id;
+      result.promotionName = promotion.name;
       totalRating += result.rating;
 
       // Update wrestler records
@@ -160,7 +163,7 @@ export class AIPromotionSystem {
     const baseRating = (effective1 + effective2) / 40;
     const randomFactor = randomInt(-8, 8) / 10;
     const chemistry = this.getChemistry(wrestler1, wrestler2);
-    const rating = Math.max(0.5, Math.min(5, baseRating + randomFactor + chemistry));
+    const rating = Math.max(0.5, Math.min(7, baseRating + randomFactor + chemistry));
 
     return { winner, loser, rating };
   }
@@ -199,15 +202,79 @@ export class AIPromotionSystem {
     const loserCareer = loser.getComponent('careerStats');
     const winnerPop = winner.getComponent('popularity');
     const loserPop = loser.getComponent('popularity');
+    const winnerIdentity = winner.getComponent('identity');
+    const loserIdentity = loser.getComponent('identity');
 
     if (winnerCareer) {
       winnerCareer.totalWins = (winnerCareer.totalWins || 0) + 1;
       winnerCareer.consecutiveWins = (winnerCareer.consecutiveWins || 0) + 1;
+      winnerCareer.totalMatches = (winnerCareer.totalMatches || 0) + 1;
+      
+      // Track match rating
+      if (!winnerCareer.starRatings) winnerCareer.starRatings = [];
+      winnerCareer.starRatings.push(result.rating);
+      if (winnerCareer.starRatings.length > 10) winnerCareer.starRatings.shift();
+      winnerCareer.averageRating = winnerCareer.starRatings.reduce((a, b) => a + b, 0) / winnerCareer.starRatings.length;
+      
+      // Track best match
+      if (result.rating > (winnerCareer.bestMatchRating || 0)) {
+        winnerCareer.bestMatchRating = result.rating;
+        winnerCareer.bestMatchDetails = {
+          rating: result.rating,
+          opponent: loserIdentity?.name || "Unknown",
+          date: `Week ${result.week || "?"}`,
+          promotion: result.promotionName || "Unknown",
+        };
+      }
+      
+      // Track match history
+      if (!winnerCareer.matchHistory) winnerCareer.matchHistory = [];
+      winnerCareer.matchHistory.push({
+        rating: result.rating,
+        opponent: loserIdentity?.name || "Unknown",
+        opponentId: loser.id,
+        result: "win",
+        date: `Week ${result.week || "?"}`,
+        isMainEvent: result.isMainEvent || false,
+        promotion: result.promotionName || "Unknown",
+      });
+      if (winnerCareer.matchHistory.length > 50) winnerCareer.matchHistory.shift();
     }
 
     if (loserCareer) {
       loserCareer.totalLosses = (loserCareer.totalLosses || 0) + 1;
       loserCareer.consecutiveWins = 0;
+      loserCareer.totalMatches = (loserCareer.totalMatches || 0) + 1;
+      
+      // Track match rating
+      if (!loserCareer.starRatings) loserCareer.starRatings = [];
+      loserCareer.starRatings.push(result.rating);
+      if (loserCareer.starRatings.length > 10) loserCareer.starRatings.shift();
+      loserCareer.averageRating = loserCareer.starRatings.reduce((a, b) => a + b, 0) / loserCareer.starRatings.length;
+      
+      // Track best match
+      if (result.rating > (loserCareer.bestMatchRating || 0)) {
+        loserCareer.bestMatchRating = result.rating;
+        loserCareer.bestMatchDetails = {
+          rating: result.rating,
+          opponent: winnerIdentity?.name || "Unknown",
+          date: `Week ${result.week || "?"}`,
+          promotion: result.promotionName || "Unknown",
+        };
+      }
+      
+      // Track match history
+      if (!loserCareer.matchHistory) loserCareer.matchHistory = [];
+      loserCareer.matchHistory.push({
+        rating: result.rating,
+        opponent: winnerIdentity?.name || "Unknown",
+        opponentId: winner.id,
+        result: "loss",
+        date: `Week ${result.week || "?"}`,
+        isMainEvent: result.isMainEvent || false,
+        promotion: result.promotionName || "Unknown",
+      });
+      if (loserCareer.matchHistory.length > 50) loserCareer.matchHistory.shift();
     }
 
     // Update popularity

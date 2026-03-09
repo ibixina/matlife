@@ -158,8 +158,8 @@ export class ChampionshipSystem {
     // Update wrestler's career stats
     const careerStats = wrestler.getComponent('careerStats');
     if (careerStats) {
-      if (!careerStats.championships) careerStats.championships = [];
-      careerStats.championships.push({
+      if (!careerStats.titleReigns) careerStats.titleReigns = [];
+      careerStats.titleReigns.push({
         championshipId,
         championshipName: championship.name,
         wonWeek: currentWeek

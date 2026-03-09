@@ -275,7 +275,8 @@ export class EntityFactory {
         age: jsonEntry.age,
         hometown: jsonEntry.hometown || "Unknown",
         gender: jsonEntry.gender || "Male",
-        gimmick: jsonEntry.gimmick || jsonEntry.archetype || "Wrestler",
+        gimmick: jsonEntry.gimmick || "",
+        archetype: jsonEntry.archetype || "",
         alignment: jsonEntry.alignment || (() => {
           const alignments = ["Face", "Heel", "Tweener"];
           return alignments[Math.floor(Math.random() * alignments.length)];

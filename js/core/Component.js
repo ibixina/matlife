@@ -28,6 +28,12 @@ export class Component {
 }
 
 // 1. Identity Component
+const VALID_ARCHETYPES = ["Technical", "High-Flyer", "Powerhouse", "Brawler", "Strong Style", "Lucha Libre"];
+
+function getRandomArchetype() {
+  return VALID_ARCHETYPES[Math.floor(Math.random() * VALID_ARCHETYPES.length)];
+}
+
 export class IdentityComponent extends Component {
   constructor(options = {}) {
     super();
@@ -46,7 +52,17 @@ export class IdentityComponent extends Component {
   }
 
   static deserialize(data) {
-    return new IdentityComponent(data);
+    const component = new IdentityComponent(data);
+    
+    if (!component.archetype || component.archetype === "Wrestler") {
+      if (data.gimmick && VALID_ARCHETYPES.includes(data.gimmick)) {
+        component.archetype = data.gimmick;
+      } else {
+        component.archetype = getRandomArchetype();
+      }
+    }
+    
+    return component;
   }
 }
 

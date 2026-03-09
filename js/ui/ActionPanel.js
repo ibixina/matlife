@@ -44,6 +44,7 @@ export class ActionPanel {
     this.currentPromotion = null;
     this.currentPromotionId = null;
     this.careerView = "main";
+    this.rankingType = "avgStats";
     this.fastForwarding = false;
     this.previousTab = null; // Track previous tab for scroll restoration
     this.defaultDailyActionLimit = 3;
@@ -181,6 +182,9 @@ export class ActionPanel {
           this.careerView = "main";
         }
         this.renderCareerTab(state);
+        break;
+      case "rankings":
+        this.renderRankingsTab(state);
         break;
       default:
         this.renderMatchTab(state);
@@ -2423,8 +2427,8 @@ export class ActionPanel {
           const gainText =
             result.gains.length > 0
               ? result.gains
-                  .map((g) => `${g.stat} +${g.gain.toFixed(1)}`)
-                  .join(", ")
+                .map((g) => `${g.stat} +${g.gain.toFixed(1)}`)
+                .join(", ")
               : "No significant gains this session";
 
           gameStateManager.dispatch("ADD_LOG_ENTRY", {
@@ -2476,8 +2480,8 @@ export class ActionPanel {
             const gainsText =
               result.gains && result.gains.length > 0
                 ? result.gains
-                    .map((g) => `${g.stat} +${g.gain.toFixed(1)}`)
-                    .join(", ")
+                  .map((g) => `${g.stat} +${g.gain.toFixed(1)}`)
+                  .join(", ")
                 : "no gains (maxed out)";
             gameStateManager.dispatch("ADD_LOG_ENTRY", {
               entry: {
@@ -2629,7 +2633,7 @@ export class ActionPanel {
         const hasCreativeControl = !!playerContract?.hasCreativeControl;
         const followedBooking = match.bookedWinner
           ? (match.bookedWinner === "wrestler1" && playerWon) ||
-            (match.bookedWinner === "wrestler2" && !playerWon)
+          (match.bookedWinner === "wrestler2" && !playerWon)
           : true;
         const bookingStatus = followedBooking
           ? " [FOLLOWED BOOKING]"
@@ -2720,43 +2724,39 @@ export class ActionPanel {
       <h3>${identity?.name || "Unknown"}</h3>
       <p><strong>Gimmick:</strong> ${identity?.gimmick || "None"}</p>
       <p><strong>Alignment:</strong> ${identity?.alignment || "Unknown"}</p>
-      ${
-        inRingStats
-          ? `
+      <p><strong>Archetype:</strong> ${identity?.archetype || "Wrestler"}</p>
+      ${inRingStats
+        ? `
         <h4 style="margin-top: 1rem;">Stats</h4>
         <p>Brawling: ${inRingStats.brawling}</p>
         <p>Technical: ${inRingStats.technical}</p>
         <p>Aerial: ${inRingStats.aerial}</p>
       `
-          : ""
+        : ""
       }
-      ${
-        popularity
-          ? `
+      ${popularity
+        ? `
         <p style="margin-top: 1rem;"><strong>Overness:</strong> ${popularity.overness}</p>
       `
-          : ""
+        : ""
       }
-      ${
-        careerStats
-          ? `
+      ${careerStats
+        ? `
         <p><strong>Record:</strong> ${careerStats.totalWins}-${careerStats.totalLosses}-${careerStats.draws}</p>
       `
-          : ""
+        : ""
       }
-      ${
-        relationship
-          ? `
+      ${relationship
+        ? `
         <p style="margin-top: 1rem;"><strong>Relationship:</strong> ${relationship.affinity} (${relationship.type})</p>
       `
-          : ""
+        : ""
       }
-      ${
-        activeFeud
-          ? `
+      ${activeFeud
+        ? `
         <p style="color: #ff8c42;"><strong>Active Feud:</strong> ${activeFeud.phase} phase, heat ${activeFeud.heat}</p>
       `
-          : ""
+        : ""
       }
     `;
 
@@ -4917,8 +4917,8 @@ export class ActionPanel {
       const promotion = state.promotions.get(contract.promotionId);
       const positionInfo = contract.position
         ? CardPositionSystem.getPositionInfo(
-            contract.position,
-          ).name.toUpperCase()
+          contract.position,
+        ).name.toUpperCase()
         : "DARK MATCH";
       const buyoutCost =
         (contract.remainingWeeks || 0) * (contract.weeklySalary || 0);
@@ -5686,6 +5686,461 @@ export class ActionPanel {
       });
     progressDiv.appendChild(progressRows);
     this.container.appendChild(progressDiv);
+  }
+
+  /**
+   * Ranking types for wrestler rankings
+   */
+  static RANKING_TYPES = {
+    avgStats: {
+      label: "Avg All Stats",
+      getValue: (wrestler) => {
+        const physical = wrestler.getComponent("physicalStats");
+        const inRing = wrestler.getComponent("inRingStats");
+        const entertainment = wrestler.getComponent("entertainmentStats");
+        if (!inRing) return 0;
+        let total = 0;
+        let count = 0;
+        if (physical) {
+          total += physical.strength + physical.stamina + physical.speed + physical.resilience;
+          count += 4;
+        }
+        if (inRing) {
+          total += inRing.brawling + inRing.technical + inRing.aerial + inRing.selling + inRing.psychology;
+          count += 5;
+        }
+        if (entertainment) {
+          total += entertainment.charisma + entertainment.micSkills + entertainment.acting;
+          count += 3;
+        }
+        return count > 0 ? total / count : 0;
+      },
+    },
+    matchRatings: {
+      label: "Best Match",
+      isEligible: (wrestler) => {
+        const career = wrestler.getComponent("careerStats");
+        return career?.starRatings && career.starRatings.length > 0;
+      },
+      getValue: (wrestler) => {
+        const career = wrestler.getComponent("careerStats");
+        return career?.bestMatchRating || 0;
+      },
+      getDisplay: (wrestler) => {
+        const career = wrestler.getComponent("careerStats");
+        const rating = career?.bestMatchRating || 0;
+        const details = career?.bestMatchDetails;
+        if (rating > 0 && details) {
+          return `${rating.toFixed(1)} vs ${details.opponent}`;
+        }
+        return rating > 0 ? rating.toFixed(1) : "0";
+      },
+    },
+    avgMatchRating: {
+      label: "Avg Match Rating",
+      isEligible: (wrestler) => {
+        const career = wrestler.getComponent("careerStats");
+        return career?.starRatings && career.starRatings.length >= 3;
+      },
+      getValue: (wrestler) => {
+        const career = wrestler.getComponent("careerStats");
+        return career?.averageRating || 0;
+      },
+      getDisplay: (wrestler) => {
+        const career = wrestler.getComponent("careerStats");
+        const rating = career?.averageRating || 0;
+        return rating > 0 ? rating.toFixed(1) : "0.0";
+      },
+    },
+    championships: {
+      label: "Titles",
+      getValue: (wrestler, state) => {
+        const career = wrestler.getComponent("careerStats");
+        const historical = career?.totalTitleReigns || 0;
+
+        // Count current championships
+        let currentChampionships = 0;
+        if (state?.championships) {
+          state.championships.forEach((title) => {
+            if (title.currentChampion === wrestler.id) {
+              currentChampionships++;
+            }
+          });
+        }
+
+        // Return total: current + historical (but don't double-count if still holding)
+        return currentChampionships + historical;
+      },
+      getDisplay: (wrestler, state) => {
+        const career = wrestler.getComponent("careerStats");
+        const historical = career?.totalTitleReigns || 0;
+
+        // Count current championships
+        let currentChampionships = 0;
+        if (state?.championships) {
+          state.championships.forEach((title) => {
+            if (title.currentChampion === wrestler.id) {
+              currentChampionships++;
+            }
+          });
+        }
+
+        if (currentChampionships > 0 || historical > 0) {
+          return currentChampionships + historical;
+        }
+        return "0";
+      },
+    },
+    winRate: {
+      label: "Win Rate",
+      getValue: (wrestler) => {
+        const career = wrestler.getComponent("careerStats");
+        const total = (career?.totalWins || 0) + (career?.totalLosses || 0) + (career?.draws || 0);
+        return total > 0 ? ((career?.totalWins || 0) / total) * 100 : 0;
+      },
+      getDisplay: (wrestler) => {
+        const career = wrestler.getComponent("careerStats");
+        const total = (career?.totalWins || 0) + (career?.totalLosses || 0) + (career?.draws || 0);
+        const rate = total > 0 ? ((career?.totalWins || 0) / total) * 100 : 0;
+        return `${rate.toFixed(1)}%`;
+      },
+    },
+    popularity: {
+      label: "Popularity",
+      getValue: (wrestler) => {
+        const popularity = wrestler.getComponent("popularity");
+        return popularity?.overness || 0;
+      },
+    },
+    wins: {
+      label: "Total Wins",
+      getValue: (wrestler) => {
+        const career = wrestler.getComponent("careerStats");
+        return career?.totalWins || 0;
+      },
+    },
+    consecutiveWins: {
+      label: "Consecutive Wins",
+      getValue: (wrestler) => {
+        const career = wrestler.getComponent("careerStats");
+        return career?.consecutiveWins || 0;
+      },
+    },
+  };
+
+  /**
+   * Renders the Rankings tab
+   * @private
+   */
+  renderRankingsTab(state) {
+    this.titleEl.textContent = "Rankings";
+    this.container.innerHTML = "";
+
+    if (!this.rankingType) {
+      this.rankingType = "avgStats";
+    }
+
+    const rankingTypes = ActionPanel.RANKING_TYPES;
+
+    const typeSelector = document.createElement("div");
+    typeSelector.className = "ranking-type-selector mb-md";
+    typeSelector.style.display = "flex";
+    typeSelector.style.flexWrap = "wrap";
+    typeSelector.style.gap = "0.5rem";
+    typeSelector.style.marginBottom = "1rem";
+
+    Object.entries(rankingTypes).forEach(([key, config]) => {
+      const btn = document.createElement("button");
+      btn.className = `btn ${this.rankingType === key ? "btn-primary" : ""}`;
+      btn.style.fontSize = "0.8rem";
+      btn.style.padding = "0.4rem 0.6rem";
+      btn.textContent = config.label;
+      btn.addEventListener("click", () => {
+        this.rankingType = key;
+        this.renderRankingsTab(state);
+      });
+      typeSelector.appendChild(btn);
+    });
+    this.container.appendChild(typeSelector);
+
+    const rankingConfig = rankingTypes[this.rankingType];
+
+    const wrestlers = [];
+    state.entities.forEach((entity, id) => {
+      if (entity.getComponent("inRingStats")) {
+        // Apply eligibility filter if defined
+        if (rankingConfig.isEligible && !rankingConfig.isEligible(entity, state)) {
+          return;
+        }
+        wrestlers.push(entity);
+      }
+    });
+
+    // Special handling for match ratings - show ranked matches instead of wrestlers
+    if (this.rankingType === "matchRatings") {
+      this.renderMatchRankings(state, rankingConfig);
+      return;
+    }
+
+    wrestlers.sort((a, b) => {
+      const valueA = rankingConfig.getValue(a, state);
+      const valueB = rankingConfig.getValue(b, state);
+      return valueB - valueA;
+    });
+
+    const rankingsList = document.createElement("div");
+    rankingsList.className = "rankings-list";
+
+    // Use a consistent grid layout for header and rows
+    const gridLayout = "40px 1fr 1.2fr 80px";
+
+    const header = document.createElement("div");
+    header.style.display = "grid";
+    header.style.gridTemplateColumns = gridLayout;
+    header.style.padding = "0.5rem";
+    header.style.fontWeight = "bold";
+    header.style.fontSize = "0.8rem";
+    header.style.borderBottom = "1px solid var(--border-color)";
+    header.innerHTML = `
+      <span>#</span>
+      <span>Wrestler</span>
+      <span>Promotion</span>
+      <span style="text-align: right;">${rankingConfig.label}</span>
+    `;
+    rankingsList.appendChild(header);
+
+    wrestlers.slice(0, 50).forEach((wrestler, index) => {
+      const identity = wrestler.getComponent("identity");
+      const contract = wrestler.getComponent("contract");
+      const value = rankingConfig.getValue(wrestler, state);
+      const displayValue = rankingConfig.getDisplay ? rankingConfig.getDisplay(wrestler, state) : (typeof value === "number" ? (Number.isInteger(value) ? value : value.toFixed(1)) : value);
+      const isPlayer = wrestler.id === state.player?.entityId;
+
+      // Get promotion name
+      let promotionName = "Free Agent";
+      if (contract?.promotionId) {
+        const promotion = state.promotions.get(contract.promotionId);
+        promotionName = promotion?.name || "Free Agent";
+      }
+
+      const row = document.createElement("div");
+      row.style.display = "grid";
+      row.style.gridTemplateColumns = gridLayout;
+      row.style.alignItems = "center";
+      row.style.padding = "0.5rem";
+      row.style.fontSize = "0.85rem";
+      row.style.borderBottom = "1px solid var(--border-color)";
+      row.style.background = isPlayer ? "rgba(255,200,87,0.1)" : "transparent";
+      row.style.cursor = "pointer";
+
+      const rankColors = ["#ffd700", "#c0c0c0", "#cd7f32"];
+      const rankColor = index < 3 ? rankColors[index] : "var(--text-secondary)";
+
+      row.innerHTML = `
+        <span style="color: ${rankColor}; font-weight: bold;">${index + 1}</span>
+        <span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 5px;">${identity?.name || "Unknown"}${isPlayer ? " (You)" : ""}</span>
+        <span style="font-size: 0.75rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${promotionName}</span>
+        <span style="text-align: right;">${displayValue}</span>
+      `;
+
+      row.addEventListener("click", () => {
+        this.showWrestlerDetails(wrestler, state);
+      });
+
+      rankingsList.appendChild(row);
+    });
+
+    this.container.appendChild(rankingsList);
+  }
+
+  /**
+   * Renders match rankings (all matches ranked by rating)
+   * @private
+   */
+  renderMatchRankings(state, rankingConfig) {
+    const allMatches = [];
+
+    state.entities.forEach((entity) => {
+      if (entity.getComponent("inRingStats")) {
+        const identity = entity.getComponent("identity");
+        const career = entity.getComponent("careerStats");
+        if (career?.matchHistory) {
+          career.matchHistory.forEach((match) => {
+            allMatches.push({
+              wrestler: identity?.name || "Unknown",
+              wrestlerId: entity.id,
+              ...match,
+            });
+          });
+        }
+      }
+    });
+
+    const uniqueMatches = [];
+    const seen = new Set();
+    allMatches.forEach((match) => {
+      const w1 = match.wrestler?.toLowerCase().trim() || "";
+      const w2 = match.opponent?.toLowerCase().trim() || "";
+      const wrestlers = [w1, w2].sort();
+      const key = `${match.date}-${wrestlers[0]}-${wrestlers[1]}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueMatches.push(match);
+      }
+    });
+
+    // Sort by rating descending
+    uniqueMatches.sort((a, b) => b.rating - a.rating);
+
+    const rankingsList = document.createElement("div");
+    rankingsList.className = "rankings-list";
+
+    // Use consistent grid layout
+    const gridLayout = "40px 1fr 60px 1fr";
+
+    const header = document.createElement("div");
+    header.style.display = "grid";
+    header.style.gridTemplateColumns = gridLayout;
+    header.style.alignItems = "center";
+    header.style.padding = "0.5rem";
+    header.style.fontWeight = "bold";
+    header.style.fontSize = "0.8rem";
+    header.style.borderBottom = "1px solid var(--border-color)";
+    header.innerHTML = `
+      <span>#</span>
+      <span>Match</span>
+      <span style="text-align: center;">Rating</span>
+      <span style="text-align: right;">Promotion</span>
+    `;
+    rankingsList.appendChild(header);
+
+    uniqueMatches.slice(0, 50).forEach((match, index) => {
+      const isPlayer = match.wrestlerId === state.player?.entityId;
+
+      const row = document.createElement("div");
+      row.style.display = "grid";
+      row.style.gridTemplateColumns = gridLayout;
+      row.style.alignItems = "center";
+      row.style.padding = "0.5rem";
+      row.style.fontSize = "0.85rem";
+      row.style.borderBottom = "1px solid var(--border-color)";
+      row.style.background = isPlayer ? "rgba(255,200,87,0.1)" : "transparent";
+      row.style.cursor = "pointer";
+
+
+      // Show winner in gold, loser in normal color
+      const winnerName = match.result === "win" ? match.wrestler : match.opponent;
+      const loserName = match.result === "win" ? match.opponent : match.wrestler;
+
+      const rankColors = ["#ffd700", "#c0c0c0", "#cd7f32"];
+      const rankColor = index < 3 ? rankColors[index] : "var(--text-secondary)";
+
+      const stars = "★".repeat(Math.floor(match.rating)) + (match.rating % 1 >= 0.5 ? "½" : "");
+      const ratingColor = match.rating >= 5 ? "#ffd700" : match.rating >= 3 ? "#c0c0c0" : "#cd7f32";
+
+      row.innerHTML = `
+        <span style="color: ${rankColor}; font-weight: bold;">${index + 1}</span>
+        <span style="min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 5px;"><span style="color: #ffd700; font-weight: bold;">${winnerName}</span> vs ${loserName}</span>
+        <span style="text-align: center; color: ${ratingColor}; font-weight: bold;">${stars} (${match.rating.toFixed(1)})</span>
+        <span style="font-size: 0.75rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right;">${match.promotion || "Independent"}</span>
+      `;
+
+      rankingsList.appendChild(row);
+    });
+
+    if (uniqueMatches.length === 0) {
+      const empty = document.createElement("div");
+      empty.style.padding = "1rem";
+      empty.style.textAlign = "center";
+      empty.style.color = "var(--text-muted)";
+      empty.textContent = "No matches recorded yet";
+      rankingsList.appendChild(empty);
+    }
+
+    this.container.appendChild(rankingsList);
+  }
+
+  /**
+   * Shows detailed info about a wrestler from rankings
+   * @private
+   */
+  showWrestlerDetails(wrestler, state) {
+    const identity = wrestler.getComponent("identity");
+    const physical = wrestler.getComponent("physicalStats");
+    const inRing = wrestler.getComponent("inRingStats");
+    const entertainment = wrestler.getComponent("entertainmentStats");
+    const popularity = wrestler.getComponent("popularity");
+    const career = wrestler.getComponent("careerStats");
+    const condition = wrestler.getComponent("condition");
+    const contract = wrestler.getComponent("contract");
+
+    this.container.innerHTML = "";
+
+    const backBtn = document.createElement("button");
+    backBtn.className = "btn mb-md";
+    backBtn.textContent = "← Back to Rankings";
+    backBtn.addEventListener("click", () => {
+      this.renderRankingsTab(state);
+    });
+    this.container.appendChild(backBtn);
+
+    const detailsCard = document.createElement("div");
+    detailsCard.className = "panel";
+
+    let html = `<h3>${identity?.name || "Unknown"}</h3>`;
+    html += `<p><strong>Gimmick:</strong> ${identity?.gimmick || "None"}</p>`;
+    html += `<p><strong>Alignment:</strong> ${identity?.alignment || "Face"}</p>`;
+    html += `<p><strong>Archetype:</strong> ${identity?.archetype || "Wrestler"}</p>`;
+    html += `<p><strong>Age:</strong> ${identity?.age || "?"}</p>`;
+
+    if (contract?.promotionId) {
+      const promotion = state.promotions.get(contract.promotionId);
+      html += `<p><strong>Promotion:</strong> ${promotion?.name || "Unknown"}</p>`;
+    }
+
+    if (popularity) {
+      html += `<p><strong>Overness:</strong> ${Math.round(popularity.overness)}</p>`;
+      html += `<p><strong>Momentum:</strong> ${Math.round(popularity.momentum)}</p>`;
+    }
+
+    if (career) {
+      const total = career.totalWins + career.totalLosses + career.draws;
+      const winRate = total > 0 ? ((career.totalWins / total) * 100).toFixed(1) : "0.0";
+      html += `<p><strong>Record:</strong> ${career.totalWins}-${career.totalLosses}-${career.draws} (${winRate}%)</p>`;
+      html += `<p><strong>Best Match Rating:</strong> ${career.bestMatchRating || "N/A"}</p>`;
+      if (career.bestMatchDetails) {
+        html += `<p style="font-size: 0.85rem; color: var(--text-secondary);">vs ${career.bestMatchDetails.opponent} (${career.bestMatchDetails.date})</p>`;
+      }
+      html += `<p><strong>Title Reigns:</strong> ${career.totalTitleReigns || 0}</p>`;
+      html += `<p><strong>Years Active:</strong> ${career.yearsActive || 0}</p>`;
+    }
+
+    html += `<h4 style="margin-top: 1rem;">Physical Stats</h4>`;
+    if (physical) {
+      html += `<p>STR: ${Math.round(physical.strength)} | STA: ${Math.round(physical.stamina)} | SPD: ${Math.round(physical.speed)} | RES: ${Math.round(physical.resilience)}</p>`;
+    }
+
+    html += `<h4 style="margin-top: 0.5rem;">In-Ring Stats</h4>`;
+    if (inRing) {
+      html += `<p>BRW: ${Math.round(inRing.brawling)} | TEC: ${Math.round(inRing.technical)} | AER: ${Math.round(inRing.aerial)}</p>`;
+      html += `<p>SEL: ${Math.round(inRing.selling)} | PSY: ${Math.round(inRing.psychology)}</p>`;
+    }
+
+    html += `<h4 style="margin-top: 0.5rem;">Entertainment</h4>`;
+    if (entertainment) {
+      html += `<p>MIC: ${Math.round(entertainment.micSkills)} | CHA: ${Math.round(entertainment.charisma)} | ACT: ${Math.round(entertainment.acting)}</p>`;
+    }
+
+    if (condition) {
+      html += `<h4 style="margin-top: 0.5rem;">Condition</h4>`;
+      html += `<p>Health: ${Math.round(condition.health)} | Energy: ${Math.round(condition.energy)} | Mental: ${Math.round(condition.mentalHealth || 75)}</p>`;
+      if (condition.injuries?.length > 0) {
+        html += `<p><strong>Injuries:</strong> ${condition.injuries.map(i => i.bodyPart).join(", ")}</p>`;
+      }
+    }
+
+    detailsCard.innerHTML = html;
+    this.container.appendChild(detailsCard);
   }
 }
 

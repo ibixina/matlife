@@ -1343,6 +1343,10 @@ export class BookerModeEngine {
     const winnerPop = winner.getComponent("popularity");
     const winnerCondition = winner.getComponent("condition");
     const winnerNote = this.ensureRosterNote(promotion, winner.id);
+    const winnerIdentity = winner.getComponent("identity");
+    const calendar = state.calendar;
+    const matchDate = calendar ? `Week ${calendar.week}, ${calendar.year}` : "Unknown";
+    const matchRating = score / 20;
 
     if (winnerCareer) {
       winnerCareer.totalWins += 1;
@@ -1352,9 +1356,35 @@ export class BookerModeEngine {
       );
       winnerCareer.bestMatchRating = Math.max(
         winnerCareer.bestMatchRating || 0,
-        score / 20,
+        matchRating,
       );
+      winnerCareer.bestMatchDetails = {
+        rating: matchRating,
+        opponent: loserNames,
+        date: matchDate,
+        promotion: promotion.name,
+      };
       winnerCareer.matchesThisWeek = (winnerCareer.matchesThisWeek || 0) + 1;
+      winnerCareer.totalMatches = (winnerCareer.totalMatches || 0) + 1;
+      
+      // Track match history
+      if (!winnerCareer.matchHistory) winnerCareer.matchHistory = [];
+      winnerCareer.matchHistory.push({
+        rating: matchRating,
+        opponent: loserNames || "Unknown",
+        opponentId: losers[0]?.id,
+        result: "win",
+        date: matchDate,
+        isMainEvent: slot.bookedPosition === "main_event",
+        promotion: promotion.name,
+      });
+      if (winnerCareer.matchHistory.length > 50) winnerCareer.matchHistory.shift();
+      
+      // Track average rating
+      if (!winnerCareer.starRatings) winnerCareer.starRatings = [];
+      winnerCareer.starRatings.push(matchRating);
+      if (winnerCareer.starRatings.length > 10) winnerCareer.starRatings.shift();
+      winnerCareer.averageRating = winnerCareer.starRatings.reduce((a, b) => a + b, 0) / winnerCareer.starRatings.length;
     }
     if (winnerPop) {
       winnerPop.overness = clamp(
@@ -1395,6 +1425,7 @@ export class BookerModeEngine {
       const popularity = loser.getComponent("popularity");
       const condition = loser.getComponent("condition");
       const note = this.ensureRosterNote(promotion, loser.id);
+      const loserIdentity = loser.getComponent("identity");
 
       if (career) {
         career.totalLosses += 1;
@@ -1403,6 +1434,37 @@ export class BookerModeEngine {
           (career.consecutiveWins || 0) - 1,
         );
         career.matchesThisWeek = (career.matchesThisWeek || 0) + 1;
+        career.totalMatches = (career.totalMatches || 0) + 1;
+        
+        // Track best match for loser
+        if (matchRating > (career.bestMatchRating || 0)) {
+          career.bestMatchRating = matchRating;
+          career.bestMatchDetails = {
+            rating: matchRating,
+            opponent: winnerIdentity?.name || "Unknown",
+            date: matchDate,
+            promotion: promotion.name,
+          };
+        }
+        
+        // Track match history
+        if (!career.matchHistory) career.matchHistory = [];
+        career.matchHistory.push({
+          rating: matchRating,
+          opponent: winnerIdentity?.name || "Unknown",
+          opponentId: winner.id,
+          result: "loss",
+          date: matchDate,
+          isMainEvent: slot.bookedPosition === "main_event",
+          promotion: promotion.name,
+        });
+        if (career.matchHistory.length > 50) career.matchHistory.shift();
+        
+        // Track average rating
+        if (!career.starRatings) career.starRatings = [];
+        career.starRatings.push(matchRating);
+        if (career.starRatings.length > 10) career.starRatings.shift();
+        career.averageRating = career.starRatings.reduce((a, b) => a + b, 0) / career.starRatings.length;
       }
       if (popularity) {
         popularity.momentum = clamp(

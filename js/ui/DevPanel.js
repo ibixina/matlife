@@ -735,7 +735,7 @@ export class DevPanel {
     }
 
     this.selectedSaveKey = key;
-    this.selectedSaveData = data;
+    this.selectedSaveData = data.data;
     
     const nameEl = document.getElementById('dev-edit-save-name');
     const editorEl = document.getElementById('dev-save-editor');
@@ -947,7 +947,7 @@ export class DevPanel {
       if (editorEl.value.trim()) {
         try {
           const data = JSON.parse(editorEl.value);
-          this.selectedSaveData = data;
+    this.selectedSaveData = data.data;
           this.renderJSONView(data);
         } catch (e) {
           this.showEditorStatus('Cannot switch: Invalid JSON in editor.', false);
