@@ -27,6 +27,7 @@ import EntityFactory from "../core/EntityFactory.js";
 import ResolutionEngine from "../engine/ResolutionEngine.js";
 import { randomInt } from "../core/Utils.js";
 import { dataManager } from "../core/DataManager.js";
+import MatchSimulator from "../engine/MatchSimulator.js";
 import BookerView from "./BookerView.js";
 
 /**
@@ -2707,6 +2708,13 @@ export class ActionPanel {
       player && player.id !== entity.id
         ? RelationshipManager.getRelationship(player.id, entity.id)
         : null;
+
+    // Synergy calculation
+    let synergyInfo = null;
+    if (player && player.id !== entity.id) {
+      synergyInfo = MatchSimulator._calculateSynergy(player, entity);
+    }
+
     const activeFeud =
       player && player.id !== entity.id
         ? this._getActiveFeud(player.id, entity.id)
@@ -2730,38 +2738,57 @@ export class ActionPanel {
       <p><strong>Gimmick:</strong> ${identity?.gimmick || "None"}</p>
       <p><strong>Alignment:</strong> ${identity?.alignment || "Unknown"}</p>
       <p><strong>Archetype:</strong> ${identity?.archetype || "Wrestler"}</p>
-      ${inRingStats
-        ? `
+      ${
+        inRingStats
+          ? `
         <h4 style="margin-top: 1rem;">Stats</h4>
         <p>Brawling: ${inRingStats.brawling}</p>
         <p>Technical: ${inRingStats.technical}</p>
         <p>Aerial: ${inRingStats.aerial}</p>
       `
-        : ""
+          : ""
       }
-      ${popularity
-        ? `
+      ${
+        popularity
+          ? `
         <p style="margin-top: 1rem;"><strong>Overness:</strong> ${popularity.overness}</p>
       `
-        : ""
+          : ""
       }
-      ${careerStats
-        ? `
+      ${
+        careerStats
+          ? `
         <p><strong>Record:</strong> ${careerStats.totalWins}-${careerStats.totalLosses}-${careerStats.draws}</p>
       `
-        : ""
+          : ""
       }
-      ${relationship
-        ? `
-        <p style="margin-top: 1rem;"><strong>Relationship:</strong> ${relationship.affinity} (${(relationship.tags || ['professional']).join(', ')})</p>
+      ${
+        relationship
+          ? `
+        <p style="margin-top: 1rem;"><strong>Relationship:</strong> ${relationship.affinity} (${(relationship.tags || ["professional"]).join(", ")})</p>
       `
-        : ""
+          : ""
       }
-      ${activeFeud
-        ? `
-        <p style="color: #ff8c42;"><strong>Active Feud:</strong> ${activeFeud.phase} phase, heat ${activeFeud.heat}</p>
+      ${
+        synergyInfo
+          ? `
+        <div style="margin-top: 1rem; padding: 0.5rem; background: rgba(0, 150, 255, 0.1); border-radius: var(--radius-sm); border-left: 3px solid var(--accent-info);">
+          <strong style="color: var(--accent-info);">⚡ Match Synergy</strong><br/>
+          <span style="font-size: 0.85rem;">
+            ${synergyInfo.style1} vs ${synergyInfo.style2} (${synergyInfo.styleBonus > 0 ? "+" : ""}${synergyInfo.styleBonus.toFixed(2)})<br/>
+            ${synergyInfo.alignment1} vs ${synergyInfo.alignment2} (${synergyInfo.alignmentBonus > 0 ? "+" : ""}${synergyInfo.alignmentBonus.toFixed(2)})<br/>
+            <strong>Total Bonus: ${synergyInfo.bonus > 0 ? "+" : ""}${synergyInfo.bonus.toFixed(2)}</strong>
+          </span>
+        </div>
       `
-        : ""
+          : ""
+      }
+      ${
+        activeFeud
+          ? `
+        <p style="color: #ff8c42; margin-top: 1rem;"><strong>Active Feud:</strong> ${activeFeud.phase} phase, heat ${activeFeud.heat}</p>
+      `
+          : ""
       }
     `;
 
@@ -6048,7 +6075,8 @@ export class ActionPanel {
     rankingsList.appendChild(header);
 
     uniqueMatches.slice(0, 50).forEach((match, index) => {
-      const isPlayer = match.wrestlerId === state.player?.entityId;
+      const playerId = state.player?.entityId;
+      const involvesPlayer = match.wrestlerId === playerId || match.opponentId === playerId;
 
       const row = document.createElement("div");
       row.style.display = "grid";
@@ -6057,13 +6085,16 @@ export class ActionPanel {
       row.style.padding = "0.5rem";
       row.style.fontSize = "0.85rem";
       row.style.borderBottom = "1px solid var(--border-color)";
-      row.style.background = isPlayer ? "rgba(255,200,87,0.1)" : "transparent";
+      row.style.background = involvesPlayer ? "rgba(255,200,87,0.1)" : "transparent";
       row.style.cursor = "pointer";
 
+      // Identify player name to add (You)
+      const w1Name = match.wrestler + (match.wrestlerId === playerId ? " (You)" : "");
+      const w2Name = match.opponent + (match.opponentId === playerId ? " (You)" : "");
 
       // Show winner in gold, loser in normal color
-      const winnerName = match.result === "win" ? match.wrestler : match.opponent;
-      const loserName = match.result === "win" ? match.opponent : match.wrestler;
+      const winnerName = match.result === "win" ? w1Name : w2Name;
+      const loserName = match.result === "win" ? w2Name : w1Name;
 
       const rankColors = ["#ffd700", "#c0c0c0", "#cd7f32"];
       const rankColor = index < 3 ? rankColors[index] : "var(--text-secondary)";
