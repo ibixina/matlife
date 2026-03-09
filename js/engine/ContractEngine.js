@@ -8,6 +8,7 @@ import ResolutionEngine from "./ResolutionEngine.js";
 import { gameStateManager } from "../core/GameStateManager.js";
 import { clamp } from "../core/Utils.js";
 import ChampionshipSystem from "./ChampionshipSystem.js";
+import DynamicFeudSystem from "./DynamicFeudSystem.js";
 
 /**
  * Maximum player contract length in weeks
@@ -508,6 +509,11 @@ export class ContractEngine {
             wrestler.id,
           );
         }
+        // End all feuds with the old promotion
+        DynamicFeudSystem.endAllFeudsForEntity(
+          wrestler.id,
+          "Left promotion",
+        );
       }
     }
 
@@ -575,6 +581,9 @@ export class ContractEngine {
       }
     }
 
+    // End all active feuds for this wrestler
+    DynamicFeudSystem.endAllFeudsForEntity(wrestler.id, "Wrestler released");
+
     // Apply no-compete
     contract.noCompeteActive = true;
     contract.noCompeteWeeksRemaining = contract.noCompeteWeeks;
@@ -622,6 +631,10 @@ export class ContractEngine {
           ChampionshipSystem.reassignTitlesForDeparture(
             promotion.id,
             wrestler.id,
+          );
+          DynamicFeudSystem.endAllFeudsForEntity(
+            wrestler.id,
+            "Contract expired",
           );
         }
 
@@ -796,6 +809,10 @@ export class ContractEngine {
     if (promotion) {
       promotion.roster = promotion.roster.filter((id) => id !== wrestler.id);
       ChampionshipSystem.reassignTitlesForDeparture(promotion.id, wrestler.id);
+      DynamicFeudSystem.endAllFeudsForEntity(
+        wrestler.id,
+        "Declined contract renewal",
+      );
     }
 
     contract.promotionId = null;

@@ -7,6 +7,7 @@
 import { gameStateManager } from '../core/GameStateManager.js';
 import ResolutionEngine from './ResolutionEngine.js';
 import { randomInt, clamp } from '../core/Utils.js';
+import DynamicFeudSystem from './DynamicFeudSystem.js';
 
 /**
  * WellnessEngine - Manages PED usage and drug testing
@@ -235,6 +236,10 @@ export class WellnessEngine {
           promotion.roster = promotion.roster.filter(id => id !== entity.id);
           contract.promotionId = null;
           contract.weeklySalary = 0;
+          DynamicFeudSystem.endAllFeudsForEntity(
+            entity.id,
+            "Contract terminated",
+          );
         }
         entity.addTag('[Released]');
         return {

@@ -215,6 +215,9 @@ export class DynamicFeudSystem {
     const entityAInFeud = this.hasActiveFeud(entityA.id);
     if (entityAInFeud) {
       const existingFeud = state.feuds.get(entityAInFeud);
+      if (!existingFeud?.entityA || !existingFeud?.entityB) {
+        return { error: "Invalid feud data" };
+      }
       const isWithEntityB = existingFeud?.entityA === entityB.id || existingFeud?.entityB === entityB.id;
       if (!isWithEntityB) {
         const otherId = existingFeud.entityA === entityA.id ? existingFeud.entityB : existingFeud.entityA;
@@ -227,6 +230,9 @@ export class DynamicFeudSystem {
     const entityBInFeud = this.hasActiveFeud(entityB.id);
     if (entityBInFeud) {
       const existingFeud = state.feuds.get(entityBInFeud);
+      if (!existingFeud?.entityA || !existingFeud?.entityB) {
+        return { error: "Invalid feud data" };
+      }
       const isWithEntityA = existingFeud?.entityA === entityA.id || existingFeud?.entityB === entityA.id;
       if (!isWithEntityA) {
         const otherId = existingFeud.entityA === entityB.id ? existingFeud.entityB : existingFeud.entityA;
@@ -768,6 +774,30 @@ export class DynamicFeudSystem {
     if (!feud) return ["Standard Singles"];
 
     return FEUD_PHASES[feud.phase].matchTypes;
+  }
+
+  /**
+   * Ends all active feuds for a wrestler (e.g., when leaving a promotion)
+   * @param {string} entityId - Entity ID
+   * @param {string} reason - Reason for ending the feuds
+   */
+  static endAllFeudsForEntity(entityId, reason = "Wrestler left the promotion") {
+    const state = gameStateManager.getStateRef();
+    let endedCount = 0;
+
+    for (const [feudId, feud] of state.feuds) {
+      if (
+        (feud.entityA === entityId || feud.entityB === entityId) &&
+        !feud.resolved
+      ) {
+        feud.resolved = true;
+        feud.endWeek = state.calendar.absoluteWeek;
+        feud.endReason = reason;
+        endedCount++;
+      }
+    }
+
+    return { endedCount };
   }
 }
 

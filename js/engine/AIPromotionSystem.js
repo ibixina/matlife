@@ -9,6 +9,7 @@ import MatchSimulator from './MatchSimulator.js';
 import RelationshipManager from './RelationshipManager.js';
 import { randomInt } from '../core/Utils.js';
 import { dataManager } from '../core/DataManager.js';
+import DynamicFeudSystem from './DynamicFeudSystem.js';
 
 /**
  * Promotion size tiers and their characteristics
@@ -493,6 +494,10 @@ export class AIPromotionSystem {
       if (contract) {
         contract.promotionId = null;
         promotion.roster = promotion.roster.filter(id => id !== toRelease.id);
+        DynamicFeudSystem.endAllFeudsForEntity(
+          toRelease.id,
+          "Released by promotion",
+        );
 
         const identity = toRelease.getComponent('identity');
         gameStateManager.dispatch('ADD_LOG_ENTRY', {

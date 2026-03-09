@@ -267,12 +267,13 @@ export class MatchSimulator {
       "Lucha Libre": "Aerial",
     };
 
-    if (gimmick && archetypeToStyle[gimmick]) {
-      return archetypeToStyle[gimmick];
-    }
-
+    // Check archetype first (authoritative value), then fall back to gimmick
     if (archetype && archetypeToStyle[archetype]) {
       return archetypeToStyle[archetype];
+    }
+
+    if (gimmick && archetypeToStyle[gimmick]) {
+      return archetypeToStyle[gimmick];
     }
 
     const inRing = entity.getComponent("inRingStats") || {};

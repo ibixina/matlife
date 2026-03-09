@@ -1227,12 +1227,14 @@ export class ActionPanel {
       card.style.borderLeft = `3px solid ${color}`;
       const romanceLevel = relationship.romanceLevel || 0;
       const trust = relationship.trust ?? 50;
-      const romanticStatus =
-        relationship.type === "romantic"
-          ? `💘 Romantic${relationship.committed ? " · Committed" : ""}${relationship.secretAffair ? " · Secret Affair" : ""}`
-          : relationship.type === "rival"
-            ? "🔥 Rivalry"
-            : "Professional Relationship";
+      const tags = relationship.tags || ['professional'];
+      const isRomantic = tags.includes("romantic");
+      const isRival = tags.includes("rival");
+      const romanticStatus = isRomantic
+        ? `💘 Romantic${relationship.committed ? " · Committed" : ""}${relationship.secretAffair ? " · Secret Affair" : ""}`
+        : isRival
+          ? "🔥 Rivalry"
+          : "Professional Relationship";
       card.innerHTML = `
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <strong>${name}</strong>
@@ -1241,7 +1243,7 @@ export class ActionPanel {
         <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem;">
           ${romanticStatus}
         </p>
-        ${relationship.type === "romantic" ? `<p style="font-size: 0.8rem;">Romance: ${romanceLevel} | Trust: ${trust}</p>` : ""}
+        ${isRomantic ? `<p style="font-size: 0.8rem;">Romance: ${romanceLevel} | Trust: ${trust}</p>` : ""}
         ${relationship.affinity >= 50 ? '<p style="font-size: 0.8rem; color: #4caf50;">✓ Chemistry bonus in matches</p>' : ""}
         ${relationship.affinity <= -50 ? '<p style="font-size: 0.8rem; color: #f44336;">⚠️ Risk of backstage conflict</p>' : ""}
       `;
@@ -1293,16 +1295,18 @@ export class ActionPanel {
     // Show current relationship status
     const statusDiv = document.createElement("div");
     statusDiv.className = "panel mb-md";
-    const romanticStatus =
-      relationship.type === "romantic"
-        ? `💘 Romantic${relationship.committed ? " · Committed" : ""}${relationship.secretAffair ? " · Secret Affair" : ""}`
-        : relationship.type === "rival"
-          ? "🔥 Rivalry"
-          : "Professional Relationship";
+    const tags = relationship.tags || ['professional'];
+    const isRomantic = tags.includes("romantic");
+    const isRival = tags.includes("rival");
+    const romanticStatus = isRomantic
+      ? `💘 Romantic${relationship.committed ? " · Committed" : ""}${relationship.secretAffair ? " · Secret Affair" : ""}`
+      : isRival
+        ? "🔥 Rivalry"
+        : "Professional Relationship";
     statusDiv.innerHTML = `
       <p><strong>Status:</strong> ${romanticStatus}</p>
       <p><strong>Affinity:</strong> ${relationship.affinity}</p>
-      ${relationship.type === "romantic" ? `<p><strong>Romance Level:</strong> ${relationship.romanceLevel || 0}</p><p><strong>Trust:</strong> ${relationship.trust ?? 50}</p>` : ""}
+      ${isRomantic ? `<p><strong>Romance Level:</strong> ${relationship.romanceLevel || 0}</p><p><strong>Trust:</strong> ${relationship.trust ?? 50}</p>` : ""}
     `;
     this.container.appendChild(statusDiv);
 
@@ -1622,7 +1626,8 @@ export class ActionPanel {
 
       // Break up option - always available if in a romantic relationship
       const rel = this._getRel(player.id, target.id);
-      if (rel && rel.type === "romantic") {
+      const relTags = rel?.tags || ['professional'];
+      if (rel && relTags.includes("romantic")) {
         const breakupCard = this.createActionCard(
           "Break Up",
           rel.committed
@@ -2748,7 +2753,7 @@ export class ActionPanel {
       }
       ${relationship
         ? `
-        <p style="margin-top: 1rem;"><strong>Relationship:</strong> ${relationship.affinity} (${relationship.type})</p>
+        <p style="margin-top: 1rem;"><strong>Relationship:</strong> ${relationship.affinity} (${(relationship.tags || ['professional']).join(', ')})</p>
       `
         : ""
       }
@@ -2965,7 +2970,8 @@ export class ActionPanel {
 
       // Break up option - always available if in a romantic relationship
       const rel = this._getRel(player.id, entity.id);
-      if (rel && rel.type === "romantic") {
+      const relTags = rel?.tags || ['professional'];
+      if (rel && relTags.includes("romantic")) {
         const breakupCard = this.createActionCard(
           "Break Up",
           rel.committed
@@ -3235,7 +3241,7 @@ export class ActionPanel {
     const committed = rels.find(
       (r) =>
         r.entityId !== excludeId &&
-        r.relationship?.type === "romantic" &&
+        r.relationship?.tags?.includes("romantic") &&
         r.relationship?.committed === true,
     );
     return committed?.entityId || null;
@@ -3261,8 +3267,11 @@ export class ActionPanel {
     const romanceDelta = delta > 0 ? 10 : -6;
 
     RelationshipManager.modifyAffinity(player.id, target.id, delta, "Flirting");
+    const relTags = rel?.tags || ['professional'];
+    if (!relTags.includes("romantic") && delta > 0) {
+      RelationshipManager.addTag(player.id, target.id, "romantic");
+    }
     RelationshipManager.setRelationship(player.id, target.id, {
-      type: rel.type === "rival" ? "professional" : rel.type || "professional",
       romanceLevel: Math.max(
         0,
         Math.min(100, (rel.romanceLevel || 0) + romanceDelta),
@@ -3310,8 +3319,11 @@ export class ActionPanel {
       success ? 10 : -6,
       "Date request",
     );
+    const relTags = rel?.tags || ['professional'];
+    if (success && !relTags.includes("romantic")) {
+      RelationshipManager.addTag(player.id, target.id, "romantic");
+    }
     RelationshipManager.setRelationship(player.id, target.id, {
-      type: success ? "romantic" : rel.type || "professional",
       romanceLevel: Math.max(
         0,
         Math.min(100, (rel.romanceLevel || 0) + (success ? 18 : -8)),
@@ -4752,7 +4764,8 @@ export class ActionPanel {
    */
   breakUp(player, target) {
     const rel = this._getRel(player.id, target.id);
-    if (!rel || rel.type !== "romantic") {
+    const relTags = rel?.tags || ['professional'];
+    if (!rel || !relTags.includes("romantic")) {
       gameStateManager.dispatch("ADD_LOG_ENTRY", {
         entry: {
           category: "backstage",
@@ -4767,9 +4780,9 @@ export class ActionPanel {
     const targetName = target.getComponent("identity")?.name || "them";
     const wasCommitted = rel.committed;
 
-    // Set relationship to neutral/negative
+    // Remove romantic tag and set to neutral/negative
+    RelationshipManager.removeTag(player.id, target.id, "romantic");
     RelationshipManager.setRelationship(player.id, target.id, {
-      type: "acquaintance",
       affinity: -20,
       romanceLevel: 0,
       trust: 20,
@@ -5982,7 +5995,7 @@ export class ActionPanel {
       const w1 = match.wrestler?.toLowerCase().trim() || "";
       const w2 = match.opponent?.toLowerCase().trim() || "";
       const wrestlers = [w1, w2].sort();
-      const key = `${match.date}-${wrestlers[0]}-${wrestlers[1]}`;
+      const key = `${match.date}-${match.rating}-${wrestlers[0]}-${wrestlers[1]}`;
       if (!seen.has(key)) {
         seen.add(key);
         uniqueMatches.push(match);

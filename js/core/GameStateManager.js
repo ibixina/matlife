@@ -320,13 +320,18 @@ class GameStateManager {
     if (existing) {
       Object.assign(existing, changes);
     } else {
+      let processedChanges = { ...changes };
+      if (changes.type) {
+        processedChanges.tags = [changes.type];
+        delete processedChanges.type;
+      }
       this.state.relationships.set(key, {
         entityA,
         entityB,
         affinity: 0,
-        type: "professional",
+        tags: ['professional'],
         history: [],
-        ...changes,
+        ...processedChanges,
       });
     }
   }

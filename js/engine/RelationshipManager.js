@@ -35,9 +35,32 @@ export class RelationshipManager {
       entityA: idA,
       entityB: idB,
       affinity: 0,
-      type: 'professional',
+      tags: ['professional'],
       history: []
     };
+  }
+
+  /**
+   * Checks if a relationship has a specific tag
+   * @param {string} idA - First entity ID
+   * @param {string} idB - Second entity ID
+   * @param {string} tag - Tag to check for
+   * @returns {boolean} True if relationship has the tag
+   */
+  static hasTag(idA, idB, tag) {
+    const relationship = this.getRelationship(idA, idB);
+    return relationship.tags?.includes(tag) ?? false;
+  }
+
+  /**
+   * Gets all tags for a relationship
+   * @param {string} idA - First entity ID
+   * @param {string} idB - Second entity ID
+   * @returns {string[]} Array of tags
+   */
+  static getTags(idA, idB) {
+    const relationship = this.getRelationship(idA, idB);
+    return relationship.tags ?? ['professional'];
   }
 
   /**
@@ -47,10 +70,23 @@ export class RelationshipManager {
    * @param {object} changes - Changes to apply
    */
   static setRelationship(idA, idB, changes) {
+    let processedChanges = { ...changes };
+    
+    if (changes.type) {
+      const existing = this.getRelationship(idA, idB);
+      const existingTags = existing.tags || ['professional'];
+      if (!existingTags.includes(changes.type)) {
+        processedChanges.tags = [...existingTags, changes.type];
+      } else {
+        processedChanges = { ...changes, tags: existingTags };
+      }
+      delete processedChanges.type;
+    }
+    
     gameStateManager.dispatch('SET_RELATIONSHIP', {
       entityA: idA,
       entityB: idB,
-      changes
+      changes: processedChanges
     });
   }
 
@@ -161,9 +197,10 @@ export class RelationshipManager {
     const existing = this.getRelationship(idA, idB);
     
     // Only create if it's a default relationship
-    if (existing.affinity === 0 && existing.type === 'professional') {
+    const isDefault = existing.tags?.length === 1 && existing.tags[0] === 'professional';
+    if (existing.affinity === 0 && isDefault) {
       this.setRelationship(idA, idB, {
-        type,
+        tags: [type],
         affinity: initialAffinity,
         history: []
       });
@@ -171,13 +208,41 @@ export class RelationshipManager {
   }
 
   /**
-   * Changes the relationship type
+   * Adds a tag to a relationship (doesn't remove existing tags)
+   * @param {string} idA - First entity ID
+   * @param {string} idB - Second entity ID
+   * @param {string} newTag - Tag to add
+   */
+  static addTag(idA, idB, newTag) {
+    const relationship = this.getRelationship(idA, idB);
+    const tags = [...(relationship.tags || ['professional'])];
+    if (!tags.includes(newTag)) {
+      tags.push(newTag);
+      this.setRelationship(idA, idB, { tags });
+    }
+  }
+
+  /**
+   * Removes a tag from a relationship
+   * @param {string} idA - First entity ID
+   * @param {string} idB - Second entity ID
+   * @param {string} tag - Tag to remove
+   */
+  static removeTag(idA, idB, tag) {
+    const relationship = this.getRelationship(idA, idB);
+    const tags = (relationship.tags || ['professional']).filter(t => t !== tag);
+    if (tags.length === 0) tags.push('professional');
+    this.setRelationship(idA, idB, { tags });
+  }
+
+  /**
+   * Changes the relationship type (adds tag, keeps existing)
    * @param {string} idA - First entity ID
    * @param {string} idB - Second entity ID
    * @param {string} newType - New relationship type
    */
   static setRelationshipType(idA, idB, newType) {
-    this.setRelationship(idA, idB, { type: newType });
+    this.addTag(idA, idB, newType);
   }
 }
 
@@ -186,7 +251,7 @@ export class RelationshipManager {
  * @property {string} entityA - First entity ID
  * @property {string} entityB - Second entity ID
  * @property {number} affinity - Relationship value (-100 to +100)
- * @property {string} type - Relationship type (professional, romantic, mentor, rival)
+ * @property {string[]} tags - Relationship tags (professional, romantic, mentor, rival)
  * @property {string[]} history - Array of relationship events
  */
 
