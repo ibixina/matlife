@@ -36,9 +36,13 @@ export class IdentityComponent extends Component {
     this.hometown = options.hometown ?? "Unknown";
     this.gender = options.gender ?? "Unknown";
     this.gimmick = options.gimmick ?? "";
-    this.alignment = options.alignment ?? "Face";
+    this.alignment = options.alignment ?? (() => {
+      const alignments = ["Face", "Heel", "Tweener"];
+      return alignments[Math.floor(Math.random() * alignments.length)];
+    })();
     this.catchphrase = options.catchphrase ?? "";
     this.entranceStyle = options.entranceStyle ?? "Simple";
+    this.archetype = options.archetype ?? "";
   }
 
   static deserialize(data) {
@@ -137,6 +141,14 @@ export class CareerStatsComponent extends Component {
     this.yearsActive = options.yearsActive ?? 0;
     this.injuriesCausedCount = options.injuriesCausedCount ?? 0;
     this.matchesThisWeek = options.matchesThisWeek ?? 0;
+    this.totalTitleReigns = options.totalTitleReigns ?? 0;
+    this.championships = options.championships ?? [];
+    this.totalMatches = options.totalMatches ?? 0;
+    this.starRatings = options.starRatings ?? [];
+    this.averageRating = options.averageRating ?? 0;
+    this.matchHistory = options.matchHistory ?? [];
+    this.fiveStarMatches = options.fiveStarMatches ?? 0;
+    this.mainEvents = options.mainEvents ?? 0;
   }
 
   static deserialize(data) {

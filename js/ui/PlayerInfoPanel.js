@@ -4,9 +4,11 @@
  * Top bar with player stats and info
  */
 
+import { gameStateManager } from "../core/GameStateManager.js";
 import { gameCalendar } from "../core/GameCalendar.js";
 import CardPositionSystem from "../engine/CardPositionSystem.js";
 import BookerModeEngine from "../engine/BookerModeEngine.js";
+import CharacterEvolution from "../engine/CharacterEvolution.js";
 
 /**
  * PlayerInfoPanel - Renders the player info header
@@ -14,6 +16,144 @@ import BookerModeEngine from "../engine/BookerModeEngine.js";
 export class PlayerInfoPanel {
   constructor() {
     this.container = document.getElementById("player-info");
+    this.initEventListeners();
+  }
+
+  initEventListeners() {
+    const editBtn = document.getElementById("edit-identity-btn");
+    if (editBtn) {
+      editBtn.addEventListener("click", () => this.openIdentityModal());
+    }
+
+    const closeBtn = document.getElementById("close-identity-modal");
+    if (closeBtn) {
+      closeBtn.addEventListener("click", () => this.closeIdentityModal());
+    }
+
+    const modal = document.getElementById("identity-modal");
+    if (modal) {
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) this.closeIdentityModal();
+      });
+    }
+  }
+
+  openIdentityModal() {
+    const state = gameStateManager.getStateRef();
+    if (!state || !state.player || !state.player.entityId) return;
+
+    const player = state.entities.get(state.player.entityId);
+    if (!player || state.player.mode === "BOOKER") return;
+
+    const identity = player.getComponent("identity");
+    const physicalStats = player.getComponent("physicalStats");
+    const inRingStats = player.getComponent("inRingStats");
+    const entertainmentStats = player.getComponent("entertainmentStats");
+
+    if (!identity) return;
+
+    const alignments = CharacterEvolution.getAllAlignments();
+    const gimmicks = CharacterEvolution.getAllGimmicks();
+    const archetypes = Object.keys(CharacterEvolution.getAllArchetypeRequirements());
+
+    let html = `
+      <div class="identity-edit-section">
+        <label>Alignment</label>
+        <select id="edit-alignment">
+          ${alignments.map(a => `<option value="${a}" ${a === identity.alignment ? 'selected' : ''}>${a}</option>`).join('')}
+        </select>
+      </div>
+      <div class="identity-edit-section">
+        <label>Gimmick</label>
+        <select id="edit-gimmick">
+          ${gimmicks.map(g => `<option value="${g}" ${g === identity.gimmick ? 'selected' : ''}>${g}</option>`).join('')}
+        </select>
+      </div>
+      <div class="identity-edit-section">
+        <label>Archetype (requires stats)</label>
+        <select id="edit-archetype">
+          ${archetypes.map(a => {
+            const canChange = CharacterEvolution.canChangeArchetype(player, a).canChange;
+            return `<option value="${a}" ${a === identity.archetype ? 'selected' : ''} ${!canChange ? 'disabled' : ''}>${a}${!canChange ? ' (locked)' : ''}</option>`;
+          }).join('')}
+        </select>
+      </div>
+      <div id="archetype-requirements" class="archetype-requirements">
+        <strong>Stat Requirements for Archetype:</strong>
+        ${archetypes.map(a => {
+          const reqs = CharacterEvolution.getArchetypeRequirements(a);
+          if (!reqs) return '';
+          const canChange = CharacterEvolution.canChangeArchetype(player, a).canChange;
+          let reqText = Object.entries(reqs.physical).map(([k, v]) => `${k}: ${v}`).join(', ');
+          return `<div class="req-row ${canChange ? 'met' : 'unmet'}"><span>${a}:</span> <span>${reqText}</span></div>`;
+        }).join('')}
+      </div>
+      <button id="save-identity-btn" class="btn btn-primary" style="width: 100%; margin-top: var(--space-md);">Save Changes</button>
+    `;
+
+    const modalBody = document.getElementById("identity-modal-body");
+    if (modalBody) {
+      modalBody.innerHTML = html;
+    }
+
+    document.getElementById("edit-archetype")?.addEventListener("change", () => {
+      this.updateRequirementHighlights();
+    });
+
+    document.getElementById("save-identity-btn")?.addEventListener("click", () => {
+      this.saveIdentityChanges(player);
+    });
+
+    document.getElementById("identity-modal")?.classList.remove("hidden");
+  }
+
+  updateRequirementHighlights() {
+    const state = gameStateManager.getStateRef();
+    if (!state || !state.player?.entityId) return;
+    const player = state.entities.get(state.player.entityId);
+    if (!player) return;
+
+    const selectedArchetype = document.getElementById("edit-archetype")?.value;
+    if (!selectedArchetype) return;
+
+    const rows = document.querySelectorAll(".req-row");
+    rows.forEach(row => {
+      const archetype = row.querySelector("span:first-child").textContent;
+      if (archetype === selectedArchetype) {
+        const canChange = CharacterEvolution.canChangeArchetype(player, archetype).canChange;
+        row.classList.toggle("met", canChange);
+        row.classList.toggle("unmet", !canChange);
+      }
+    });
+  }
+
+  saveIdentityChanges(player) {
+    const newAlignment = document.getElementById("edit-alignment")?.value;
+    const newGimmick = document.getElementById("edit-gimmick")?.value;
+    const newArchetype = document.getElementById("edit-archetype")?.value;
+
+    if (newAlignment) {
+      CharacterEvolution.changeAlignment(player, newAlignment, gameStateManager);
+    }
+
+    if (newGimmick) {
+      CharacterEvolution.changeGimmick(player, newGimmick, gameStateManager);
+    }
+
+    if (newArchetype) {
+      const result = CharacterEvolution.changeArchetype(player, newArchetype, gameStateManager);
+      if (!result.success) {
+        alert(`Cannot change archetype: ${result.error}`);
+        return;
+      }
+    }
+
+    this.closeIdentityModal();
+    document.getElementById("player-info-panel")?.dispatchEvent(new CustomEvent("refresh"));
+  }
+
+  closeIdentityModal() {
+    document.getElementById("identity-modal")?.classList.add("hidden");
   }
 
   /**

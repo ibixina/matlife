@@ -131,6 +131,7 @@ export class EntityFactory {
         alignment: formData.alignment,
         catchphrase: formData.catchphrase,
         entranceStyle: formData.entranceStyle,
+        archetype: formData.archetype,
       }),
     );
 
@@ -275,7 +276,10 @@ export class EntityFactory {
         hometown: jsonEntry.hometown || "Unknown",
         gender: jsonEntry.gender || "Male",
         gimmick: jsonEntry.gimmick || jsonEntry.archetype || "Wrestler",
-        alignment: jsonEntry.alignment || "Face",
+        alignment: jsonEntry.alignment || (() => {
+          const alignments = ["Face", "Heel", "Tweener"];
+          return alignments[Math.floor(Math.random() * alignments.length)];
+        })(),
         catchphrase: jsonEntry.catchphrase || "",
         entranceStyle: jsonEntry.entranceStyle || "Simple",
       }),

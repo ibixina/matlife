@@ -26,6 +26,7 @@ import AgingEngine from "./AgingEngine.js";
 import EntityFactory from "../core/EntityFactory.js";
 import { rollD20, randomInt } from "../core/Utils.js";
 import BookerModeEngine from "./BookerModeEngine.js";
+import CharacterEvolution from "./CharacterEvolution.js";
 
 /**
  * WorldSimulator - The master "advance the world" function
@@ -163,6 +164,9 @@ export class WorldSimulator {
         // Process AI promotions (weekly, not every day)
         this._processAIPromotions(state);
 
+        // Evolve NPC attributes occasionally
+        this._evolveNPCs(state);
+
         if (state.player?.mode === "BOOKER") {
           const playerPromotion = BookerModeEngine.getPlayerPromotion(state);
           if (playerPromotion) {
@@ -251,13 +255,16 @@ export class WorldSimulator {
     const winner = contestedResult.winner === "actor" ? wrestler1 : wrestler2;
     const loser = winner === wrestler1 ? wrestler2 : wrestler1;
 
-    // Update records
-    this._updateMatchRecords(winner, loser);
-
     // Generate simplified match rating (1-5 stars)
     const baseRating = (stat1 + stat2) / 10;
     const randomFactor = randomInt(-5, 5) / 10;
     const matchRating = Math.max(0.5, Math.min(5, baseRating + randomFactor));
+
+    const calendar = this._getCalendar();
+    const matchDate = calendar ? `Week ${calendar.week}, ${calendar.year}` : "Unknown";
+
+    // Update records
+    this._updateMatchRecords(winner, loser, matchRating, matchDate, null);
 
     return {
       winner,
@@ -883,6 +890,28 @@ export class WorldSimulator {
   }
 
   /**
+   * Evolves NPC attributes occasionally (alignment, gimmick, archetype)
+   * @private
+   * @param {object} state - Game state
+   */
+  static _evolveNPCs(state) {
+    const npcs = [];
+    for (const entity of state.entities.values()) {
+      if (entity.isPlayer === false) {
+        npcs.push(entity);
+      }
+    }
+
+    for (const npc of npcs) {
+      const result = CharacterEvolution.evolveNPC(npc, 0.05, gameStateManager);
+      if (result?.success) {
+        const identity = npc.getComponent("identity");
+        console.log(`NPC Evolution: ${identity.name} changed ${result.oldValue} to ${result.newValue}`);
+      }
+    }
+  }
+
+  /**
    * Generates feuds for player's promotion based on relationships
    * @private
    * @param {object} state - Game state
@@ -989,13 +1018,50 @@ export class WorldSimulator {
    * @private
    * @param {Entity} winner - Winning wrestler
    * @param {Entity} loser - Losing wrestler
+   * @param {number} matchRating - Match rating
+   * @param {string} matchDate - Date string for the match
+   * @param {string} promotion - Promotion name
    */
-  static _updateMatchRecords(winner, loser) {
+  static _updateMatchRecords(winner, loser, matchRating = 0, matchDate = "Unknown", promotion = null) {
+    const winnerIdentity = winner.getComponent("identity");
+    const loserIdentity = loser.getComponent("identity");
+    const promotionName = promotion || "Independent";
+    
     // Update winner
     const winnerCareer = winner.getComponent("careerStats");
     if (winnerCareer) {
       winnerCareer.totalWins++;
       winnerCareer.consecutiveWins = (winnerCareer.consecutiveWins || 0) + 1;
+      winnerCareer.totalMatches = (winnerCareer.totalMatches || 0) + 1;
+      
+      if (matchRating > 0) {
+        if (!winnerCareer.starRatings) winnerCareer.starRatings = [];
+        winnerCareer.starRatings.push(matchRating);
+        if (winnerCareer.starRatings.length > 10) winnerCareer.starRatings.shift();
+        winnerCareer.averageRating = winnerCareer.starRatings.reduce((a, b) => a + b, 0) / winnerCareer.starRatings.length;
+        
+        if (matchRating > (winnerCareer.bestMatchRating || 0)) {
+          winnerCareer.bestMatchRating = matchRating;
+          winnerCareer.bestMatchDetails = {
+            rating: matchRating,
+            opponent: loserIdentity?.name || "Unknown",
+            date: matchDate,
+            promotion: promotionName,
+          };
+        }
+        
+        if (!winnerCareer.matchHistory) winnerCareer.matchHistory = [];
+        winnerCareer.matchHistory.push({
+          rating: matchRating,
+          opponent: loserIdentity?.name || "Unknown",
+          opponentId: loser.id,
+          result: "win",
+          date: matchDate,
+          isMainEvent: false,
+          promotion: promotionName,
+        });
+        if (winnerCareer.matchHistory.length > 50) winnerCareer.matchHistory.shift();
+      }
     }
 
     // Update loser
@@ -1003,6 +1069,36 @@ export class WorldSimulator {
     if (loserCareer) {
       loserCareer.totalLosses++;
       loserCareer.consecutiveWins = 0;
+      loserCareer.totalMatches = (loserCareer.totalMatches || 0) + 1;
+      
+      if (matchRating > 0) {
+        if (!loserCareer.starRatings) loserCareer.starRatings = [];
+        loserCareer.starRatings.push(matchRating);
+        if (loserCareer.starRatings.length > 10) loserCareer.starRatings.shift();
+        loserCareer.averageRating = loserCareer.starRatings.reduce((a, b) => a + b, 0) / loserCareer.starRatings.length;
+        
+        if (matchRating > (loserCareer.bestMatchRating || 0)) {
+          loserCareer.bestMatchRating = matchRating;
+          loserCareer.bestMatchDetails = {
+            rating: matchRating,
+            opponent: winnerIdentity?.name || "Unknown",
+            date: matchDate,
+            promotion: promotionName,
+          };
+        }
+        
+        if (!loserCareer.matchHistory) loserCareer.matchHistory = [];
+        loserCareer.matchHistory.push({
+          rating: matchRating,
+          opponent: winnerIdentity?.name || "Unknown",
+          opponentId: winner.id,
+          result: "loss",
+          date: matchDate,
+          isMainEvent: false,
+          promotion: promotionName,
+        });
+        if (loserCareer.matchHistory.length > 50) loserCareer.matchHistory.shift();
+      }
     }
   }
 }

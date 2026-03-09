@@ -318,6 +318,9 @@ export class MatchSimulator {
       "Face|Heel": 0.25,
       "Face|Face": -0.1,
       "Heel|Heel": -0.1,
+      "Face|Tweener": 0.1,
+      "Heel|Tweener": 0.1,
+      "Tweener|Tweener": -0.05,
     };
     return bonuses[pairKey] ?? 0;
   }
